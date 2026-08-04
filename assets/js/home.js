@@ -461,6 +461,7 @@ function renderDailyGoals() {
   const ring = document.getElementById('daily-goal-ring');
   const percentEl = document.getElementById('daily-goal-percent');
   const captionEl = document.getElementById('daily-goal-caption');
+  const totalEl = document.getElementById('daily-goal-total');
   if (!ring || !percentEl || !captionEl) return;
 
   const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
@@ -474,6 +475,7 @@ function renderDailyGoals() {
 
   percentEl.textContent = `${percent}%`;
   captionEl.textContent = percent > 100 ? '목표 초과 달성' : '달성';
+  if (totalEl) totalEl.textContent = `${totalMinutes}분 / ${DAILY_GOAL_MINUTES}분`;
 }
 
 function renderSelectedDateLabel() {
@@ -836,9 +838,11 @@ function openWordModal() {
   const photoInput = document.getElementById('word-photo-input');
   const photoWrap = document.getElementById('word-photo-preview-wrap');
   const photoHint = document.getElementById('word-photo-hint');
+  const verseHint = document.getElementById('word-verse-hint');
   if (photoInput) photoInput.value = '';
   if (photoWrap) photoWrap.classList.add('hidden');
   if (photoHint) photoHint.classList.add('hidden');
+  if (verseHint) verseHint.classList.add('hidden');
 
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -1095,6 +1099,7 @@ function initHomeWidgets() {
         return;
       }
 
+      const wordVerseHint = document.getElementById('word-verse-hint');
       const entries = [...document.querySelectorAll('#word-verse-list .word-verse-entry')].map((entry) => ({
         startBook: entry.querySelector('.word-start-book').value,
         startChapter: entry.querySelector('.word-start-chapter').value,
@@ -1103,6 +1108,13 @@ function initHomeWidgets() {
         endChapter: entry.querySelector('.word-end-chapter').value,
         endVerse: entry.querySelector('.word-end-verse').value
       }));
+
+      const hasIncompleteEntry = entries.some((entry) => Object.values(entry).some((value) => !value));
+      if (hasIncompleteEntry) {
+        if (wordVerseHint) wordVerseHint.classList.remove('hidden');
+        return;
+      }
+      if (wordVerseHint) wordVerseHint.classList.add('hidden');
 
       updateRecord(selectedDateKey, (record) => {
         record.wordVerses = entries;

@@ -27,7 +27,7 @@
   <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-12">
     <!-- Daily Goals -->
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-6">Daily Goals</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant mb-6">Today</h3>
       <div class="relative w-36 h-36 mx-auto">
         <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
@@ -45,6 +45,7 @@
         </div>
       </div>
       <p class="text-center text-xs text-on-surface-variant mt-4">기도 · 말씀 · 공부 · 예배 (목표 300분)</p>
+      <p id="daily-goal-total" class="text-center text-xs font-semibold text-on-surface mt-1">0분 / 300분</p>
     </div>
 
     <!-- Calendar -->
@@ -230,6 +231,7 @@
       </div>
 
       <div id="word-verse-list" class="flex flex-col gap-4"></div>
+      <p id="word-verse-hint" class="text-xs text-error mt-2 hidden">읽은 말씀 구절(시작 ~ 끝)을 입력해주세요.</p>
 
       <button id="word-add-verse" type="button" aria-label="구절 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
         <i class="fa-solid fa-plus"></i>
@@ -359,7 +361,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=16"></script>
+<script src="assets/js/home.js?v=17"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'home' });
