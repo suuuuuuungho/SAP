@@ -6,6 +6,17 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style data-purpose="custom-styles">
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+    /* 보그체(Vogue) 느낌의 로고 전용 서체 — 웹에 'Vogue'라는 이름의 표준 폰트가 없어서,
+       실제 Vogue 매거진 로고와 같은 계열인 두꺼운 디돈(Didot/Bodoni) 스타일 세리프로 대체.
+       Didot/Bodoni MT는 있으면 우선 쓰고, 없는 환경(대부분의 Windows/모바일)에서는
+       구글폰트 Playfair Display가 동일한 느낌으로 항상 렌더링되도록 폴백을 둠. */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
+
+    .logo-vogue {
+      font-family: 'Didot', 'Bodoni MT', 'Playfair Display', serif;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
 
     body {
       font-family: 'Pretendard', sans-serif;
@@ -48,7 +59,7 @@
 <div class="app-container" data-purpose="mobile-app-layout">
 <!-- BEGIN: TopHeader -->
 <header class="flex justify-between items-center px-4 py-3 border-b border-gray-200 mt-8" data-purpose="main-header">
-<div class="text-xl tracking-tighter" style="font-family: &quot;Times New Roman&quot;, Times, serif; font-weight: bold; font-style: italic;">SAPIANS</div>
+<div class="logo-vogue text-xl">SAPIANS</div>
 
 </header>
 <!-- END: TopHeader -->
