@@ -108,13 +108,19 @@ function formatWordSummary(entries) {
   return entries.map(formatVerseRange).filter(Boolean).join(', ');
 }
 
+// 말씀 has no natural duration input, so a verified 말씀 counts as a flat 60 minutes.
+const WORD_VERIFIED_MINUTES = 60;
+
 function renderWordWidgetSummary() {
   const slot = document.querySelector('#widget-word .widget-summary');
   if (!slot) return;
 
   const summary = formatWordSummary(loadWordVerses());
   if (summary) {
-    slot.innerHTML = `<p class="text-xs text-on-surface leading-relaxed">${summary}</p>`;
+    slot.innerHTML = `
+      <p class="text-3xl font-bold text-primary">${WORD_VERIFIED_MINUTES}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${summary}</p>
+    `;
   } else {
     slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
   }
@@ -150,11 +156,14 @@ function launchConfetti() {
   setTimeout(() => container.remove(), 4000);
 }
 
-// Only 기도 has real tracked minutes so far; 말씀/공부/예배 default to 0
-// until their own input flows exist, same as the Progress checkmarks.
+// 공부/예배 have no tracked minutes yet until their own input flows exist,
+// same as the Progress checkmarks. 기도 sums real logged time; 말씀 is a flat 60분 once verified.
 function getCategoryMinutes(key) {
   if (key === 'pray') {
     return loadPrayerClasses().reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+  }
+  if (key === 'word') {
+    return loadProgress().word ? WORD_VERIFIED_MINUTES : 0;
   }
   return 0;
 }
@@ -573,6 +582,7 @@ function initHomeWidgets() {
 
       renderVerificationState();
       renderWordWidgetSummary();
+      renderDailyGoals();
       closeWordModal();
     });
   }
