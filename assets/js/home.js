@@ -488,12 +488,16 @@ function renderCalendarStrip() {
     const key = dateKey(d);
     const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
 
+    const weekdayLabel = offset < 7
+      ? `<span class="text-[10px] font-semibold ${key === todayKeyValue ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>`
+      : '';
+
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'calendar-day-cell flex flex-col items-center gap-2';
     cell.dataset.dateKey = key;
     cell.innerHTML = `
-      <span class="text-[10px] font-semibold ${key === todayKeyValue ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>
+      ${weekdayLabel}
       <span class="w-9 h-9 flex items-center justify-center rounded-full text-sm ${filled}">${d.getDate()}</span>
     `;
     stripEl.appendChild(cell);
