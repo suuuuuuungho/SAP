@@ -395,7 +395,7 @@ function launchConfettiBurst(origin) {
   const container = document.createElement('div');
   container.className = 'confetti-container';
 
-  for (let i = 0; i < 90; i += 1) {
+  for (let i = 0; i < 360; i += 1) {
     const piece = document.createElement('div');
     const size = 6 + Math.random() * 8;
     const duration = 1.1 + Math.random() * 0.6;
