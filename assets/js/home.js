@@ -2,6 +2,7 @@
 // State is stored locally (per-browser) for now — not yet saved to Supabase.
 const PROGRESS_STORAGE_KEY = 'sap_progress_v1';
 const PRAYER_CLASSES_STORAGE_KEY = 'sap_prayer_classes_v1';
+const WORD_VERSES_STORAGE_KEY = 'sap_word_verses_v1';
 
 function loadProgress() {
   try {
@@ -21,6 +22,14 @@ function saveProgress(progress) {
 function loadPrayerClasses() {
   try {
     return JSON.parse(localStorage.getItem(PRAYER_CLASSES_STORAGE_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function loadWordVerses() {
+  try {
+    return JSON.parse(localStorage.getItem(WORD_VERSES_STORAGE_KEY) || '[]');
   } catch (e) {
     return [];
   }
@@ -80,6 +89,32 @@ function renderPrayWidgetSummary() {
       <p class="text-3xl font-bold text-primary">${totalMinutes}<span class="text-base font-semibold ml-0.5">분</span></p>
       <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${summary}</p>
     `;
+  } else {
+    slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
+  }
+}
+
+function formatVerseRange(entry) {
+  if (!entry.startBook || !entry.startChapter || !entry.startVerse) return '';
+  const start = `${entry.startBook} ${entry.startChapter}:${entry.startVerse}`;
+  if (!entry.endBook || !entry.endChapter || !entry.endVerse) return start;
+  const end = entry.endBook === entry.startBook
+    ? `${entry.endChapter}:${entry.endVerse}`
+    : `${entry.endBook} ${entry.endChapter}:${entry.endVerse}`;
+  return `${start} ~ ${end}`;
+}
+
+function formatWordSummary(entries) {
+  return entries.map(formatVerseRange).filter(Boolean).join(', ');
+}
+
+function renderWordWidgetSummary() {
+  const slot = document.querySelector('#widget-word .widget-summary');
+  if (!slot) return;
+
+  const summary = formatWordSummary(loadWordVerses());
+  if (summary) {
+    slot.innerHTML = `<p class="text-xs text-on-surface leading-relaxed">${summary}</p>`;
   } else {
     slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
   }
@@ -180,9 +215,44 @@ function renderCalendarStrip() {
   }
 }
 
+function renderMonthlyCalendar() {
+  const grid = document.getElementById('calendar-monthly-view');
+  if (!grid) return;
+
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  grid.innerHTML = '';
+
+  dayNames.forEach((name) => {
+    const header = document.createElement('span');
+    header.className = 'text-[10px] font-semibold text-on-surface-variant py-1';
+    header.textContent = name;
+    grid.appendChild(header);
+  });
+
+  for (let i = 0; i < firstWeekday; i += 1) {
+    grid.appendChild(document.createElement('span'));
+  }
+
+  for (let date = 1; date <= daysInMonth; date += 1) {
+    const isToday = date === today.getDate();
+    const cell = document.createElement('div');
+    cell.className = 'flex items-center justify-center py-1';
+    cell.innerHTML = `<span class="w-8 h-8 flex items-center justify-center rounded-full text-sm ${isToday ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold' : 'text-on-surface'}">${date}</span>`;
+    grid.appendChild(cell);
+  }
+}
+
 function wireCalendarTabs() {
   const weeklyBtn = document.getElementById('calendar-tab-weekly');
   const monthlyBtn = document.getElementById('calendar-tab-monthly');
+  const weeklyView = document.getElementById('calendar-weekly-view');
+  const monthlyView = document.getElementById('calendar-monthly-view');
   if (!weeklyBtn || !monthlyBtn) return;
 
   function selectTab(active, inactive) {
@@ -192,8 +262,24 @@ function wireCalendarTabs() {
     inactive.classList.add('text-on-surface-variant');
   }
 
-  weeklyBtn.addEventListener('click', () => selectTab(weeklyBtn, monthlyBtn));
-  monthlyBtn.addEventListener('click', () => selectTab(monthlyBtn, weeklyBtn));
+  weeklyBtn.addEventListener('click', () => {
+    selectTab(weeklyBtn, monthlyBtn);
+    if (weeklyView) weeklyView.classList.remove('hidden');
+    if (monthlyView) {
+      monthlyView.classList.add('hidden');
+      monthlyView.classList.remove('grid');
+    }
+  });
+
+  monthlyBtn.addEventListener('click', () => {
+    selectTab(monthlyBtn, weeklyBtn);
+    renderMonthlyCalendar();
+    if (monthlyView) {
+      monthlyView.classList.remove('hidden');
+      monthlyView.classList.add('grid');
+    }
+    if (weeklyView) weeklyView.classList.add('hidden');
+  });
 }
 
 function wirePhotoPreview(entryEl) {
@@ -281,15 +367,120 @@ function closePrayModal() {
   modal.classList.remove('flex');
 }
 
+// 말씀 modal: one shared required photo (not per-entry, unlike 기도) + repeatable verse ranges.
+function wireWordPhotoPreview() {
+  const input = document.getElementById('word-photo-input');
+  const wrap = document.getElementById('word-photo-preview-wrap');
+  const preview = document.getElementById('word-photo-preview');
+  const removeBtn = document.getElementById('word-photo-remove');
+  const hint = document.getElementById('word-photo-hint');
+  if (!input || !wrap || !preview) return;
+
+  function clearPhoto() {
+    if (preview.dataset.objectUrl) {
+      URL.revokeObjectURL(preview.dataset.objectUrl);
+      delete preview.dataset.objectUrl;
+    }
+    preview.src = '';
+    wrap.classList.add('hidden');
+    input.value = '';
+  }
+
+  input.addEventListener('change', () => {
+    if (hint) hint.classList.add('hidden');
+    const file = input.files && input.files[0];
+    if (!file) {
+      clearPhoto();
+      return;
+    }
+    if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.dataset.objectUrl = url;
+    wrap.classList.remove('hidden');
+  });
+
+  if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
+}
+
+function updateWordRemoveButtons() {
+  const entries = document.querySelectorAll('#word-verse-list .word-verse-entry');
+  entries.forEach((entry) => {
+    const removeBtn = entry.querySelector('.word-remove-verse');
+    if (removeBtn) removeBtn.classList.toggle('hidden', entries.length <= 1);
+  });
+}
+
+function addWordVerseEntry(data) {
+  const template = document.getElementById('word-verse-template');
+  const list = document.getElementById('word-verse-list');
+  if (!template || !list) return;
+
+  list.appendChild(template.content.cloneNode(true));
+  const entryEl = list.lastElementChild;
+
+  renderBibleBookOptions(entryEl.querySelector('.word-start-book'));
+  renderBibleBookOptions(entryEl.querySelector('.word-end-book'));
+
+  if (data) {
+    if (data.startBook) entryEl.querySelector('.word-start-book').value = data.startBook;
+    if (data.startChapter) entryEl.querySelector('.word-start-chapter').value = data.startChapter;
+    if (data.startVerse) entryEl.querySelector('.word-start-verse').value = data.startVerse;
+    if (data.endBook) entryEl.querySelector('.word-end-book').value = data.endBook;
+    if (data.endChapter) entryEl.querySelector('.word-end-chapter').value = data.endChapter;
+    if (data.endVerse) entryEl.querySelector('.word-end-verse').value = data.endVerse;
+  }
+
+  updateWordRemoveButtons();
+}
+
+// Re-opening loads previously saved verse ranges for editing. The required photo can't be
+// restored (only an in-memory preview URL was ever kept), so it must be re-attached to save again.
+function openWordModal() {
+  const modal = document.getElementById('word-modal');
+  const list = document.getElementById('word-verse-list');
+  if (!modal || !list) return;
+  list.innerHTML = '';
+
+  const existing = loadWordVerses();
+  if (existing.length > 0) {
+    existing.forEach((entry) => addWordVerseEntry(entry));
+  } else {
+    addWordVerseEntry();
+  }
+
+  const photoInput = document.getElementById('word-photo-input');
+  const photoWrap = document.getElementById('word-photo-preview-wrap');
+  const photoHint = document.getElementById('word-photo-hint');
+  if (photoInput) photoInput.value = '';
+  if (photoWrap) photoWrap.classList.add('hidden');
+  if (photoHint) photoHint.classList.add('hidden');
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeWordModal() {
+  const modal = document.getElementById('word-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
 function initHomeWidgets() {
   renderVerificationState();
   renderPrayWidgetSummary();
+  renderWordWidgetSummary();
   renderDailyGoals();
   renderCalendarStrip();
   wireCalendarTabs();
+  wireWordPhotoPreview();
 
   const prayWidget = document.getElementById('widget-pray');
   if (prayWidget) prayWidget.addEventListener('click', openPrayModal);
+
+  const wordWidget = document.getElementById('widget-word');
+  if (wordWidget) wordWidget.addEventListener('click', openWordModal);
 
   const closeBtn = document.getElementById('pray-modal-close');
   const overlay = document.getElementById('pray-modal-overlay');
@@ -330,6 +521,59 @@ function initHomeWidgets() {
       renderPrayWidgetSummary();
       renderDailyGoals();
       closePrayModal();
+    });
+  }
+
+  const wordCloseBtn = document.getElementById('word-modal-close');
+  const wordOverlay = document.getElementById('word-modal-overlay');
+  const wordCancelBtn = document.getElementById('word-cancel');
+  const wordAddBtn = document.getElementById('word-add-verse');
+  const wordSaveBtn = document.getElementById('word-save');
+  const wordList = document.getElementById('word-verse-list');
+
+  if (wordCloseBtn) wordCloseBtn.addEventListener('click', closeWordModal);
+  if (wordOverlay) wordOverlay.addEventListener('click', closeWordModal);
+  if (wordCancelBtn) wordCancelBtn.addEventListener('click', closeWordModal);
+  if (wordAddBtn) wordAddBtn.addEventListener('click', () => addWordVerseEntry());
+
+  if (wordList) {
+    wordList.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.word-remove-verse');
+      if (!removeBtn) return;
+      removeBtn.closest('.word-verse-entry').remove();
+      updateWordRemoveButtons();
+    });
+  }
+
+  if (wordSaveBtn) {
+    wordSaveBtn.addEventListener('click', () => {
+      const photoInput = document.getElementById('word-photo-input');
+      const photoHint = document.getElementById('word-photo-hint');
+      const hasPhoto = !!(photoInput && photoInput.files && photoInput.files.length > 0);
+
+      if (!hasPhoto) {
+        if (photoHint) photoHint.classList.remove('hidden');
+        return;
+      }
+
+      const entries = [...document.querySelectorAll('#word-verse-list .word-verse-entry')].map((entry) => ({
+        startBook: entry.querySelector('.word-start-book').value,
+        startChapter: entry.querySelector('.word-start-chapter').value,
+        startVerse: entry.querySelector('.word-start-verse').value,
+        endBook: entry.querySelector('.word-end-book').value,
+        endChapter: entry.querySelector('.word-end-chapter').value,
+        endVerse: entry.querySelector('.word-end-verse').value
+      }));
+
+      localStorage.setItem(WORD_VERSES_STORAGE_KEY, JSON.stringify(entries));
+
+      const progress = loadProgress();
+      progress.word = true;
+      saveProgress(progress);
+
+      renderVerificationState();
+      renderWordWidgetSummary();
+      closeWordModal();
     });
   }
 }
