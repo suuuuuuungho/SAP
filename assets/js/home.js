@@ -51,13 +51,35 @@ function formatPrayerSummary(entries) {
     .join(', ');
 }
 
+function timeToMinutes(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function durationMinutes(start, end) {
+  const s = timeToMinutes(start);
+  const e = timeToMinutes(end);
+  if (s === null || e === null) return 0;
+  let diff = e - s;
+  if (diff < 0) diff += 24 * 60; // crossed midnight
+  return diff;
+}
+
 function renderPrayWidgetSummary() {
   const slot = document.querySelector('#widget-pray .widget-summary');
   if (!slot) return;
 
-  const summary = formatPrayerSummary(loadPrayerClasses());
+  const entries = loadPrayerClasses();
+  const summary = formatPrayerSummary(entries);
+
   if (summary) {
-    slot.innerHTML = `<p class="text-xs text-on-surface leading-relaxed">${summary}</p>`;
+    const totalMinutes = entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+    slot.innerHTML = `
+      <p class="text-3xl font-bold text-primary">${totalMinutes}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${summary}</p>
+    `;
   } else {
     slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
   }
@@ -65,26 +87,35 @@ function renderPrayWidgetSummary() {
 
 function wirePhotoPreview(entryEl) {
   const input = entryEl.querySelector('.pray-photo-input');
+  const wrap = entryEl.querySelector('.pray-photo-preview-wrap');
   const preview = entryEl.querySelector('.pray-photo-preview');
-  if (!input || !preview) return;
+  const removeBtn = entryEl.querySelector('.pray-photo-remove');
+  if (!input || !wrap || !preview) return;
 
-  input.addEventListener('change', () => {
+  function clearPhoto() {
     if (preview.dataset.objectUrl) {
       URL.revokeObjectURL(preview.dataset.objectUrl);
       delete preview.dataset.objectUrl;
     }
+    preview.src = '';
+    wrap.classList.add('hidden');
+    input.value = '';
+  }
 
+  input.addEventListener('change', () => {
     const file = input.files && input.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      preview.src = url;
-      preview.dataset.objectUrl = url;
-      preview.classList.remove('hidden');
-    } else {
-      preview.src = '';
-      preview.classList.add('hidden');
+    if (!file) {
+      clearPhoto();
+      return;
     }
+    if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.dataset.objectUrl = url;
+    wrap.classList.remove('hidden');
   });
+
+  if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
 }
 
 function updatePrayRemoveButtons() {
