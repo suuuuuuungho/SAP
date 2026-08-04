@@ -472,6 +472,7 @@ function renderDailyGoals() {
   const circumference = 2 * Math.PI * radius;
   ring.setAttribute('stroke-dasharray', String(circumference));
   ring.setAttribute('stroke-dashoffset', String(circumference * (1 - filledPercent / 100)));
+  ring.setAttribute('stroke', percent >= 50 ? 'url(#daily-goal-gradient-high)' : 'url(#daily-goal-gradient-low)');
 
   percentEl.textContent = `${percent}%`;
   captionEl.textContent = percent > 100 ? '목표 초과 달성' : '달성';

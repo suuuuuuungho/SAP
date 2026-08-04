@@ -31,11 +31,15 @@
       <div class="relative w-36 h-36 mx-auto">
         <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
-          <circle id="daily-goal-ring" cx="60" cy="60" r="52" fill="none" stroke-width="12" stroke-linecap="round" stroke="url(#daily-goal-gradient)"></circle>
+          <circle id="daily-goal-ring" cx="60" cy="60" r="52" fill="none" stroke-width="12" stroke-linecap="round" stroke="url(#daily-goal-gradient-low)"></circle>
           <defs>
-            <linearGradient id="daily-goal-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ff4b91"></stop>
+            <linearGradient id="daily-goal-gradient-low" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#aa3524"></stop>
               <stop offset="100%" stop-color="#ee6650"></stop>
+            </linearGradient>
+            <linearGradient id="daily-goal-gradient-high" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff4b91"></stop>
+              <stop offset="100%" stop-color="#6e4f9c"></stop>
             </linearGradient>
           </defs>
         </svg>
@@ -361,7 +365,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=17"></script>
+<script src="assets/js/home.js?v=18"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'home' });
