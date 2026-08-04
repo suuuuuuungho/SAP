@@ -1,29 +1,17 @@
 // Home page only: date-scoped daily records, Progress checkmarks, widget verification rings,
-// the Daily Goals ring, the calendar date picker, and the 기도/말씀/공부 인증 modals.
-// State is stored locally (per-browser) for now — not yet saved to Supabase.
+// the Daily Goals ring, the calendar date picker, and the 공부/예배 modals.
+// 기도/말씀은 assets/js/pray-word.js가 Supabase에 저장/조회한다 (Gallery와 공유).
+// 공부/예배는 그대로 localStorage(브라우저별)에 저장된다.
 
 const RECORDS_STORAGE_KEY = 'sap_daily_records_v1';
 const DAILY_GOAL_MINUTES = 300;
 const WORD_VERIFIED_MINUTES = 60; // 말씀 has no natural duration input, so a verified 말씀 is a flat 60분.
 
-function todayKey() {
-  return dateKey(new Date());
-}
-
-function dateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 let selectedDateKey = todayKey();
 
 function defaultRecord() {
   return {
-    progress: { pray: false, word: false, study: false, worship: false },
-    prayerClasses: [],
-    wordVerses: [],
+    progress: { study: false, worship: false },
     studySessions: [], // { source: 'record' | 'manual', seconds }
     worshipStatus: null, // 'attended' | 'absent' | 'home'
     worshipMinutes: 0
@@ -47,8 +35,6 @@ function getRecord(key) {
   const base = defaultRecord();
   return {
     progress: Object.assign({}, base.progress, stored.progress),
-    prayerClasses: stored.prayerClasses || base.prayerClasses,
-    wordVerses: stored.wordVerses || base.wordVerses,
     studySessions: stored.studySessions || base.studySessions,
     worshipStatus: typeof stored.worshipStatus === 'string' ? stored.worshipStatus : base.worshipStatus,
     worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes
@@ -61,10 +47,23 @@ function updateRecord(key, updater) {
   saveAllRecords(all);
 }
 
-function formatSelectedDateShort() {
-  if (selectedDateKey === todayKey()) return '';
-  const [, m, d] = selectedDateKey.split('-').map(Number);
-  return ` (${m}/${d})`;
+// 기도/말씀은 Supabase 기반(assets/js/pray-word.js)이라 localStorage record에 없음 —
+// 이 캐시가 selectedDateKey별 { pray, word } 인증 상태를 들고 있고, refreshPrayWordCache로 채운다.
+let prayWordStatus = {};
+
+async function refreshPrayWordCache(key) {
+  const userId = await getCurrentUserId();
+  prayWordStatus[key] = await fetchPrayWordStatus(userId, key);
+}
+
+function getPrayWordStatus(key) {
+  return prayWordStatus[key] || { pray: { entries: [], verified: false }, word: { verses: [], verified: false } };
+}
+
+// study/worship는 localStorage, pray/word는 캐시 — 인증 체크마크/셀레브레이션이 보는 통합 progress.
+function getMergedProgress(key) {
+  const pw = getPrayWordStatus(key);
+  return Object.assign({}, getRecord(key).progress, { pray: pw.pray.verified, word: pw.word.verified });
 }
 
 // 활성화된(예배는 수/금만 해당) 카테고리 4개(또는 3개)가 모두 인증됐는지 판단할 때 쓰는 목록.
@@ -77,7 +76,7 @@ function getActiveCategoriesForDate(key) {
 // Same checkmark icon everywhere — colored gradient when verified, neutral glass when not.
 // Verified widget cards also get a gradient ring matching the active nav pill color.
 function renderVerificationState() {
-  const progress = getRecord(selectedDateKey).progress;
+  const progress = getMergedProgress(selectedDateKey);
 
   document.querySelectorAll('[data-progress-icon]').forEach((el) => {
     const key = el.getAttribute('data-progress-icon');
@@ -90,29 +89,6 @@ function renderVerificationState() {
     const key = el.getAttribute('data-widget');
     el.classList.toggle('is-verified', !!progress[key]);
   });
-}
-
-function formatPrayerSummary(entries) {
-  return entries
-    .filter((entry) => entry.location)
-    .map((entry) => (entry.start && entry.end ? `${entry.location} ${entry.start}–${entry.end}` : entry.location))
-    .join(', ');
-}
-
-function timeToMinutes(hhmm) {
-  if (!hhmm) return null;
-  const [h, m] = hhmm.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return null;
-  return h * 60 + m;
-}
-
-function durationMinutes(start, end) {
-  const s = timeToMinutes(start);
-  const e = timeToMinutes(end);
-  if (s === null || e === null) return 0;
-  let diff = e - s;
-  if (diff < 0) diff += 24 * 60; // crossed midnight
-  return diff;
 }
 
 function formatMinutesSeconds(totalSeconds) {
@@ -135,7 +111,7 @@ function renderPrayWidgetSummary() {
   const slot = document.querySelector('#widget-pray .widget-summary');
   if (!slot) return;
 
-  const entries = getRecord(selectedDateKey).prayerClasses;
+  const entries = getPrayWordStatus(selectedDateKey).pray.entries;
   const summary = formatPrayerSummary(entries);
 
   if (summary) {
@@ -149,25 +125,11 @@ function renderPrayWidgetSummary() {
   }
 }
 
-function formatVerseRange(entry) {
-  if (!entry.startBook || !entry.startChapter || !entry.startVerse) return '';
-  const start = `${entry.startBook} ${entry.startChapter}:${entry.startVerse}`;
-  if (!entry.endBook || !entry.endChapter || !entry.endVerse) return start;
-  const end = entry.endBook === entry.startBook
-    ? `${entry.endChapter}:${entry.endVerse}`
-    : `${entry.endBook} ${entry.endChapter}:${entry.endVerse}`;
-  return `${start} ~ ${end}`;
-}
-
-function formatWordSummary(entries) {
-  return entries.map(formatVerseRange).filter(Boolean).join(', ');
-}
-
 function renderWordWidgetSummary() {
   const slot = document.querySelector('#widget-word .widget-summary');
   if (!slot) return;
 
-  const summary = formatWordSummary(getRecord(selectedDateKey).wordVerses);
+  const summary = formatWordSummary(getPrayWordStatus(selectedDateKey).word.verses);
   if (summary) {
     slot.innerHTML = `
       <p class="text-3xl font-bold text-primary">${WORD_VERIFIED_MINUTES}<span class="text-base font-semibold ml-0.5">분</span></p>
@@ -341,8 +303,9 @@ function renderWorshipWidgetSummary() {
 // 예배 is a flat 120분 when O/가정 was chosen (수/금만 활성화).
 function getCategoryMinutes(key) {
   const record = getRecord(selectedDateKey);
-  if (key === 'pray') return record.prayerClasses.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
-  if (key === 'word') return record.progress.word ? WORD_VERIFIED_MINUTES : 0;
+  const pw = getPrayWordStatus(selectedDateKey);
+  if (key === 'pray') return pw.pray.entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+  if (key === 'word') return pw.word.verified ? WORD_VERIFIED_MINUTES : 0;
   if (key === 'study') return Math.round((getStudySeconds(record, 'record') + getStudySeconds(record, 'manual')) / 60);
   if (key === 'worship') return record.worshipMinutes || 0;
   return 0;
@@ -427,9 +390,9 @@ function launchBigConfetti() {
 // 둘 다 개별 modal 저장이 아니라 "저장하기" 버튼을 눌러야만 확인/발사되고,
 // 조건을 만족하는 한 저장할 때마다 매번 터진다 (하루에 한 번만 터지도록 막지 않음).
 function checkAllCategoriesCelebration() {
-  const record = getRecord(selectedDateKey);
+  const progress = getMergedProgress(selectedDateKey);
   const categories = getActiveCategoriesForDate(selectedDateKey);
-  const allDone = categories.every((key) => record.progress[key]);
+  const allDone = categories.every((key) => progress[key]);
 
   if (allDone) launchSmallConfetti();
 }
@@ -568,8 +531,9 @@ function renderAllForSelectedDate() {
   renderMonthlyCalendar();
 }
 
-function selectDate(key) {
+async function selectDate(key) {
   selectedDateKey = key;
+  await refreshPrayWordCache(key);
   renderAllForSelectedDate();
 }
 
@@ -617,292 +581,6 @@ function wireCalendarTabs() {
     }
     if (weeklyView) weeklyView.classList.add('hidden');
   });
-}
-
-const PRAY_PLACEHOLDER_IMAGE = 'assets/img/pray-placeholder.svg';
-
-function wirePhotoPreview(entryEl) {
-  const input = entryEl.querySelector('.pray-photo-input');
-  const wrap = entryEl.querySelector('.pray-photo-preview-wrap');
-  const preview = entryEl.querySelector('.pray-photo-preview');
-  const removeBtn = entryEl.querySelector('.pray-photo-remove');
-  const unavailableInput = entryEl.querySelector('.pray-photo-unavailable-input');
-  if (!input || !wrap || !preview) return;
-
-  function clearPhoto() {
-    if (preview.dataset.objectUrl) {
-      URL.revokeObjectURL(preview.dataset.objectUrl);
-      delete preview.dataset.objectUrl;
-    }
-    preview.src = '';
-    wrap.classList.add('hidden');
-    input.value = '';
-  }
-
-  input.addEventListener('change', () => {
-    const file = input.files && input.files[0];
-    if (!file) {
-      clearPhoto();
-      return;
-    }
-    if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.dataset.objectUrl = url;
-    wrap.classList.remove('hidden');
-  });
-
-  if (removeBtn) {
-    removeBtn.addEventListener('click', () => {
-      clearPhoto();
-      if (unavailableInput && unavailableInput.checked) {
-        unavailableInput.checked = false;
-      }
-    });
-  }
-
-  if (unavailableInput) {
-    unavailableInput.addEventListener('change', () => {
-      if (unavailableInput.checked) {
-        clearPhoto();
-        input.disabled = true;
-        preview.src = PRAY_PLACEHOLDER_IMAGE;
-        wrap.classList.remove('hidden');
-      } else {
-        input.disabled = false;
-        clearPhoto();
-      }
-    });
-  }
-}
-
-function updatePrayRemoveButtons() {
-  const entries = document.querySelectorAll('#pray-class-list .pray-class-entry');
-  entries.forEach((entry) => {
-    const removeBtn = entry.querySelector('.pray-remove-class');
-    if (removeBtn) removeBtn.classList.toggle('hidden', entries.length <= 1);
-  });
-}
-
-// 저장된 기록을 열었을 때 "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 정확히 보여주는 캡션.
-function updatePrayEntryDateTimeLabel(entryEl) {
-  const label = entryEl.querySelector('.pray-entry-datetime');
-  if (!label) return;
-  const start = entryEl.querySelector('.pray-start-input').value;
-  const end = entryEl.querySelector('.pray-end-input').value;
-  const [y, m, d] = selectedDateKey.split('-');
-  const datePrefix = `${y}.${m}.${d}`;
-  label.textContent = start && end
-    ? `${datePrefix} ${start} ~ ${datePrefix} ${end}`
-    : '';
-}
-
-const PRAY_FIXED_LOCATIONS = ['대성전', '요한성전', '중등부기도', '가정'];
-
-function addPrayClassEntry(data) {
-  const template = document.getElementById('pray-class-template');
-  const list = document.getElementById('pray-class-list');
-  if (!template || !list) return;
-
-  list.appendChild(template.content.cloneNode(true));
-  const entryEl = list.lastElementChild;
-  wirePhotoPreview(entryEl);
-
-  const locationSelect = entryEl.querySelector('.pray-location-input');
-  const locationOtherInput = entryEl.querySelector('.pray-location-other-input');
-  locationSelect.addEventListener('change', () => {
-    locationOtherInput.classList.toggle('hidden', locationSelect.value !== '기타');
-  });
-
-  if (data) {
-    if (data.location) {
-      if (PRAY_FIXED_LOCATIONS.includes(data.location)) {
-        locationSelect.value = data.location;
-      } else {
-        locationSelect.value = '기타';
-        locationOtherInput.value = data.location;
-        locationOtherInput.classList.remove('hidden');
-      }
-    }
-    if (data.start) entryEl.querySelector('.pray-start-input').value = data.start;
-    if (data.end) entryEl.querySelector('.pray-end-input').value = data.end;
-    if (data.photoUnavailable) {
-      const unavailableInput = entryEl.querySelector('.pray-photo-unavailable-input');
-      if (unavailableInput) {
-        unavailableInput.checked = true;
-        unavailableInput.dispatchEvent(new Event('change'));
-      }
-    }
-  }
-
-  updatePrayEntryDateTimeLabel(entryEl);
-  entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
-  entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
-
-  updatePrayRemoveButtons();
-}
-
-function resetPrayerRecord() {
-  if (!confirm('기도 기록을 전체 초기화할까요?')) return;
-  updateRecord(selectedDateKey, (record) => {
-    record.prayerClasses = [];
-    record.progress.pray = false;
-    return record;
-  });
-  renderVerificationState();
-  renderPrayWidgetSummary();
-  renderDailyGoals();
-  closePrayModal();
-}
-
-// Re-opening loads the selected date's previously saved classes so they can be edited.
-// (사진은 브라우저에만 임시로 있던 미리보기라 저장되지 않으므로 다시 열면 비어 있습니다.)
-function openPrayModal() {
-  const modal = document.getElementById('pray-modal');
-  const list = document.getElementById('pray-class-list');
-  if (!modal || !list) return;
-  list.innerHTML = '';
-
-  const titleEl = modal.querySelector('h2');
-  if (titleEl) titleEl.textContent = `기도 인증${formatSelectedDateShort()}`;
-
-  const existing = getRecord(selectedDateKey).prayerClasses;
-  if (existing.length > 0) {
-    existing.forEach((entry) => addPrayClassEntry(entry));
-  } else {
-    addPrayClassEntry();
-  }
-
-  const hint = document.getElementById('pray-class-hint');
-  if (hint) hint.classList.add('hidden');
-
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-}
-
-function closePrayModal() {
-  const modal = document.getElementById('pray-modal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  modal.classList.remove('flex');
-}
-
-// 말씀 modal: one shared required photo (not per-entry, unlike 기도) + repeatable verse ranges.
-function wireWordPhotoPreview() {
-  const input = document.getElementById('word-photo-input');
-  const wrap = document.getElementById('word-photo-preview-wrap');
-  const preview = document.getElementById('word-photo-preview');
-  const removeBtn = document.getElementById('word-photo-remove');
-  const hint = document.getElementById('word-photo-hint');
-  if (!input || !wrap || !preview) return;
-
-  function clearPhoto() {
-    if (preview.dataset.objectUrl) {
-      URL.revokeObjectURL(preview.dataset.objectUrl);
-      delete preview.dataset.objectUrl;
-    }
-    preview.src = '';
-    wrap.classList.add('hidden');
-    input.value = '';
-  }
-
-  input.addEventListener('change', () => {
-    if (hint) hint.classList.add('hidden');
-    const file = input.files && input.files[0];
-    if (!file) {
-      clearPhoto();
-      return;
-    }
-    if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    preview.dataset.objectUrl = url;
-    wrap.classList.remove('hidden');
-  });
-
-  if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
-}
-
-function updateWordRemoveButtons() {
-  const entries = document.querySelectorAll('#word-verse-list .word-verse-entry');
-  entries.forEach((entry) => {
-    const removeBtn = entry.querySelector('.word-remove-verse');
-    if (removeBtn) removeBtn.classList.toggle('hidden', entries.length <= 1);
-  });
-}
-
-function addWordVerseEntry(data) {
-  const template = document.getElementById('word-verse-template');
-  const list = document.getElementById('word-verse-list');
-  if (!template || !list) return;
-
-  list.appendChild(template.content.cloneNode(true));
-  const entryEl = list.lastElementChild;
-
-  renderBibleBookOptions(entryEl.querySelector('.word-start-book'));
-  renderBibleBookOptions(entryEl.querySelector('.word-end-book'));
-
-  if (data) {
-    if (data.startBook) entryEl.querySelector('.word-start-book').value = data.startBook;
-    if (data.startChapter) entryEl.querySelector('.word-start-chapter').value = data.startChapter;
-    if (data.startVerse) entryEl.querySelector('.word-start-verse').value = data.startVerse;
-    if (data.endBook) entryEl.querySelector('.word-end-book').value = data.endBook;
-    if (data.endChapter) entryEl.querySelector('.word-end-chapter').value = data.endChapter;
-    if (data.endVerse) entryEl.querySelector('.word-end-verse').value = data.endVerse;
-  }
-
-  updateWordRemoveButtons();
-}
-
-// Re-opening loads the selected date's saved verse ranges for editing. The required photo can't
-// be restored (only an in-memory preview URL was ever kept), so it must be re-attached to save again.
-function openWordModal() {
-  const modal = document.getElementById('word-modal');
-  const list = document.getElementById('word-verse-list');
-  if (!modal || !list) return;
-  list.innerHTML = '';
-
-  const titleEl = modal.querySelector('h2');
-  if (titleEl) titleEl.textContent = `말씀 인증${formatSelectedDateShort()}`;
-
-  const existing = getRecord(selectedDateKey).wordVerses;
-  if (existing.length > 0) {
-    existing.forEach((entry) => addWordVerseEntry(entry));
-  } else {
-    addWordVerseEntry();
-  }
-
-  const photoInput = document.getElementById('word-photo-input');
-  const photoWrap = document.getElementById('word-photo-preview-wrap');
-  const photoHint = document.getElementById('word-photo-hint');
-  const verseHint = document.getElementById('word-verse-hint');
-  if (photoInput) photoInput.value = '';
-  if (photoWrap) photoWrap.classList.add('hidden');
-  if (photoHint) photoHint.classList.add('hidden');
-  if (verseHint) verseHint.classList.add('hidden');
-
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-}
-
-function closeWordModal() {
-  const modal = document.getElementById('word-modal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  modal.classList.remove('flex');
-}
-
-function resetWordRecord() {
-  if (!confirm('말씀 기록을 전체 초기화할까요?')) return;
-  updateRecord(selectedDateKey, (record) => {
-    record.wordVerses = [];
-    record.progress.word = false;
-    return record;
-  });
-  renderVerificationState();
-  renderWordWidgetSummary();
-  renderDailyGoals();
-  closeWordModal();
 }
 
 // --- 공부: Record 타이머 (포그라운드 전용, Pause/On/Off) + 수동 분 입력 ---
@@ -1085,146 +763,29 @@ function showSaveToast() {
   setTimeout(() => toast.remove(), 2000);
 }
 
-function initHomeWidgets() {
-  renderAllForSelectedDate();
+// 기도/말씀 저장·초기화 이후 Home 쪽에서 다시 그려줘야 하는 것들 (pray-word.js가 호출).
+async function onPrayWordSaved() {
+  await refreshPrayWordCache(selectedDateKey);
+  renderVerificationState();
+  renderPrayWidgetSummary();
+  renderWordWidgetSummary();
+  renderDailyGoals();
+}
+
+async function initHomeWidgets() {
   wireCalendarTabs();
   wireCalendarSelection();
-  wireWordPhotoPreview();
+  wirePrayModalStatic();
+  wireWordModalStatic();
 
   const dateResetBtn = document.getElementById('selected-date-reset');
   if (dateResetBtn) dateResetBtn.addEventListener('click', () => selectDate(todayKey()));
 
   const prayWidget = document.getElementById('widget-pray');
-  if (prayWidget) prayWidget.addEventListener('click', openPrayModal);
+  if (prayWidget) prayWidget.addEventListener('click', () => openPrayModal(selectedDateKey, onPrayWordSaved));
 
   const wordWidget = document.getElementById('widget-word');
-  if (wordWidget) wordWidget.addEventListener('click', openWordModal);
-
-  const closeBtn = document.getElementById('pray-modal-close');
-  const overlay = document.getElementById('pray-modal-overlay');
-  const cancelBtn = document.getElementById('pray-cancel');
-  const addBtn = document.getElementById('pray-add-class');
-  const saveBtn = document.getElementById('pray-save');
-  const resetBtn = document.getElementById('pray-reset');
-  const list = document.getElementById('pray-class-list');
-
-  if (closeBtn) closeBtn.addEventListener('click', closePrayModal);
-  if (overlay) overlay.addEventListener('click', closePrayModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closePrayModal);
-  if (addBtn) addBtn.addEventListener('click', () => addPrayClassEntry());
-  if (resetBtn) resetBtn.addEventListener('click', resetPrayerRecord);
-
-  if (list) {
-    list.addEventListener('click', (e) => {
-      const removeBtn = e.target.closest('.pray-remove-class');
-      if (!removeBtn) return;
-      removeBtn.closest('.pray-class-entry').remove();
-      updatePrayRemoveButtons();
-    });
-  }
-
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      const entryEls = [...document.querySelectorAll('#pray-class-list .pray-class-entry')];
-      const entries = entryEls.map((entry) => {
-        const locationSelect = entry.querySelector('.pray-location-input');
-        const location = locationSelect.value === '기타'
-          ? entry.querySelector('.pray-location-other-input').value.trim()
-          : locationSelect.value;
-        const photoUnavailable = entry.querySelector('.pray-photo-unavailable-input').checked;
-        return {
-          hasPhoto: photoUnavailable || entry.querySelector('.pray-photo-input').files.length > 0,
-          photoUnavailable,
-          location,
-          start: entry.querySelector('.pray-start-input').value,
-          end: entry.querySelector('.pray-end-input').value
-        };
-      });
-
-      const prayClassHint = document.getElementById('pray-class-hint');
-      const hasIncompleteEntry = entries.some((entry) => !entry.hasPhoto || !entry.location || !entry.start || !entry.end);
-      if (hasIncompleteEntry) {
-        if (prayClassHint) prayClassHint.classList.remove('hidden');
-        return;
-      }
-      if (prayClassHint) prayClassHint.classList.add('hidden');
-
-      updateRecord(selectedDateKey, (record) => {
-        record.prayerClasses = entries.map(({ location, start, end, photoUnavailable }) => ({ location, start, end, photoUnavailable }));
-        record.progress.pray = true;
-        return record;
-      });
-
-      renderVerificationState();
-      renderPrayWidgetSummary();
-      renderDailyGoals();
-      closePrayModal();
-    });
-  }
-
-  const wordCloseBtn = document.getElementById('word-modal-close');
-  const wordOverlay = document.getElementById('word-modal-overlay');
-  const wordCancelBtn = document.getElementById('word-cancel');
-  const wordAddBtn = document.getElementById('word-add-verse');
-  const wordSaveBtn = document.getElementById('word-save');
-  const wordResetBtn = document.getElementById('word-reset');
-  const wordList = document.getElementById('word-verse-list');
-
-  if (wordCloseBtn) wordCloseBtn.addEventListener('click', closeWordModal);
-  if (wordOverlay) wordOverlay.addEventListener('click', closeWordModal);
-  if (wordCancelBtn) wordCancelBtn.addEventListener('click', closeWordModal);
-  if (wordAddBtn) wordAddBtn.addEventListener('click', () => addWordVerseEntry());
-  if (wordResetBtn) wordResetBtn.addEventListener('click', resetWordRecord);
-
-  if (wordList) {
-    wordList.addEventListener('click', (e) => {
-      const removeBtn = e.target.closest('.word-remove-verse');
-      if (!removeBtn) return;
-      removeBtn.closest('.word-verse-entry').remove();
-      updateWordRemoveButtons();
-    });
-  }
-
-  if (wordSaveBtn) {
-    wordSaveBtn.addEventListener('click', () => {
-      const photoInput = document.getElementById('word-photo-input');
-      const photoHint = document.getElementById('word-photo-hint');
-      const hasPhoto = !!(photoInput && photoInput.files && photoInput.files.length > 0);
-
-      if (!hasPhoto) {
-        if (photoHint) photoHint.classList.remove('hidden');
-        return;
-      }
-
-      const wordVerseHint = document.getElementById('word-verse-hint');
-      const entries = [...document.querySelectorAll('#word-verse-list .word-verse-entry')].map((entry) => ({
-        startBook: entry.querySelector('.word-start-book').value,
-        startChapter: entry.querySelector('.word-start-chapter').value,
-        startVerse: entry.querySelector('.word-start-verse').value,
-        endBook: entry.querySelector('.word-end-book').value,
-        endChapter: entry.querySelector('.word-end-chapter').value,
-        endVerse: entry.querySelector('.word-end-verse').value
-      }));
-
-      const hasIncompleteEntry = entries.some((entry) => Object.values(entry).some((value) => !value));
-      if (hasIncompleteEntry) {
-        if (wordVerseHint) wordVerseHint.classList.remove('hidden');
-        return;
-      }
-      if (wordVerseHint) wordVerseHint.classList.add('hidden');
-
-      updateRecord(selectedDateKey, (record) => {
-        record.wordVerses = entries;
-        record.progress.word = true;
-        return record;
-      });
-
-      renderVerificationState();
-      renderWordWidgetSummary();
-      renderDailyGoals();
-      closeWordModal();
-    });
-  }
+  if (wordWidget) wordWidget.addEventListener('click', () => openWordModal(selectedDateKey, onPrayWordSaved));
 
   const studyWidget = document.getElementById('widget-study');
   if (studyWidget) studyWidget.addEventListener('click', openStudyHistoryModal);
@@ -1325,6 +886,10 @@ function initHomeWidgets() {
       checkGoalCelebration();
     });
   }
+
+  // 버튼 wiring은 전부 즉시 끝내고, 기도/말씀 최초 데이터만 비동기로 불러온 뒤 첫 렌더를 한다.
+  await refreshPrayWordCache(selectedDateKey);
+  renderAllForSelectedDate();
 }
 
 window.initHomeWidgets = initHomeWidgets;
