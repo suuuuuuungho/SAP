@@ -157,6 +157,7 @@
       </div>
 
       <div id="pray-class-list" class="flex flex-col gap-4"></div>
+      <p id="pray-class-hint" class="text-xs text-error mt-2 hidden">사진 첨부, 기도 장소, 시작/종료 시간을 모두 입력해주세요.</p>
 
       <button id="pray-add-class" type="button" aria-label="클래스 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
         <i class="fa-solid fa-plus"></i>
@@ -178,7 +179,7 @@
       </button>
       <div class="flex flex-col gap-3 pr-8">
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">사진 첨부</label>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">사진 첨부 <span class="text-error">*</span></label>
           <input type="file" accept="image/*" class="pray-photo-input w-full text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-on-surface">
           <div class="pray-photo-preview-wrap hidden relative mt-2">
             <img class="pray-photo-preview w-full max-h-40 object-cover rounded-xl" alt="첨부한 사진 미리보기">
@@ -188,21 +189,23 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">기도 장소</label>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">기도 장소 <span class="text-error">*</span></label>
           <select class="pray-location-input glass-input w-full px-3 py-2 rounded-xl text-sm">
             <option value="대성전">대성전</option>
             <option value="요한성전">요한성전</option>
             <option value="중등부기도">중등부기도</option>
             <option value="가정">가정</option>
+            <option value="기타">기타</option>
           </select>
+          <input type="text" placeholder="기도 장소를 입력해주세요" class="pray-location-other-input hidden glass-input w-full px-3 py-2 rounded-xl text-sm mt-2">
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 시간</label>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 시간 <span class="text-error">*</span></label>
             <input type="time" class="pray-start-input glass-input w-full px-3 py-2 rounded-xl text-sm">
           </div>
           <div>
-            <label class="block text-xs font-medium text-on-surface-variant mb-1">종료 시간</label>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1">종료 시간 <span class="text-error">*</span></label>
             <input type="time" class="pray-end-input glass-input w-full px-3 py-2 rounded-xl text-sm">
           </div>
         </div>
@@ -365,7 +368,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=20"></script>
+<script src="assets/js/home.js?v=21"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'home' });

@@ -26,9 +26,7 @@ function defaultRecord() {
     wordVerses: [],
     studySessions: [], // { source: 'record' | 'manual', seconds }
     worshipStatus: null, // 'attended' | 'absent' | 'home'
-    worshipMinutes: 0,
-    goalCelebrated: false,
-    allDoneCelebrated: false
+    worshipMinutes: 0
   };
 }
 
@@ -53,9 +51,7 @@ function getRecord(key) {
     wordVerses: stored.wordVerses || base.wordVerses,
     studySessions: stored.studySessions || base.studySessions,
     worshipStatus: typeof stored.worshipStatus === 'string' ? stored.worshipStatus : base.worshipStatus,
-    worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes,
-    goalCelebrated: typeof stored.goalCelebrated === 'boolean' ? stored.goalCelebrated : base.goalCelebrated,
-    allDoneCelebrated: typeof stored.allDoneCelebrated === 'boolean' ? stored.allDoneCelebrated : base.allDoneCelebrated
+    worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes
   };
 }
 
@@ -265,6 +261,9 @@ function renderStudyHistoryModal() {
 }
 
 function removeStudySession(index) {
+  const target = getRecord(selectedDateKey).studySessions[index];
+  if (target && target.source === 'record' && !confirm('Record로 기록한 시간을 삭제할까요?')) return;
+
   updateRecord(selectedDateKey, (record) => {
     record.studySessions = record.studySessions.filter((_, i) => i !== index);
     record.progress.study = record.studySessions.length > 0;
@@ -428,33 +427,23 @@ function launchBigConfetti() {
   setTimeout(() => launchConfettiBurst(BIG_CONFETTI_ORIGINS[2]), 360);
 }
 
-// 인증하기의 활성 카테고리(예배는 수/금만)가 모두 완료된 첫 순간에 작은 confetti.
+// 인증하기의 활성 카테고리(예배는 수/금만)가 모두 완료되어 있으면 작은 confetti.
 // 300분 목표 달성(checkGoalCelebration)의 큰 confetti와 차등을 둠.
-// 둘 다 개별 modal 저장이 아니라 "저장하기" 버튼을 눌러야만 확인/발사된다.
+// 둘 다 개별 modal 저장이 아니라 "저장하기" 버튼을 눌러야만 확인/발사되고,
+// 조건을 만족하는 한 저장할 때마다 매번 터진다 (하루에 한 번만 터지도록 막지 않음).
 function checkAllCategoriesCelebration() {
   const record = getRecord(selectedDateKey);
   const categories = getActiveCategoriesForDate(selectedDateKey);
   const allDone = categories.every((key) => record.progress[key]);
 
-  if (allDone && !record.allDoneCelebrated) {
-    launchSmallConfetti();
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { allDoneCelebrated: true }));
-  } else if (!allDone && record.allDoneCelebrated) {
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { allDoneCelebrated: false }));
-  }
+  if (allDone) launchSmallConfetti();
 }
 
 function checkGoalCelebration() {
-  const record = getRecord(selectedDateKey);
   const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
   const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
 
-  if (percent >= 100 && !record.goalCelebrated) {
-    launchBigConfetti();
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: true }));
-  } else if (percent < 100 && record.goalCelebrated) {
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: false }));
-  }
+  if (percent >= 100) launchBigConfetti();
 }
 
 function renderDailyGoals() {
@@ -687,6 +676,8 @@ function updatePrayEntryDateTimeLabel(entryEl) {
     : '';
 }
 
+const PRAY_FIXED_LOCATIONS = ['대성전', '요한성전', '중등부기도', '가정'];
+
 function addPrayClassEntry(data) {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
@@ -696,8 +687,22 @@ function addPrayClassEntry(data) {
   const entryEl = list.lastElementChild;
   wirePhotoPreview(entryEl);
 
+  const locationSelect = entryEl.querySelector('.pray-location-input');
+  const locationOtherInput = entryEl.querySelector('.pray-location-other-input');
+  locationSelect.addEventListener('change', () => {
+    locationOtherInput.classList.toggle('hidden', locationSelect.value !== '기타');
+  });
+
   if (data) {
-    if (data.location) entryEl.querySelector('.pray-location-input').value = data.location;
+    if (data.location) {
+      if (PRAY_FIXED_LOCATIONS.includes(data.location)) {
+        locationSelect.value = data.location;
+      } else {
+        locationSelect.value = '기타';
+        locationOtherInput.value = data.location;
+        locationOtherInput.classList.remove('hidden');
+      }
+    }
     if (data.start) entryEl.querySelector('.pray-start-input').value = data.start;
     if (data.end) entryEl.querySelector('.pray-end-input').value = data.end;
   }
@@ -739,6 +744,9 @@ function openPrayModal() {
   } else {
     addPrayClassEntry();
   }
+
+  const hint = document.getElementById('pray-class-hint');
+  if (hint) hint.classList.add('hidden');
 
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -1047,14 +1055,30 @@ function initHomeWidgets() {
 
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      const entries = [...document.querySelectorAll('#pray-class-list .pray-class-entry')].map((entry) => ({
-        location: entry.querySelector('.pray-location-input').value,
-        start: entry.querySelector('.pray-start-input').value,
-        end: entry.querySelector('.pray-end-input').value
-      }));
+      const entryEls = [...document.querySelectorAll('#pray-class-list .pray-class-entry')];
+      const entries = entryEls.map((entry) => {
+        const locationSelect = entry.querySelector('.pray-location-input');
+        const location = locationSelect.value === '기타'
+          ? entry.querySelector('.pray-location-other-input').value.trim()
+          : locationSelect.value;
+        return {
+          hasPhoto: entry.querySelector('.pray-photo-input').files.length > 0,
+          location,
+          start: entry.querySelector('.pray-start-input').value,
+          end: entry.querySelector('.pray-end-input').value
+        };
+      });
+
+      const prayClassHint = document.getElementById('pray-class-hint');
+      const hasIncompleteEntry = entries.some((entry) => !entry.hasPhoto || !entry.location || !entry.start || !entry.end);
+      if (hasIncompleteEntry) {
+        if (prayClassHint) prayClassHint.classList.remove('hidden');
+        return;
+      }
+      if (prayClassHint) prayClassHint.classList.add('hidden');
 
       updateRecord(selectedDateKey, (record) => {
-        record.prayerClasses = entries;
+        record.prayerClasses = entries.map(({ location, start, end }) => ({ location, start, end }));
         record.progress.pray = true;
         return record;
       });
