@@ -177,3 +177,19 @@ body {
     opacity: 0.85;
   }
 }
+
+/* 300분 목표 달성: 코너에서 터지는 confetti (bottom-left / bottom-right / top) */
+.confetti-burst-piece {
+  position: absolute;
+  border-radius: 2px;
+}
+@keyframes confetti-burst {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, 0px), var(--ty, 0px)) rotate(var(--rot, 720deg));
+    opacity: 0;
+  }
+}

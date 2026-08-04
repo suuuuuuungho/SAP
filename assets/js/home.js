@@ -132,9 +132,11 @@ function formatMinutesSeconds(totalSeconds) {
 
 function formatFullTimestamp(ms) {
   const d = new Date(ms);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${hh}:${mm}`;
+  return `${d.getFullYear()}.${m}.${day} ${hh}:${mm}`;
 }
 
 function renderPrayWidgetSummary() {
@@ -235,7 +237,7 @@ function renderStudyHistoryModal() {
   const rowHTML = (entry, i) => {
     const hasTimestamps = entry.source === 'record' && entry.startedAt && entry.endedAt;
     const timestampCaption = hasTimestamps
-      ? `<p class="study-session-timestamp hidden text-[11px] text-on-surface-variant mt-2 pt-2 border-t border-outline-variant">${formatFullTimestamp(entry.startedAt)} 부터 ${formatFullTimestamp(entry.endedAt)} 까지</p>`
+      ? `<p class="study-session-timestamp hidden text-[11px] text-on-surface-variant mt-2 pt-2 border-t border-outline-variant">${formatFullTimestamp(entry.startedAt)} ~ ${formatFullTimestamp(entry.endedAt)}</p>`
       : '';
     return `
     <div class="glass-card rounded-xl px-4 py-2.5 text-sm ${hasTimestamps ? 'study-session-row cursor-pointer' : ''}" data-index="${entry.index}">
@@ -351,47 +353,78 @@ function getCategoryMinutes(key) {
   return 0;
 }
 
-// Dependency-free confetti burst. `big` (300분 목표 달성) is a grander effect — more pieces, a
-// richer/more varied palette, larger drift — than the small one (모든 카테고리 인증 완료).
+// 작은 confetti (모든 카테고리 인증 완료): 화면 위에서 랜덤하게 떨어지는 기존 방식.
 const SMALL_CONFETTI_COLORS = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
-const BIG_CONFETTI_COLORS = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c', '#ffd23f', '#4ecdc4', '#ff9f1c', '#2ec4b6', '#f72585', '#7bdff2'];
 
-function launchConfetti({ big = false } = {}) {
-  const colors = big ? BIG_CONFETTI_COLORS : SMALL_CONFETTI_COLORS;
-  const pieceCount = big ? 150 : 45;
+function launchSmallConfetti() {
   const container = document.createElement('div');
   container.className = 'confetti-container';
 
-  for (let i = 0; i < pieceCount; i += 1) {
+  for (let i = 0; i < 45; i += 1) {
     const piece = document.createElement('div');
-    const size = (big ? 8 : 5) + Math.random() * (big ? 8 : 4);
-    const duration = (big ? 2.8 : 1.6) + Math.random() * (big ? 1.8 : 0.7);
+    const size = 5 + Math.random() * 4;
+    const duration = 1.6 + Math.random() * 0.7;
 
     piece.className = 'confetti-piece';
     piece.style.left = `${Math.random() * 100}vw`;
     piece.style.width = `${size}px`;
     piece.style.height = `${size * 0.4}px`;
-    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.background = SMALL_CONFETTI_COLORS[Math.floor(Math.random() * SMALL_CONFETTI_COLORS.length)];
     piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * (big ? 260 : 140)}px`);
+    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * 140}px`);
     piece.style.animation = `confetti-fall ${duration}s ease-in ${Math.random() * 0.4}s forwards`;
 
     container.appendChild(piece);
   }
 
   document.body.appendChild(container);
-  setTimeout(() => container.remove(), big ? 5000 : 2500);
+  setTimeout(() => container.remove(), 2500);
 }
 
-function launchSmallConfetti() {
-  launchConfetti({ big: false });
+// 큰 confetti (300분 목표 달성): 코너에서 터지는 3연발. 좌하단 -> 우하단 -> 상단 순서로 빠르게.
+const BIG_CONFETTI_COLORS = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c', '#ffd23f', '#4ecdc4', '#ff9f1c', '#2ec4b6', '#f72585', '#7bdff2'];
+
+const BIG_CONFETTI_ORIGINS = [
+  { left: '0', bottom: '0', txRange: [15, 45], tyRange: [-70, -30] }, // 좌측 하단 -> 우상 방향으로 발사
+  { right: '0', bottom: '0', txRange: [-45, -15], tyRange: [-70, -30] }, // 우측 하단 -> 좌상 방향으로 발사
+  { left: '50%', top: '0', txRange: [-40, 40], tyRange: [30, 70] } // 상단 -> 아래로 퍼지며 발사
+];
+
+function launchConfettiBurst(origin) {
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+
+  for (let i = 0; i < 90; i += 1) {
+    const piece = document.createElement('div');
+    const size = 6 + Math.random() * 8;
+    const duration = 1.1 + Math.random() * 0.6;
+    const tx = origin.txRange[0] + Math.random() * (origin.txRange[1] - origin.txRange[0]);
+    const ty = origin.tyRange[0] + Math.random() * (origin.tyRange[1] - origin.tyRange[0]);
+
+    piece.className = 'confetti-burst-piece';
+    if (origin.left) piece.style.left = origin.left;
+    if (origin.right) piece.style.right = origin.right;
+    if (origin.top) piece.style.top = origin.top;
+    if (origin.bottom) piece.style.bottom = origin.bottom;
+    piece.style.width = `${size}px`;
+    piece.style.height = `${size * 0.4}px`;
+    piece.style.background = BIG_CONFETTI_COLORS[Math.floor(Math.random() * BIG_CONFETTI_COLORS.length)];
+    piece.style.setProperty('--tx', `${tx}vw`);
+    piece.style.setProperty('--ty', `${ty}vh`);
+    piece.style.setProperty('--rot', `${360 + Math.random() * 360}deg`);
+    piece.style.animation = `confetti-burst ${duration}s cubic-bezier(0.2, 0.8, 0.3, 1) ${Math.random() * 0.1}s forwards`;
+
+    container.appendChild(piece);
+  }
+
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 2200);
 }
 
-// 3연속 발사로 300분 달성을 더 크게 축하한다.
 function launchBigConfetti() {
-  launchConfetti({ big: true });
-  setTimeout(() => launchConfetti({ big: true }), 250);
-  setTimeout(() => launchConfetti({ big: true }), 500);
+  launchConfettiBurst(BIG_CONFETTI_ORIGINS[0]);
+  setTimeout(() => launchConfettiBurst(BIG_CONFETTI_ORIGINS[1]), 180);
+  setTimeout(() => launchConfettiBurst(BIG_CONFETTI_ORIGINS[2]), 360);
 }
 
 // 인증하기의 활성 카테고리(예배는 수/금만)가 모두 완료된 첫 순간에 작은 confetti.
