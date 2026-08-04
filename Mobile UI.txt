@@ -1,0 +1,276 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Dashboard - Mobile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Pretendard', 'ui-sans-serif', 'system-ui', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'],
+        }
+      }
+    }
+  }
+</script>
+<style data-purpose="custom-utilities">
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Hide scrollbar for horizontal scroll areas but keep functionality */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Custom gradient for get started banner */
+    .bg-gradient-started {
+      background: linear-gradient(135deg, rgba(245,243,255,1) 0%, rgba(253,244,255,1) 50%, rgba(236,253,245,1) 100%);
+    }
+  </style>
+</head>
+<body class="text-gray-900 bg-white min-h-screen flex flex-col font-sans">
+<!-- BEGIN: MobileHeader -->
+<header class="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 z-30 flex items-center justify-between px-4" data-purpose="mobile-top-nav">
+<div class="flex items-center gap-3">
+<button aria-label="Open menu" class="p-1 -ml-1 text-gray-600 hover:text-gray-900 focus:outline-none rounded-md" id="menu-toggle">
+<svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+</button>
+<div class="text-sm flex items-center gap-1 font-bold">SAP 1기 <svg class="text-gray-400" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+</div>
+<!-- Placeholder for right side action if needed, keeping empty for clean look -->
+<div></div>
+</header>
+<!-- END: MobileHeader -->
+<!-- BEGIN: OffCanvasSidebar -->
+<!-- Overlay -->
+<div class="fixed inset-0 bg-black/40 z-40 hidden opacity-0 transition-opacity duration-300" data-purpose="sidebar-overlay" id="sidebar-overlay"></div>
+<!-- Sidebar Menu -->
+<aside class="fixed inset-y-0 left-0 w-[280px] bg-[#f9f9f9] z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col h-full border-r border-gray-200" data-purpose="sidebar-navigation" id="sidebar-menu">
+<div class="p-4 flex justify-end">
+<button class="p-2 text-gray-500 hover:bg-gray-200 rounded-md" id="menu-close">
+<svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><line x1="18" x2="6" y1="6" y2="18"></line><line x1="6" x2="18" y1="6" y2="18"></line></svg>
+</button>
+</div>
+<nav class="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+<!-- Main Nav Items -->
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium bg-gray-200/50 rounded-lg text-gray-900" href="#">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Home
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors" href="#">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+        Study
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors" href="#">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        Gallery
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors" href="#">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg>
+        Stat
+      </a>
+</nav>
+<!-- Bottom Actions -->
+<div class="p-4 border-t border-gray-200 space-y-4">
+
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-medium">P</div>
+<div>
+<p class="text-sm font-medium text-gray-900 leading-tight">Personal</p>
+<p class="text-xs text-gray-500">Organization</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: OffCanvasSidebar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 mt-14 p-4 lg:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+<h1 class="text-3xl font-bold text-gray-900 tracking-tight">Home</h1>
+<!-- Time Filter Pill -->
+
+</div>
+<!-- Get Started Section -->
+<section aria-labelledby="get-started-title" class="mb-8">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-lg font-semibold text-gray-900" id="get-started-title">Section 1</h2>
+<button class="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-700">
+<svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><line x1="18" x2="6" y1="6" y2="18"></line><line x1="6" x2="18" y1="6" y2="18"></line></svg>
+          Dismiss
+        </button>
+</div>
+<div class="bg-gradient-started rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm relative overflow-hidden flex flex-col lg:flex-row gap-6">
+<!-- Steps List -->
+<div class="flex-1 space-y-4 relative z-10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+<svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg>
+</div>
+<span class="text-sm font-medium text-gray-800">1. Add credits</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-600 flex items-center justify-center shrink-0 shadow-sm">
+<svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+</div>
+<span class="text-sm font-medium text-gray-800">2. Create an API key</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-600 flex items-center justify-center shrink-0 shadow-sm">
+<svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" x2="12" y1="22.08" y2="12"></line></svg>
+</div>
+<span class="text-sm font-medium text-gray-800">3. Test models</span>
+</div>
+</div>
+<!-- Quickstart Cards Container (Horizontal scroll on very small screens, grid otherwise) -->
+
+</div>
+</section>
+<!-- Metrics Grid -->
+<section aria-label="Section 2" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+<!-- Total Tokens -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[140px]">
+<h3 class="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 cursor-pointer w-fit">
+          Total tokens <svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6"></path></svg>
+</h3>
+<p class="text-2xl font-semibold text-gray-900 mt-1 mb-auto">0</p>
+<div class="w-full pt-4">
+<!-- Simplified line chart representation -->
+<div class="h-[2px] bg-red-400 w-full relative rounded-full">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-red-500 bg-white shadow-sm"></div>
+</div>
+</div>
+</article>
+<!-- Chat Completions -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[140px]">
+<h3 class="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 cursor-pointer w-fit">
+          Responses and Chat Completions <svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6"></path></svg>
+</h3>
+<p class="text-2xl font-semibold text-gray-900 mt-1 mb-auto">0</p>
+<div class="w-full pt-4 flex gap-1 items-end h-6">
+<!-- Dashed line representation for empty state -->
+<div class="w-full border-b-2 border-dashed border-gray-300"></div>
+</div>
+</article>
+<!-- Safety -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[140px]">
+<div class="flex items-start justify-between">
+<h3 class="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 cursor-pointer">
+            Safety: Blocked Responses Requests <svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6"></path></svg>
+</h3>
+<svg class="text-gray-400" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></svg>
+</div>
+<p class="text-2xl font-semibold text-gray-900 mt-1 mb-auto">0</p>
+<div class="w-full pt-4 flex gap-2">
+<div class="h-[2px] bg-gray-200 w-1/2"></div>
+<div class="h-[2px] bg-gray-200 w-1/2"></div>
+</div>
+</article>
+<!-- August Spend -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm row-span-1 lg:row-span-2 flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-sm font-medium text-gray-800">August spend</h3>
+<svg class="text-gray-400" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+</div>
+<div class="space-y-4 flex-1">
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-gray-600 font-medium">Personal</span>
+<span class="text-gray-800">$0.00 / $100.00</span>
+</div>
+<div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden relative">
+<div class="h-full bg-gray-900 w-0"></div> <!-- 0% width -->
+<!-- Limit marker -->
+<div class="absolute top-0 bottom-0 right-[50%] w-[1px] bg-gray-400"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-gray-600 font-bold">SAP 1기</span>
+<span class="text-gray-800">$0.00 / $10.00</span>
+</div>
+<div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-gray-900 w-0"></div> <!-- 0% width -->
+</div>
+</div>
+</div>
+</article>
+<!-- Credit Balance -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between min-h-[140px]">
+<div>
+<h3 class="text-sm text-gray-500 mb-1">Credit balance</h3>
+<p class="text-2xl font-semibold text-gray-900">$4.53</p>
+</div>
+<button class="mt-4 flex items-center justify-center gap-2 w-fit px-3 py-1.5 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 shadow-sm transition-colors">
+<svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><rect height="14" rx="2" ry="2" width="18" x="3" y="5"></rect><line x1="3" x2="21" y1="10" y2="10"></line><line x1="7" x2="7.01" y1="15" y2="15"></line><line x1="11" x2="13" y1="15" y2="15"></line></svg>
+          Add credits
+        </button>
+</article>
+<!-- Total Requests -->
+<article class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[140px]">
+<h3 class="text-sm text-gray-500 flex items-center gap-1 hover:text-gray-800 cursor-pointer w-fit">
+          Total requests <svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6"></path></svg>
+</h3>
+<p class="text-2xl font-semibold text-gray-900 mt-1 mb-auto">0</p>
+<div class="w-full pt-4">
+<!-- Green line chart representation -->
+<div class="h-[2px] bg-emerald-400 w-full relative rounded-full">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-emerald-500 bg-white shadow-sm"></div>
+</div>
+</div>
+</article>
+</section>
+<!-- Bottom Sections Grid (Models & Updates) -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-12">
+<!-- Recommended Models -->
+
+<!-- Updates Sidebar -->
+
+</div>
+</main>
+<!-- END: MainContent -->
+<!-- Simple script for mobile menu toggle -->
+<script data-purpose="mobile-menu-logic">
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggleBtn = document.getElementById('menu-toggle');
+      const menuCloseBtn = document.getElementById('menu-close');
+      const sidebarMenu = document.getElementById('sidebar-menu');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+      const body = document.body;
+
+      function openMenu() {
+        sidebarMenu.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+        // Small delay to allow display:block to apply before animating opacity
+        setTimeout(() => {
+          sidebarOverlay.classList.remove('opacity-0');
+        }, 10);
+        body.style.overflow = 'hidden'; // Prevent background scrolling
+      }
+
+      function closeMenu() {
+        sidebarMenu.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+          sidebarOverlay.classList.add('hidden');
+        }, 300); // Wait for transition
+        body.style.overflow = '';
+      }
+
+      menuToggleBtn.addEventListener('click', openMenu);
+      menuCloseBtn.addEventListener('click', closeMenu);
+      sidebarOverlay.addEventListener('click', closeMenu);
+    });
+  </script>
+
+
+</body></html>

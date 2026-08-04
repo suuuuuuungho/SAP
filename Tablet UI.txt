@@ -1,0 +1,256 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>API Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style data-purpose="custom-styles">
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #ffffff;
+    }
+    .sidebar-transition {
+      transition: width 0.3s ease;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #d1d5db;
+      border-radius: 10px;
+    }
+  </style>
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gray: {
+              50: '#f9fafb',
+              100: '#f3f4f6',
+              200: '#e5e7eb',
+              300: '#d1d5db',
+              400: '#9ca3af',
+              500: '#6b7280',
+              600: '#4b5563',
+              700: '#374151',
+              800: '#1f2937',
+              900: '#111827',
+            }
+          },
+          fontFamily: {
+            sans: ['Pretendard', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" data-snapdom="injected-import"></head>
+<body class="flex h-screen overflow-hidden text-gray-800">
+<!-- BEGIN: Sidebar -->
+<!-- Sidebar collapsed for tablet view, icons only -->
+<aside class="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col items-center py-4 z-20 hidden md:flex sidebar-transition custom-scrollbar overflow-y-auto">
+<!-- Workspace Switcher -->
+<button class="w-10 h-10 rounded-md hover:bg-gray-200 flex items-center justify-center mb-6 text-gray-600 transition-colors">
+<div class="w-6 h-6 bg-gray-800 text-white rounded text-xs flex items-center justify-center font-bold">L</div>
+</button>
+<!-- Navigation Menu -->
+<nav class="flex-1 w-full flex flex-col gap-1 px-2">
+<a aria-label="Home" class="w-12 h-12 rounded-lg bg-gray-200 text-gray-900 flex items-center justify-center mx-auto transition-colors group relative" href="#">
+<i class="fa-solid fa-house text-lg"></i>
+<div class="absolute left-14 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Home</div>
+</a>
+<a aria-label="Study" class="w-12 h-12 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center justify-center mx-auto transition-colors group relative" href="#">
+<i class="fa-solid fa-book text-lg"></i>
+<div class="absolute left-14 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Study</div>
+</a>
+<a aria-label="Gallery" class="w-12 h-12 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center justify-center mx-auto transition-colors group relative" href="#">
+<i class="fa-regular fa-image text-lg"></i>
+<div class="absolute left-14 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Gallery</div>
+</a>
+<a aria-label="Stat" class="w-12 h-12 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center justify-center mx-auto transition-colors group relative" href="#">
+<i class="fa-solid fa-chart-simple text-lg"></i>
+<div class="absolute left-14 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Stat</div>
+</a>
+</nav>
+<!-- Bottom Actions -->
+<div class="mt-auto flex flex-col gap-2 items-center pb-4 w-full px-2">
+<button aria-label="More" class="w-12 h-12 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors group relative">
+<i class="fa-solid fa-ellipsis text-lg"></i>
+<div class="absolute left-14 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">More</div>
+</button>
+<button aria-label="User Profile" class="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center text-sm font-bold mt-2">
+        P
+      </button>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: Main Content Area -->
+<main class="flex-1 overflow-y-auto custom-scrollbar relative">
+<!-- Mobile Header (Visible only on small screens) -->
+<header class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+<div class="font-semibold text-lg flex items-center gap-2 font-bold"><div class="w-6 h-6 bg-gray-800 text-white rounded text-xs flex items-center justify-center font-bold">L</div> SAP 1기</div>
+<button class="p-2 text-gray-600">
+<i class="fa-solid fa-bars text-xl"></i>
+</button>
+</header>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
+<!-- Top Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+<h1 class="text-4xl font-bold text-gray-900">Home</h1>
+
+</div>
+<!-- Get Started Banner -->
+<section class="mb-10">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-semibold text-gray-900">Section 1</h2>
+<button class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors">
+<i class="fa-solid fa-xmark"></i> Dismiss
+          </button>
+</div>
+<div class="bg-gradient-to-r from-white via-[#f3e8ff] to-[#dcfce7] rounded-xl border border-gray-200 p-6 flex flex-col lg:flex-row gap-8 relative overflow-hidden shadow-sm">
+<!-- Background decorative elements (simplified) -->
+
+<div class="flex-1 space-y-5 z-10">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+<i class="fa-solid fa-check text-sm"></i>
+</div>
+<span class="font-medium text-gray-900">1. Add credits</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+<i class="fa-solid fa-key text-gray-600 text-sm"></i>
+</div>
+<span class="font-medium text-gray-700">2. Create an API key</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+<i class="fa-solid fa-cube text-gray-600 text-sm"></i>
+</div>
+<span class="font-medium text-gray-700">3. Test models</span>
+</div>
+</div>
+
+</div>
+</section>
+<!-- Metrics Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-0 border border-gray-200 rounded-xl overflow-hidden mb-12 shadow-sm bg-white"><div class="col-span-full p-6 border-b border-gray-200"><h2 class="text-xl font-semibold text-gray-900">Section 2</h2></div>
+<!-- Total Tokens Card -->
+<div class="p-6 border-b md:border-b-0 md:border-r border-gray-200">
+<div class="flex justify-between items-center mb-2">
+<a class="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 group" href="#">
+              Total tokens <i class="fa-solid fa-chevron-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+</a>
+</div>
+<div class="text-2xl font-bold text-gray-900 mb-8">0</div>
+<!-- Mock Chart -->
+<div class="relative h-2 bg-gray-100 rounded-full w-full">
+<div class="absolute top-0 left-0 h-full bg-pink-500 rounded-full w-[95%]"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-[95%] w-3 h-3 bg-white border-2 border-pink-500 rounded-full shadow-sm"></div>
+</div>
+</div>
+<!-- Responses Card -->
+<div class="p-6 border-b border-gray-200">
+<div class="flex justify-between items-center mb-2">
+<a class="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 group" href="#">
+              Responses and Chat Completions <i class="fa-solid fa-chevron-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+</a>
+</div>
+<div class="text-2xl font-bold text-gray-900 mb-8">0</div>
+<!-- Mock Chart -->
+<div class="flex gap-1 h-2 items-end w-full">
+<!-- Generating dashed line effect -->
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+<div class="h-0.5 bg-gray-300 flex-1 rounded"></div>
+</div>
+</div>
+<!-- Safety Card -->
+<div class="p-6 border-b md:border-b-0 md:border-r border-gray-200">
+<div class="flex justify-between items-center mb-2">
+<a class="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 group" href="#">
+              Safety: Blocked Responses Requests <i class="fa-solid fa-chevron-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+</a>
+<i class="fa-regular fa-circle-question text-gray-400 text-sm cursor-help"></i>
+</div>
+<div class="text-2xl font-bold text-gray-900 mb-8">0</div>
+<!-- Mock Chart -->
+<div class="flex gap-2 h-1 w-full">
+<div class="bg-gray-200 h-full flex-1 rounded"></div>
+<div class="bg-gray-200 h-full flex-1 rounded"></div>
+</div>
+</div>
+<!-- August Spend Card -->
+<div class="p-6 border-t md:border-t-0 md:col-start-1 md:row-start-2 border-gray-200">
+<div class="flex justify-between items-center mb-4">
+<span class="text-sm font-medium text-gray-600">August spend</span>
+<button class="text-gray-400 hover:text-gray-600 transition-colors">
+<i class="fa-solid fa-gear text-sm"></i>
+</button>
+</div>
+<div class="space-y-4">
+<!-- Personal Spend -->
+<div>
+<div class="flex justify-between text-sm mb-2">
+<span class="text-gray-900 font-medium">Personal</span>
+<span class="text-gray-600">$0.00 / $100.00</span>
+</div>
+<div class="h-3 bg-gray-100 rounded-sm w-full relative">
+<div class="absolute left-[40%] top-0 h-full w-0.5 bg-gray-800"></div>
+</div>
+</div>
+<!-- Organization Spend -->
+<div>
+<div class="flex justify-between text-sm mb-2">
+<span class="text-gray-900 font-medium font-bold">SAP 1기</span>
+<span class="text-gray-600">$0.00 / $10.00</span>
+</div>
+<div class="h-3 bg-gray-100 rounded-sm w-full"></div>
+</div>
+</div>
+</div>
+<!-- Credit Balance Card -->
+<div class="p-6 border-t border-l-0 md:border-l border-gray-200">
+<div class="text-sm font-medium text-gray-600 mb-2">Credit balance</div>
+<div class="text-2xl font-bold text-gray-900 mb-4">$4.53</div>
+<button class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+<i class="fa-regular fa-credit-card"></i> Add credits
+           </button>
+</div>
+<!-- Total Requests Card -->
+<div class="p-6 border-t border-l-0 md:border-l border-gray-200">
+<div class="flex justify-between items-center mb-2">
+<a class="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 group" href="#">
+              Total requests <i class="fa-solid fa-chevron-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+</a>
+</div>
+<div class="text-2xl font-bold text-gray-900 mb-8">0</div>
+<!-- Mock Chart -->
+<div class="relative h-0.5 bg-gray-200 w-full mt-2">
+<div class="absolute top-0 left-0 h-full bg-emerald-400 w-full"></div>
+<div class="absolute top-1/2 -translate-y-1/2 right-0 w-2.5 h-2.5 bg-white border-2 border-emerald-400 rounded-full shadow-sm"></div>
+</div>
+</div>
+</section>
+<!-- Bottom Section: Models and Updates -->
+
+</div>
+</main>
+<!-- END: Main Content Area -->
+
+
+</body></html>

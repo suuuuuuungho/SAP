@@ -1,0 +1,200 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dashboard</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- FontAwesome for Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sidebar-bg': '#f7f7f8',
+            'sidebar-hover': '#e5e5e5',
+            'sidebar-active': '#e5e5e5',
+            'border-color': '#e5e5e5',
+            'text-primary': '#111827',
+            'text-secondary': '#6b7280',
+            'accent': '#10a37f',
+            'pink-line': '#e23d70'
+          },
+          fontFamily: {
+            sans: ['Pretendard', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-styles">
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+    body {
+      font-family: 'Pretendard', sans-serif;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .gradient-bg {
+      background: linear-gradient(120deg, #f0fdf4 0%, #fae8ff 40%, #fef08a 70%, #dcfce3 100%);
+    }
+  </style>
+<link data-snapdom="injected-import" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"></head>
+<body class="bg-white text-text-primary h-screen flex overflow-hidden">
+<!-- BEGIN: Sidebar -->
+<aside class="w-[260px] bg-sidebar-bg flex flex-col border-r border-border-color h-full flex-shrink-0 relative transition-transform duration-300 z-20">
+<!-- Top Organization Header -->
+<div class="px-4 py-3 flex items-center justify-between hover:bg-sidebar-hover cursor-pointer transition-colors duration-200 mt-2">
+<div class="flex items-center gap-2 overflow-hidden">
+<span class="text-sm truncate font-bold">SAP 1기</span>
+<i class="fa-solid fa-chevron-down text-xs text-text-secondary"></i>
+</div>
+<button class="text-text-secondary hover:text-text-primary">
+<i class="fa-solid fa-table-columns text-sm"></i>
+</button>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 overflow-y-auto scrollbar-hide py-2 px-3 flex flex-col gap-0.5">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md bg-sidebar-active text-text-primary font-medium text-sm" href="#">
+<i class="fa-solid fa-house w-4 text-center"></i>
+        Home
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-hover text-text-primary font-medium text-sm transition-colors duration-200" href="#">
+<i class="fa-solid fa-book w-4 text-center"></i>
+        Study
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-hover text-text-primary font-medium text-sm transition-colors duration-200" href="#">
+<i class="fa-regular fa-image w-4 text-center"></i>
+        Gallery
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-hover text-text-primary font-medium text-sm transition-colors duration-200" href="#">
+<i class="fa-solid fa-chart-line w-4 text-center"></i>
+        Stat
+      </a>
+</nav>
+<!-- Bottom Actions / Profile -->
+<div class="p-4 border-t border-border-color flex flex-col gap-4">
+<!-- Ad Banner -->
+<!-- User Profile -->
+<div class="flex items-center gap-3 cursor-pointer hover:bg-sidebar-hover p-2 rounded-md -mx-2 transition-colors">
+<div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+          P
+        </div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium truncate">Personal</span>
+<span class="text-xs text-text-secondary truncate">Organization</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: Main Content -->
+<main class="flex-1 overflow-y-auto bg-white relative">
+<div class="max-w-[1200px] mx-auto px-8 py-10 pb-24">
+<!-- Header Section -->
+<header class="flex justify-between items-center mb-10"><div class="flex items-center gap-4"><h1 class="text-4xl font-bold tracking-tight">Home</h1><div class="relative"><button class="flex items-center gap-2 px-3 py-2 border border-border-color rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"><span class="">Aug 2024</span><i class="fa-solid fa-chevron-down text-[10px] text-text-secondary"></i></button></div></div></header>
+<!-- Get Started Section -->
+<section class="mb-12">
+<h2 class="text-xl font-bold mb-4">Section 1</h2>
+<div class="gradient-bg rounded-xl p-8 flex justify-between items-center relative overflow-hidden">
+<div class="flex gap-12 relative z-10">
+<div class="flex flex-col gap-2">
+
+<h3 class="font-bold text-lg">Add credits</h3>
+<p class="text-sm text-text-secondary w-48">Pre-pay for usage to access higher rate limits</p>
+</div>
+
+
+</div>
+</div>
+</section>
+<!-- Metrics Grid -->
+<h2 class="text-xl font-bold mb-4">Section 2</h2><section class="grid grid-cols-3 gap-0 border border-border-color rounded-xl overflow-hidden mb-16 shadow-sm">
+<!-- Total Tokens -->
+<div class="p-6 border-b border-r border-border-color">
+<div class="flex items-center justify-between mb-2 cursor-pointer group">
+<h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Total tokens <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+</div>
+<div class="text-2xl font-semibold mb-8">0</div>
+<div class="relative w-full h-0.5 bg-gray-200 rounded-full mt-10">
+<div class="absolute top-0 left-0 h-full bg-pink-line rounded-full w-full"></div>
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-pink-line bg-white"></div>
+</div>
+</div>
+<!-- Responses and Chat Completions -->
+<div class="p-6 border-b border-r border-border-color">
+<div class="flex items-center justify-between mb-2 cursor-pointer group">
+<h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Responses and Chat Completions <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+</div>
+<div class="text-2xl font-semibold mb-8">0</div>
+<div class="w-full border-t-2 border-dashed border-gray-300 mt-10"></div>
+</div>
+<!-- Safety: Blocked Responses -->
+<div class="p-6 border-b border-border-color">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-sm font-medium text-text-secondary cursor-pointer group hover:text-text-primary">Safety: Blocked Responses Requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+<i class="fa-regular fa-circle-info text-text-secondary text-sm"></i>
+</div>
+<div class="text-2xl font-semibold mb-8">0</div>
+<div class="flex gap-1 mt-10">
+<div class="h-0.5 bg-gray-200 flex-1"></div>
+<div class="h-0.5 bg-gray-200 flex-1"></div>
+</div>
+</div>
+<!-- August spend -->
+<div class="p-6 border-r border-border-color">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-sm font-medium text-text-secondary">August spend</h3>
+<i class="fa-solid fa-gear text-text-secondary text-sm cursor-pointer hover:text-text-primary"></i>
+</div>
+<div class="mb-4">
+<div class="flex justify-between text-sm mb-2">
+<span class="">Personal</span>
+<span class="text-text-secondary">$0.00 / $100.00</span>
+</div>
+<div class="w-full bg-gray-100 rounded-sm h-3 relative">
+<div class="absolute right-[20%] top-0 bottom-0 w-0.5 bg-gray-800"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-2">
+<span class="font-bold">SAP 1기</span>
+<span class="text-text-secondary">$0.00 / $10.00</span>
+</div>
+<div class="w-full bg-gray-100 rounded-sm h-3"></div>
+</div>
+</div>
+<!-- Credit balance -->
+<div class="p-6 border-r border-border-color flex flex-col justify-between">
+<div>
+<h3 class="text-sm font-medium text-text-secondary mb-2">Credit balance</h3>
+<div class="text-2xl font-semibold">$4.53</div>
+</div>
+<button class="flex items-center justify-center gap-2 border border-border-color rounded-md px-4 py-2 text-sm font-medium hover:bg-gray-50 self-start w-fit">
+<i class="fa-regular fa-credit-card"></i> Add credits
+          </button>
+</div>
+<!-- Total requests -->
+<div class="p-6">
+<div class="flex items-center justify-between mb-2 cursor-pointer group">
+<h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Total requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+</div>
+<div class="text-2xl font-semibold mb-8">0</div>
+<div class="relative w-full h-0.5 bg-gray-200 rounded-full mt-10">
+<div class="absolute top-0 left-0 h-full bg-accent rounded-full w-full"></div>
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-accent bg-white"></div>
+</div>
+</div>
+</section>
+<!-- Bottom Layout: Models and Updates -->
+
+</div>
+</main>
+<!-- END: Main Content -->
+
+
+</body></html>

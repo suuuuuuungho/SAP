@@ -1,0 +1,48 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+body {
+  font-family: 'Pretendard', sans-serif;
+}
+
+/* Hide scrollbar visuals while keeping scroll functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 10px;
+}
+
+/* Decorative gradient used behind "get started"-style banners */
+.gradient-bg {
+  background: linear-gradient(120deg, #f0fdf4 0%, #fae8ff 40%, #fef08a 70%, #dcfce3 100%);
+}
+
+/* Mobile off-canvas sidebar transition */
+.sidebar-offcanvas {
+  transition: transform 0.3s ease-in-out;
+}
+.sidebar-overlay {
+  transition: opacity 0.3s ease;
+}
+
+/* Tablet icon-rail hover tooltip */
+.nav-tooltip {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.nav-icon-item:hover .nav-tooltip {
+  opacity: 1;
+}
