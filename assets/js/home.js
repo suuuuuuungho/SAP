@@ -904,7 +904,9 @@ function stopRecording() {
 
   const startedAt = recordStartTime;
   const endedAt = Date.now();
-  const elapsedSeconds = Math.round((endedAt - startedAt) / 1000);
+  // Match the whole-second timestamps shown in the history list (no ms), so the
+  // displayed duration always equals endedAt's second minus startedAt's second.
+  const elapsedSeconds = Math.floor(endedAt / 1000) - Math.floor(startedAt / 1000);
   clearInterval(recordIntervalId);
   recordIntervalId = null;
   recordStartTime = null;
