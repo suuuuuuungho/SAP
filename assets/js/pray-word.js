@@ -222,17 +222,21 @@ function updatePrayRemoveButtons() {
   });
 }
 
-// "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 보여주는 캡션.
-function updatePrayEntryDateTimeLabel(entryEl, dateKey) {
+// "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 보여주는 캡션. 항목 자체의 날짜 입력값을 쓴다
+// (항목마다 다른 날짜를 지정할 수 있으므로, 모달을 연 날짜가 아니라 이 항목의 날짜 기준).
+function updatePrayEntryDateTimeLabel(entryEl) {
   const label = entryEl.querySelector('.pray-entry-datetime');
   if (!label) return;
+  const dateValue = entryEl.querySelector('.pray-date-input').value;
   const start = entryEl.querySelector('.pray-start-input').value;
   const end = entryEl.querySelector('.pray-end-input').value;
-  const [y, m, d] = dateKey.split('-');
+  if (!dateValue || !start || !end) {
+    label.textContent = '';
+    return;
+  }
+  const [y, m, d] = dateValue.split('-');
   const datePrefix = `${y}.${m}.${d}`;
-  label.textContent = start && end
-    ? `${datePrefix} ${start} ~ ${datePrefix} ${end}`
-    : '';
+  label.textContent = `${datePrefix} ${start} ~ ${datePrefix} ${end}`;
 }
 
 function addPrayClassEntry(dateKey, data) {
@@ -243,6 +247,9 @@ function addPrayClassEntry(dateKey, data) {
   list.appendChild(template.content.cloneNode(true));
   const entryEl = list.lastElementChild;
   wirePhotoPreview(entryEl);
+
+  const dateInput = entryEl.querySelector('.pray-date-input');
+  dateInput.value = (data && data.date) || dateKey;
 
   const locationSelect = entryEl.querySelector('.pray-location-input');
   const locationOtherInput = entryEl.querySelector('.pray-location-other-input');
@@ -277,9 +284,10 @@ function addPrayClassEntry(dateKey, data) {
     }
   }
 
-  updatePrayEntryDateTimeLabel(entryEl, dateKey);
-  entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl, dateKey));
-  entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl, dateKey));
+  updatePrayEntryDateTimeLabel(entryEl);
+  dateInput.addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
+  entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
+  entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
 
   updatePrayRemoveButtons();
 }
@@ -332,8 +340,11 @@ function closePrayModal() {
   modal.classList.remove('flex');
 }
 
+// 항목마다 날짜가 다를 수 있으므로, 저장 시 날짜별로 묶어서 각자의 pray_records 행에 나눠 쓴다.
+// 모달을 연 원래 날짜(originalDateKey)는 지금 모달에 남아있는 것으로 완전히 교체(비었으면 행 삭제),
+// 다른 날짜로 옮겨진 항목은 그 날짜의 기존 기록 뒤에 이어붙인다 (그 날짜의 다른 항목은 안 불러왔으므로 덮어쓰지 않음).
 async function savePrayModal() {
-  const dateKey = prayModalDateKey;
+  const originalDateKey = prayModalDateKey;
   const saveBtn = document.getElementById('pray-save');
   const prayClassHint = document.getElementById('pray-class-hint');
   const entryEls = [...document.querySelectorAll('#pray-class-list .pray-class-entry')];
@@ -348,13 +359,14 @@ async function savePrayModal() {
     const existingPhotoPath = entry.dataset.existingPhotoPath || null;
     return {
       entry, location, photoUnavailable, newFile, existingPhotoPath,
+      date: entry.querySelector('.pray-date-input').value,
       start: entry.querySelector('.pray-start-input').value,
       end: entry.querySelector('.pray-end-input').value,
       hasPhoto: photoUnavailable || !!newFile || !!existingPhotoPath
     };
   });
 
-  const hasIncompleteEntry = drafts.some((d) => !d.hasPhoto || !d.location || !d.start || !d.end);
+  const hasIncompleteEntry = drafts.some((d) => !d.hasPhoto || !d.location || !d.start || !d.end || !d.date);
   if (hasIncompleteEntry) {
     if (prayClassHint) prayClassHint.classList.remove('hidden');
     return;
@@ -365,17 +377,29 @@ async function savePrayModal() {
 
   try {
     const userId = await getCurrentUserId();
-    const entries = [];
+    const byDate = {};
     for (let i = 0; i < drafts.length; i += 1) {
       const d = drafts[i];
       let photoPath = d.photoUnavailable ? null : d.existingPhotoPath;
       if (!d.photoUnavailable && d.newFile) {
-        photoPath = await uploadPrayPhoto(userId, dateKey, i, d.newFile);
+        photoPath = await uploadPrayPhoto(userId, d.date, i, d.newFile);
       }
-      entries.push({ location: d.location, start: d.start, end: d.end, photoUnavailable: d.photoUnavailable, photoPath });
+      if (!byDate[d.date]) byDate[d.date] = [];
+      byDate[d.date].push({ location: d.location, start: d.start, end: d.end, photoUnavailable: d.photoUnavailable, photoPath });
     }
 
-    await savePrayRecord(userId, dateKey, entries);
+    if (byDate[originalDateKey] && byDate[originalDateKey].length > 0) {
+      await savePrayRecord(userId, originalDateKey, byDate[originalDateKey]);
+    } else {
+      await deletePrayRecord(userId, originalDateKey);
+    }
+
+    const otherDates = Object.keys(byDate).filter((d) => d !== originalDateKey);
+    for (const date of otherDates) {
+      const existingRecord = await fetchPrayRecord(userId, date);
+      const merged = [...(existingRecord ? existingRecord.entries : []), ...byDate[date]];
+      await savePrayRecord(userId, date, merged);
+    }
 
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
     if (prayModalOnSaved) prayModalOnSaved();
