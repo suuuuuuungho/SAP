@@ -9,14 +9,16 @@
 <script src="assets/js/tailwind-config.js"></script>
 <link href="assets/css/app.css" rel="stylesheet">
 </head>
-<body class="bg-white text-text-primary">
+<body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
   <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mb-8">Gallery</h1>
-  <div class="border border-border-color rounded-xl p-12 flex flex-col items-center justify-center text-center gap-3 text-text-secondary">
-    <i class="fa-regular fa-hourglass-half text-3xl"></i>
-    <p class="font-medium text-text-primary">준비 중입니다</p>
-    <p class="text-sm">Gallery 기능은 추후 추가될 예정입니다.</p>
+  <div class="glass-panel rounded-[2rem] p-12 flex flex-col items-center justify-center text-center gap-3">
+    <div class="icon-glass w-14 h-14 rounded-full flex items-center justify-center text-on-surface-variant">
+      <i class="fa-regular fa-hourglass-half text-xl"></i>
+    </div>
+    <p class="font-medium text-on-surface">준비 중입니다</p>
+    <p class="text-sm text-on-surface-variant">Gallery 기능은 추후 추가될 예정입니다.</p>
   </div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

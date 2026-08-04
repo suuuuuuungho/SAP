@@ -9,16 +9,16 @@
 <script src="assets/js/tailwind-config.js"></script>
 <link href="assets/css/app.css" rel="stylesheet">
 </head>
-<body class="bg-white text-text-primary">
+<body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
   <!-- Header -->
   <div class="flex justify-between items-center mb-8 lg:mb-10">
     <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Home</h1>
     <div class="relative hidden lg:block">
-      <button class="flex items-center gap-2 px-3 py-2 border border-border-color rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+      <button class="glass-card flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium hover:bg-white transition-colors">
         <span>Aug 2024</span>
-        <i class="fa-solid fa-chevron-down text-[10px] text-text-secondary"></i>
+        <i class="fa-solid fa-chevron-down text-[10px] text-on-surface-variant"></i>
       </button>
     </div>
   </div>
@@ -26,111 +26,111 @@
   <!-- Section 1: Get Started -->
   <section class="mb-8 lg:mb-12">
     <div class="flex items-center justify-between mb-3 lg:mb-4">
-      <h2 class="text-lg lg:text-xl font-bold text-text-primary">Section 1</h2>
-      <button class="text-sm text-text-secondary flex items-center gap-1 hover:text-text-primary transition-colors">
+      <h2 class="text-lg lg:text-xl font-bold">Section 1</h2>
+      <button class="glass-card text-sm text-on-surface-variant flex items-center gap-1.5 rounded-full px-3.5 py-1.5 hover:text-on-surface transition-colors">
         <i class="fa-solid fa-xmark"></i> Dismiss
       </button>
     </div>
-    <div class="gradient-bg rounded-xl lg:rounded-2xl border border-border-color p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-12 relative overflow-hidden shadow-sm">
+    <div class="glass-panel rounded-[2rem] p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-12 relative overflow-hidden">
       <div class="flex-1 space-y-4 lg:space-y-5 relative z-10">
         <div class="flex items-center gap-3 lg:gap-4">
-          <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-tertiary text-on-primary flex items-center justify-center shrink-0">
             <i class="fa-solid fa-check text-sm"></i>
           </div>
-          <span class="text-sm lg:text-base font-medium text-text-primary">1. Add credits</span>
+          <span class="text-sm lg:text-base font-medium">1. Add credits</span>
         </div>
         <div class="flex items-center gap-3 lg:gap-4">
-          <div class="w-8 h-8 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center shrink-0 shadow-sm">
+          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0">
             <i class="fa-solid fa-key text-sm"></i>
           </div>
-          <span class="text-sm lg:text-base font-medium text-text-primary">2. Create an API key</span>
+          <span class="text-sm lg:text-base font-medium">2. Create an API key</span>
         </div>
         <div class="flex items-center gap-3 lg:gap-4">
-          <div class="w-8 h-8 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center shrink-0 shadow-sm">
+          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0">
             <i class="fa-solid fa-cube text-sm"></i>
           </div>
-          <span class="text-sm lg:text-base font-medium text-text-primary">3. Test models</span>
+          <span class="text-sm lg:text-base font-medium">3. Test models</span>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Section 2: Metrics Grid -->
-  <h2 class="text-lg lg:text-xl font-bold text-text-primary mb-4">Section 2</h2>
-  <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-border-color rounded-xl overflow-hidden mb-16 shadow-sm">
+  <h2 class="text-lg lg:text-xl font-bold mb-4">Section 2</h2>
+  <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-16">
     <!-- Total tokens -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0">
+    <div class="glass-card rounded-[1.5rem] p-6">
       <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Total tokens <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Total tokens <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
       </div>
       <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="relative w-full h-0.5 bg-gray-200 rounded-full mt-10">
-        <div class="absolute top-0 left-0 h-full bg-pink-line rounded-full w-full"></div>
-        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-pink-line bg-white"></div>
+      <div class="relative w-full h-1 bg-surface-highest rounded-full mt-10">
+        <div class="absolute top-0 left-0 h-full bg-primary rounded-full w-full"></div>
+        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-primary bg-white"></div>
       </div>
     </div>
     <!-- Responses and Chat Completions -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0">
+    <div class="glass-card rounded-[1.5rem] p-6">
       <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Responses and Chat Completions <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Responses and Chat Completions <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
       </div>
       <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="w-full border-t-2 border-dashed border-gray-300 mt-10"></div>
+      <div class="w-full border-t-2 border-dashed border-outline-variant mt-10"></div>
     </div>
     <!-- Safety: Blocked Responses -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0">
+    <div class="glass-card rounded-[1.5rem] p-6">
       <div class="flex items-center justify-between mb-2">
-        <h3 class="text-sm font-medium text-text-secondary cursor-pointer group hover:text-text-primary">Safety: Blocked Responses Requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
-        <i class="fa-regular fa-circle-info text-text-secondary text-sm"></i>
+        <h3 class="text-sm font-medium text-on-surface-variant cursor-pointer group hover:text-on-surface">Safety: Blocked Responses Requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+        <i class="fa-regular fa-circle-info text-on-surface-variant text-sm"></i>
       </div>
       <div class="text-2xl font-semibold mb-8">0</div>
       <div class="flex gap-1 mt-10">
-        <div class="h-0.5 bg-gray-200 flex-1"></div>
-        <div class="h-0.5 bg-gray-200 flex-1"></div>
+        <div class="h-1 bg-surface-highest rounded-full flex-1"></div>
+        <div class="h-1 bg-surface-highest rounded-full flex-1"></div>
       </div>
     </div>
     <!-- August spend -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0">
+    <div class="glass-card rounded-[1.5rem] p-6">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-sm font-medium text-text-secondary">August spend</h3>
-        <i class="fa-solid fa-gear text-text-secondary text-sm cursor-pointer hover:text-text-primary"></i>
+        <h3 class="text-sm font-medium text-on-surface-variant">August spend</h3>
+        <i class="fa-solid fa-gear text-on-surface-variant text-sm cursor-pointer hover:text-on-surface"></i>
       </div>
       <div class="mb-4">
         <div class="flex justify-between text-sm mb-2">
           <span>Personal</span>
-          <span class="text-text-secondary">$0.00 / $100.00</span>
+          <span class="text-on-surface-variant">$0.00 / $100.00</span>
         </div>
-        <div class="w-full bg-gray-100 rounded-sm h-3 relative">
-          <div class="absolute right-[20%] top-0 bottom-0 w-0.5 bg-gray-800"></div>
+        <div class="w-full bg-surface-highest rounded-full h-3 relative overflow-hidden">
+          <div class="absolute right-[20%] top-0 bottom-0 w-0.5 bg-on-surface"></div>
         </div>
       </div>
       <div>
         <div class="flex justify-between text-sm mb-2">
           <span class="font-bold">SAP 1기</span>
-          <span class="text-text-secondary">$0.00 / $10.00</span>
+          <span class="text-on-surface-variant">$0.00 / $10.00</span>
         </div>
-        <div class="w-full bg-gray-100 rounded-sm h-3"></div>
+        <div class="w-full bg-surface-highest rounded-full h-3"></div>
       </div>
     </div>
     <!-- Credit balance -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0 flex flex-col justify-between">
+    <div class="glass-card rounded-[1.5rem] p-6 flex flex-col justify-between">
       <div>
-        <h3 class="text-sm font-medium text-text-secondary mb-2">Credit balance</h3>
+        <h3 class="text-sm font-medium text-on-surface-variant mb-2">Credit balance</h3>
         <div class="text-2xl font-semibold">$4.53</div>
       </div>
-      <button class="flex items-center justify-center gap-2 border border-border-color rounded-md px-4 py-2 text-sm font-medium hover:bg-gray-50 self-start w-fit mt-4">
+      <button class="pill-btn-primary flex items-center justify-center gap-2 px-4 py-2 text-sm self-start w-fit mt-4">
         <i class="fa-regular fa-credit-card"></i> Add credits
       </button>
     </div>
     <!-- Total requests -->
-    <div class="p-6 border-b border-border-color md:border-r md:[&:nth-child(2n)]:border-r-0 md:[&:nth-child(n+5)]:border-b-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-child(n+4)]:border-b-0 [&:last-child]:border-b-0">
+    <div class="glass-card rounded-[1.5rem] p-6">
       <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-text-secondary group-hover:text-text-primary">Total requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
+        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Total requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
       </div>
       <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="relative w-full h-0.5 bg-gray-200 rounded-full mt-10">
-        <div class="absolute top-0 left-0 h-full bg-accent rounded-full w-full"></div>
-        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 border-accent bg-white"></div>
+      <div class="relative w-full h-1 bg-surface-highest rounded-full mt-10">
+        <div class="absolute top-0 left-0 h-full bg-tertiary rounded-full w-full"></div>
+        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-tertiary bg-white"></div>
       </div>
     </div>
   </section>

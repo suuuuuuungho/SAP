@@ -9,12 +9,13 @@
 <script src="assets/js/tailwind-config.js"></script>
 <link href="assets/css/app.css" rel="stylesheet">
 </head>
-<body class="bg-white text-text-primary h-screen flex items-center justify-center px-4">
-<div class="w-full max-w-sm">
+<body class="text-on-surface h-screen flex items-center justify-center px-4">
+<div class="mesh-bg"></div>
+<div class="w-full max-w-sm glass-panel rounded-[2rem] p-8">
   <div class="text-center mb-8">
-    <div class="w-10 h-10 bg-gray-800 text-white rounded-lg text-sm flex items-center justify-center font-bold mx-auto mb-4">S</div>
+    <div class="w-10 h-10 bg-gradient-to-br from-primary to-tertiary text-on-primary rounded-full text-sm flex items-center justify-center font-bold mx-auto mb-4">S</div>
     <h1 class="text-2xl font-bold tracking-tight">아이디 찾기</h1>
-    <p class="text-sm text-text-secondary mt-2">가입 시 등록한 이름과 전화번호를 입력하세요.</p>
+    <p class="text-sm text-on-surface-variant mt-2">가입 시 등록한 이름과 전화번호를 입력하세요.</p>
   </div>
 
   <form id="find-id-form" class="flex flex-col gap-3">
@@ -24,7 +25,7 @@
       required
       autocomplete="name"
       placeholder="이름"
-      class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+      class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
     >
     <input
       type="tel"
@@ -32,29 +33,29 @@
       required
       autocomplete="tel"
       placeholder="전화번호 (010-0000-0000)"
-      class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+      class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
     >
     <button
       type="submit"
       id="find-id-submit"
-      class="w-full bg-accent text-white font-medium text-sm rounded-md px-4 py-2.5 hover:opacity-90 transition-opacity"
+      class="pill-btn-primary w-full text-sm px-4 py-2.5"
     >
       아이디 찾기
     </button>
   </form>
 
-  <div id="result-box" class="hidden mt-6 border border-border-color rounded-md p-4 text-center">
-    <p class="text-sm text-text-secondary mb-1">회원님의 아이디는</p>
-    <p id="result-username" class="text-lg font-bold text-text-primary"></p>
-    <p class="text-sm text-text-secondary mt-1">입니다.</p>
+  <div id="result-box" class="hidden mt-6 glass-card rounded-2xl p-4 text-center">
+    <p class="text-sm text-on-surface-variant mb-1">회원님의 아이디는</p>
+    <p id="result-username" class="text-lg font-bold text-on-surface"></p>
+    <p class="text-sm text-on-surface-variant mt-1">입니다.</p>
   </div>
 
   <p id="find-id-status" class="text-sm text-center mt-4 hidden"></p>
 
-  <div class="flex items-center justify-center gap-3 text-sm text-text-secondary mt-6">
-    <a href="login.html" class="text-accent font-medium hover:opacity-80">로그인으로 돌아가기</a>
-    <span class="text-border-color">|</span>
-    <a href="find-password.html" class="hover:text-text-primary">비밀번호 찾기</a>
+  <div class="flex items-center justify-center gap-3 text-sm text-on-surface-variant mt-6">
+    <a href="login.html" class="text-primary font-medium hover:opacity-80">로그인으로 돌아가기</a>
+    <span class="text-outline-variant">|</span>
+    <a href="find-password.html" class="hover:text-on-surface">비밀번호 찾기</a>
   </div>
 </div>
 
@@ -72,8 +73,8 @@
 
   function showStatus(message, isError) {
     status.textContent = message;
-    status.classList.remove('hidden', 'text-red-600', 'text-text-secondary');
-    status.classList.add(isError ? 'text-red-600' : 'text-text-secondary');
+    status.classList.remove('hidden', 'text-error', 'text-on-surface-variant');
+    status.classList.add(isError ? 'text-error' : 'text-on-surface-variant');
   }
 
   form.addEventListener('submit', async (e) => {
