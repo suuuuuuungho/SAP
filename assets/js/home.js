@@ -479,9 +479,12 @@ function renderCalendarStrip() {
   dayEl.textContent = String(selectedDate.getDate());
 
   stripEl.innerHTML = '';
-  for (let offset = -3; offset <= 3; offset += 1) {
-    const d = new Date(selectedDate);
-    d.setDate(selectedDate.getDate() + offset);
+  // 선택된 날짜가 속한 주의 일요일부터 2주(14일)를 보여준다.
+  const weekStart = new Date(selectedDate);
+  weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+  for (let offset = 0; offset < 14; offset += 1) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + offset);
     const key = dateKey(d);
     const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
 
