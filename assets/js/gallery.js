@@ -4,6 +4,7 @@
 let galleryCurrentUserId = null;
 let galleryUsers = []; // [{id, username, name}]
 let galleryActiveTab = 'pray'; // 'pray' | 'word'
+let galleryDateKey = todayKey(); // 그리드에 표시 중인 날짜 (날짜 입력으로 변경 가능)
 let galleryPrayMap = {}; // user_id -> pray_records row
 let galleryWordMap = {}; // user_id -> word_records row
 
@@ -23,10 +24,9 @@ async function loadGalleryRecords() {
     galleryWordMap = {};
     return;
   }
-  const today = todayKey();
   const [prayRes, wordRes] = await Promise.all([
-    window.supabaseClient.from('pray_records').select('*').eq('record_date', today).in('user_id', ids),
-    window.supabaseClient.from('word_records').select('*').eq('record_date', today).in('user_id', ids)
+    window.supabaseClient.from('pray_records').select('*').eq('record_date', galleryDateKey).in('user_id', ids),
+    window.supabaseClient.from('word_records').select('*').eq('record_date', galleryDateKey).in('user_id', ids)
   ]);
   if (prayRes.error) console.error('[gallery] pray_records', prayRes.error);
   if (wordRes.error) console.error('[gallery] word_records', wordRes.error);
@@ -120,16 +120,48 @@ function wireGalleryGridClicks() {
     if (!cell || cell.dataset.userId !== galleryCurrentUserId) return;
 
     if (galleryActiveTab === 'pray') {
-      openPrayModal(todayKey(), onGallerySaved);
+      openPrayModal(galleryDateKey, onGallerySaved);
     } else {
-      openWordModal(todayKey(), onGallerySaved);
+      openWordModal(galleryDateKey, onGallerySaved);
     }
   });
+}
+
+function wireGalleryDateControl() {
+  const dateInput = document.getElementById('gallery-date-input');
+  const todayBtn = document.getElementById('gallery-date-today');
+  if (!dateInput) return;
+
+  function syncTodayButton() {
+    if (todayBtn) todayBtn.classList.toggle('hidden', galleryDateKey === todayKey());
+  }
+
+  dateInput.value = galleryDateKey;
+  syncTodayButton();
+
+  dateInput.addEventListener('change', async () => {
+    if (!dateInput.value) return;
+    galleryDateKey = dateInput.value;
+    syncTodayButton();
+    await loadGalleryRecords();
+    renderGalleryGrid();
+  });
+
+  if (todayBtn) {
+    todayBtn.addEventListener('click', async () => {
+      galleryDateKey = todayKey();
+      dateInput.value = galleryDateKey;
+      syncTodayButton();
+      await loadGalleryRecords();
+      renderGalleryGrid();
+    });
+  }
 }
 
 async function initGalleryWidgets() {
   wireGalleryTabs();
   wireGalleryGridClicks();
+  wireGalleryDateControl();
   wirePrayModalStatic();
   wireWordModalStatic();
 

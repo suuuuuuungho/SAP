@@ -20,6 +20,11 @@
     </div>
   </div>
 
+  <div class="flex items-center justify-end gap-3 mb-6">
+    <button type="button" id="gallery-date-today" class="hidden text-xs font-medium text-primary hover:opacity-80">오늘로 이동</button>
+    <input type="date" id="gallery-date-input" class="glass-input px-3 py-1.5 rounded-xl text-sm">
+  </div>
+
   <div id="gallery-grid"></div>
 
   <!-- 기도 인증 모달 (Home과 동일 마크업 — assets/js/pray-word.js가 두 페이지 공용으로 다룬다) -->
@@ -168,7 +173,7 @@
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
 <script src="assets/js/pray-word.js?v=2"></script>
-<script src="assets/js/gallery.js?v=1"></script>
+<script src="assets/js/gallery.js?v=2"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });
