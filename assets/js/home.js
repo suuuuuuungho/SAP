@@ -67,11 +67,6 @@ function formatSelectedDateShort() {
   return ` (${m}/${d})`;
 }
 
-function formatFullDateKorean(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return `${y}년 ${m}월 ${d}일`;
-}
-
 // 활성화된(예배는 수/금만 해당) 카테고리 4개(또는 3개)가 모두 인증됐는지 판단할 때 쓰는 목록.
 function getActiveCategoriesForDate(key) {
   const categories = ['pray', 'word', 'study'];
@@ -624,11 +619,14 @@ function wireCalendarTabs() {
   });
 }
 
+const PRAY_PLACEHOLDER_IMAGE = 'assets/img/pray-placeholder.svg';
+
 function wirePhotoPreview(entryEl) {
   const input = entryEl.querySelector('.pray-photo-input');
   const wrap = entryEl.querySelector('.pray-photo-preview-wrap');
   const preview = entryEl.querySelector('.pray-photo-preview');
   const removeBtn = entryEl.querySelector('.pray-photo-remove');
+  const unavailableInput = entryEl.querySelector('.pray-photo-unavailable-input');
   if (!input || !wrap || !preview) return;
 
   function clearPhoto() {
@@ -654,7 +652,28 @@ function wirePhotoPreview(entryEl) {
     wrap.classList.remove('hidden');
   });
 
-  if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      clearPhoto();
+      if (unavailableInput && unavailableInput.checked) {
+        unavailableInput.checked = false;
+      }
+    });
+  }
+
+  if (unavailableInput) {
+    unavailableInput.addEventListener('change', () => {
+      if (unavailableInput.checked) {
+        clearPhoto();
+        input.disabled = true;
+        preview.src = PRAY_PLACEHOLDER_IMAGE;
+        wrap.classList.remove('hidden');
+      } else {
+        input.disabled = false;
+        clearPhoto();
+      }
+    });
+  }
 }
 
 function updatePrayRemoveButtons() {
@@ -665,14 +684,16 @@ function updatePrayRemoveButtons() {
   });
 }
 
-// 저장된 기록을 열었을 때 "YYYY년 M월 D일 HH:MM부터 HH:MM까지" 형태로 정확히 보여주는 캡션.
+// 저장된 기록을 열었을 때 "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 정확히 보여주는 캡션.
 function updatePrayEntryDateTimeLabel(entryEl) {
   const label = entryEl.querySelector('.pray-entry-datetime');
   if (!label) return;
   const start = entryEl.querySelector('.pray-start-input').value;
   const end = entryEl.querySelector('.pray-end-input').value;
+  const [y, m, d] = selectedDateKey.split('-');
+  const datePrefix = `${y}.${m}.${d}`;
   label.textContent = start && end
-    ? `${formatFullDateKorean(selectedDateKey)} ${start}부터 ${end}까지`
+    ? `${datePrefix} ${start} ~ ${datePrefix} ${end}`
     : '';
 }
 
@@ -705,6 +726,13 @@ function addPrayClassEntry(data) {
     }
     if (data.start) entryEl.querySelector('.pray-start-input').value = data.start;
     if (data.end) entryEl.querySelector('.pray-end-input').value = data.end;
+    if (data.photoUnavailable) {
+      const unavailableInput = entryEl.querySelector('.pray-photo-unavailable-input');
+      if (unavailableInput) {
+        unavailableInput.checked = true;
+        unavailableInput.dispatchEvent(new Event('change'));
+      }
+    }
   }
 
   updatePrayEntryDateTimeLabel(entryEl);
@@ -1061,8 +1089,10 @@ function initHomeWidgets() {
         const location = locationSelect.value === '기타'
           ? entry.querySelector('.pray-location-other-input').value.trim()
           : locationSelect.value;
+        const photoUnavailable = entry.querySelector('.pray-photo-unavailable-input').checked;
         return {
-          hasPhoto: entry.querySelector('.pray-photo-input').files.length > 0,
+          hasPhoto: photoUnavailable || entry.querySelector('.pray-photo-input').files.length > 0,
+          photoUnavailable,
           location,
           start: entry.querySelector('.pray-start-input').value,
           end: entry.querySelector('.pray-end-input').value
@@ -1078,7 +1108,7 @@ function initHomeWidgets() {
       if (prayClassHint) prayClassHint.classList.add('hidden');
 
       updateRecord(selectedDateKey, (record) => {
-        record.prayerClasses = entries.map(({ location, start, end }) => ({ location, start, end }));
+        record.prayerClasses = entries.map(({ location, start, end, photoUnavailable }) => ({ location, start, end, photoUnavailable }));
         record.progress.pray = true;
         return record;
       });

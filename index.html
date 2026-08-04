@@ -187,6 +187,10 @@
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
+          <label class="flex items-center gap-2 text-xs text-on-surface-variant mt-2 select-none cursor-pointer">
+            <input type="checkbox" class="pray-photo-unavailable-input w-3.5 h-3.5 rounded accent-primary">
+            사진을 찍지 못했어요
+          </label>
         </div>
         <div>
           <label class="block text-xs font-medium text-on-surface-variant mb-1">기도 장소 <span class="text-error">*</span></label>
@@ -368,7 +372,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=21"></script>
+<script src="assets/js/home.js?v=22"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'home' });
