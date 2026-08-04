@@ -23,6 +23,49 @@
     </div>
   </div>
 
+  <!-- Overview widgets -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-12">
+    <!-- Daily Goals -->
+    <div class="glass-card rounded-[1.5rem] p-6">
+      <h3 class="text-sm font-medium text-on-surface-variant mb-6">Daily Goals</h3>
+      <div class="relative w-36 h-36 mx-auto">
+        <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+          <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
+          <circle id="daily-goal-ring" cx="60" cy="60" r="52" fill="none" stroke-width="12" stroke-linecap="round" stroke="url(#daily-goal-gradient)"></circle>
+          <defs>
+            <linearGradient id="daily-goal-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff4b91"></stop>
+              <stop offset="100%" stop-color="#ee6650"></stop>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <p id="daily-goal-percent" class="text-3xl font-bold text-on-surface">0%</p>
+          <p id="daily-goal-caption" class="text-[11px] font-semibold text-on-surface-variant tracking-wide mt-0.5">달성</p>
+        </div>
+      </div>
+      <p class="text-center text-xs text-on-surface-variant mt-4">기도 · 말씀 · 공부 · 예배 (목표 300분)</p>
+    </div>
+
+    <!-- Calendar -->
+    <div class="glass-card rounded-[1.5rem] p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="glass-panel rounded-full p-1 flex text-sm font-semibold">
+          <button type="button" id="calendar-tab-weekly" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">Weekly</button>
+          <button type="button" id="calendar-tab-monthly" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Monthly</button>
+        </div>
+        <button type="button" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="설정">
+          <i class="fa-solid fa-gear text-sm"></i>
+        </button>
+      </div>
+      <div class="flex items-end justify-between mb-6">
+        <p id="calendar-month" class="text-3xl font-bold text-on-surface"></p>
+        <p id="calendar-day" class="text-3xl font-bold text-outline-variant"></p>
+      </div>
+      <div id="calendar-strip" class="flex justify-between"></div>
+    </div>
+  </section>
+
   <!-- Section 1: Progress -->
   <section class="mb-8 lg:mb-12">
     <div class="flex items-center justify-between mb-3 lg:mb-4">
@@ -163,7 +206,7 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
-<script src="assets/js/home.js?v=2"></script>
+<script src="assets/js/home.js?v=3"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => renderApp({ activePage: 'home' }));
 </script>

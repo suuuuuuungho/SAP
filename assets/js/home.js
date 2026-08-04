@@ -85,6 +85,81 @@ function renderPrayWidgetSummary() {
   }
 }
 
+const DAILY_GOAL_MINUTES = 300;
+
+// Only 기도 has real tracked minutes so far; 말씀/공부/예배 default to 0
+// until their own input flows exist, same as the Progress checkmarks.
+function getCategoryMinutes(key) {
+  if (key === 'pray') {
+    return loadPrayerClasses().reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+  }
+  return 0;
+}
+
+function renderDailyGoals() {
+  const ring = document.getElementById('daily-goal-ring');
+  const percentEl = document.getElementById('daily-goal-percent');
+  const captionEl = document.getElementById('daily-goal-caption');
+  if (!ring || !percentEl || !captionEl) return;
+
+  const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
+  const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
+  const filledPercent = Math.min(percent, 100);
+
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  ring.setAttribute('stroke-dasharray', String(circumference));
+  ring.setAttribute('stroke-dashoffset', String(circumference * (1 - filledPercent / 100)));
+
+  percentEl.textContent = `${percent}%`;
+  captionEl.textContent = percent > 100 ? '목표 초과 달성' : '달성';
+}
+
+function renderCalendarStrip() {
+  const stripEl = document.getElementById('calendar-strip');
+  const monthEl = document.getElementById('calendar-month');
+  const dayEl = document.getElementById('calendar-day');
+  if (!stripEl || !monthEl || !dayEl) return;
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const today = new Date();
+
+  monthEl.textContent = monthNames[today.getMonth()];
+  dayEl.textContent = String(today.getDate());
+
+  stripEl.innerHTML = '';
+  for (let offset = -3; offset <= 3; offset += 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    const isToday = offset === 0;
+
+    const cell = document.createElement('div');
+    cell.className = 'flex flex-col items-center gap-2';
+    cell.innerHTML = `
+      <span class="text-[10px] font-semibold ${isToday ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>
+      <span class="w-9 h-9 flex items-center justify-center rounded-full text-sm ${isToday ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold' : 'text-on-surface'}">${d.getDate()}</span>
+    `;
+    stripEl.appendChild(cell);
+  }
+}
+
+function wireCalendarTabs() {
+  const weeklyBtn = document.getElementById('calendar-tab-weekly');
+  const monthlyBtn = document.getElementById('calendar-tab-monthly');
+  if (!weeklyBtn || !monthlyBtn) return;
+
+  function selectTab(active, inactive) {
+    active.classList.add('nav-pill-active');
+    active.classList.remove('text-on-surface-variant');
+    inactive.classList.remove('nav-pill-active');
+    inactive.classList.add('text-on-surface-variant');
+  }
+
+  weeklyBtn.addEventListener('click', () => selectTab(weeklyBtn, monthlyBtn));
+  monthlyBtn.addEventListener('click', () => selectTab(monthlyBtn, weeklyBtn));
+}
+
 function wirePhotoPreview(entryEl) {
   const input = entryEl.querySelector('.pray-photo-input');
   const wrap = entryEl.querySelector('.pray-photo-preview-wrap');
@@ -156,6 +231,9 @@ function closePrayModal() {
 function initHomeWidgets() {
   renderVerificationState();
   renderPrayWidgetSummary();
+  renderDailyGoals();
+  renderCalendarStrip();
+  wireCalendarTabs();
 
   const prayWidget = document.getElementById('widget-pray');
   if (prayWidget) prayWidget.addEventListener('click', openPrayModal);
@@ -197,6 +275,7 @@ function initHomeWidgets() {
 
       renderVerificationState();
       renderPrayWidgetSummary();
+      renderDailyGoals();
       closePrayModal();
     });
   }
