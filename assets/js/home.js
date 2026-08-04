@@ -24,7 +24,9 @@ function defaultRecord() {
     progress: { pray: false, word: false, study: false, worship: false },
     prayerClasses: [],
     wordVerses: [],
-    studyMinutes: [],
+    studySessions: [], // { source: 'record' | 'manual', seconds }
+    worshipStatus: null, // 'attended' | 'absent' | 'home'
+    worshipMinutes: 0,
     goalCelebrated: false
   };
 }
@@ -48,7 +50,9 @@ function getRecord(key) {
     progress: Object.assign({}, base.progress, stored.progress),
     prayerClasses: stored.prayerClasses || base.prayerClasses,
     wordVerses: stored.wordVerses || base.wordVerses,
-    studyMinutes: stored.studyMinutes || base.studyMinutes,
+    studySessions: stored.studySessions || base.studySessions,
+    worshipStatus: typeof stored.worshipStatus === 'string' ? stored.worshipStatus : base.worshipStatus,
+    worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes,
     goalCelebrated: typeof stored.goalCelebrated === 'boolean' ? stored.goalCelebrated : base.goalCelebrated
   };
 }
@@ -106,6 +110,12 @@ function durationMinutes(start, end) {
   return diff;
 }
 
+function formatMinutesSeconds(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
+}
+
 function renderPrayWidgetSummary() {
   const slot = document.querySelector('#widget-pray .widget-summary');
   if (!slot) return;
@@ -153,8 +163,10 @@ function renderWordWidgetSummary() {
   }
 }
 
-function getStudyTotalMinutes(record) {
-  return record.studyMinutes.reduce((sum, entry) => sum + entry.minutes, 0);
+function getStudySeconds(record, source) {
+  return record.studySessions
+    .filter((entry) => entry.source === source)
+    .reduce((sum, entry) => sum + entry.seconds, 0);
 }
 
 function renderStudyWidgetSummary() {
@@ -162,26 +174,121 @@ function renderStudyWidgetSummary() {
   if (!slot) return;
 
   const record = getRecord(selectedDateKey);
-  const total = getStudyTotalMinutes(record);
+  const recordSeconds = getStudySeconds(record, 'record');
+  const manualSeconds = getStudySeconds(record, 'manual');
 
-  if (total > 0) {
-    const breakdown = record.studyMinutes.map((entry) => `${entry.minutes}분`).join(' + ');
+  if (recordSeconds > 0 || manualSeconds > 0) {
     slot.innerHTML = `
-      <p class="text-3xl font-bold text-primary">${total}<span class="text-base font-semibold ml-0.5">분</span></p>
-      <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${breakdown}</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <p class="text-[11px] text-on-surface-variant mb-1">Record</p>
+          <p class="text-lg font-bold text-primary leading-tight">${recordSeconds > 0 ? formatMinutesSeconds(recordSeconds) : '-'}</p>
+        </div>
+        <div>
+          <p class="text-[11px] text-on-surface-variant mb-1">직접 입력</p>
+          <p class="text-lg font-bold text-primary leading-tight">${manualSeconds > 0 ? formatMinutesSeconds(manualSeconds) : '-'}</p>
+        </div>
+      </div>
     `;
   } else {
     slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
   }
 }
 
-// 예배 has no tracked minutes yet until its own input flow exists.
-// 기도 sums real logged time; 말씀 is a flat 60분 once verified; 공부 sums Record + manual entries.
+function renderStudyHistoryModal() {
+  const record = getRecord(selectedDateKey);
+  const recordSessions = record.studySessions.filter((entry) => entry.source === 'record');
+  const manualSessions = record.studySessions.filter((entry) => entry.source === 'manual');
+
+  const recordTotalEl = document.getElementById('study-history-record-total');
+  const manualTotalEl = document.getElementById('study-history-manual-total');
+  const recordListEl = document.getElementById('study-history-record-list');
+  const manualListEl = document.getElementById('study-history-manual-list');
+  if (!recordTotalEl || !manualTotalEl || !recordListEl || !manualListEl) return;
+
+  const recordTotal = getStudySeconds(record, 'record');
+  const manualTotal = getStudySeconds(record, 'manual');
+
+  recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(recordTotal) : '-';
+  manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(manualTotal) : '-';
+
+  const rowHTML = (entry, i) => `
+    <div class="glass-card rounded-xl px-4 py-2.5 text-sm flex items-center justify-between">
+      <span class="text-on-surface-variant">${i + 1}회차</span>
+      <span class="font-semibold">${formatMinutesSeconds(entry.seconds)}</span>
+    </div>`;
+
+  recordListEl.innerHTML = recordSessions.length
+    ? recordSessions.map(rowHTML).join('')
+    : '<p class="text-xs text-on-surface-variant">기록 없음</p>';
+
+  manualListEl.innerHTML = manualSessions.length
+    ? manualSessions.map(rowHTML).join('')
+    : '<p class="text-xs text-on-surface-variant">기록 없음</p>';
+}
+
+function openStudyHistoryModal() {
+  const modal = document.getElementById('study-history-modal');
+  if (!modal) return;
+  renderStudyHistoryModal();
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeStudyHistoryModal() {
+  const modal = document.getElementById('study-history-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+const WORSHIP_AUTO_MINUTES = 120; // O 또는 가정 선택 시 자동 2시간
+const WORSHIP_ACTIVE_WEEKDAYS = [3, 5]; // 수(3), 금(5)
+
+function isWorshipDayActive(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return WORSHIP_ACTIVE_WEEKDAYS.includes(new Date(y, m - 1, d).getDay());
+}
+
+function renderWorshipWidgetState() {
+  const widget = document.getElementById('widget-worship');
+  if (!widget) return;
+  const active = isWorshipDayActive(selectedDateKey);
+  widget.classList.toggle('opacity-40', !active);
+  widget.classList.toggle('pointer-events-none', !active);
+  widget.classList.toggle('cursor-pointer', active);
+  widget.classList.toggle('hover:bg-white', active);
+}
+
+function renderWorshipWidgetSummary() {
+  const slot = document.querySelector('#widget-worship .widget-summary');
+  if (!slot) return;
+
+  const record = getRecord(selectedDateKey);
+  if (!record.worshipStatus) {
+    slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
+    return;
+  }
+
+  const statusLabel = { attended: 'O 참석', absent: 'X 미참석', home: '가정예배' }[record.worshipStatus] || '';
+  if (record.worshipMinutes > 0) {
+    slot.innerHTML = `
+      <p class="text-3xl font-bold text-primary">${record.worshipMinutes}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-xs text-on-surface-variant mt-2">${statusLabel}</p>
+    `;
+  } else {
+    slot.innerHTML = `<p class="text-sm font-semibold text-on-surface-variant mt-10">${statusLabel}</p>`;
+  }
+}
+
+// 기도 sums real logged time; 말씀 is a flat 60분 once verified; 공부 sums Record + manual entries;
+// 예배 is a flat 120분 when O/가정 was chosen (수/금만 활성화).
 function getCategoryMinutes(key) {
   const record = getRecord(selectedDateKey);
   if (key === 'pray') return record.prayerClasses.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
   if (key === 'word') return record.progress.word ? WORD_VERIFIED_MINUTES : 0;
-  if (key === 'study') return getStudyTotalMinutes(record);
+  if (key === 'study') return Math.round((getStudySeconds(record, 'record') + getStudySeconds(record, 'manual')) / 60);
+  if (key === 'worship') return record.worshipMinutes || 0;
   return 0;
 }
 
@@ -336,6 +443,8 @@ function renderAllForSelectedDate() {
   renderPrayWidgetSummary();
   renderWordWidgetSummary();
   renderStudyWidgetSummary();
+  renderWorshipWidgetState();
+  renderWorshipWidgetSummary();
   renderDailyGoals();
   renderSelectedDateLabel();
   renderCalendarStrip();
@@ -622,7 +731,7 @@ function startRecording() {
 function stopRecording() {
   if (!recordStartTime) return;
 
-  const elapsedMinutes = Math.round((Date.now() - recordStartTime) / 60000);
+  const elapsedSeconds = Math.round((Date.now() - recordStartTime) / 1000);
   clearInterval(recordIntervalId);
   recordIntervalId = null;
   recordStartTime = null;
@@ -633,9 +742,9 @@ function stopRecording() {
     modal.classList.remove('flex');
   }
 
-  if (elapsedMinutes > 0) {
+  if (elapsedSeconds > 0) {
     updateRecord(selectedDateKey, (record) => {
-      record.studyMinutes = [...record.studyMinutes, { minutes: elapsedMinutes }];
+      record.studySessions = [...record.studySessions, { source: 'record', seconds: elapsedSeconds }];
       record.progress.study = true;
       return record;
     });
@@ -660,6 +769,35 @@ function closeStudyAddModal() {
   if (!modal) return;
   modal.classList.add('hidden');
   modal.classList.remove('flex');
+}
+
+function openWorshipModal() {
+  if (!isWorshipDayActive(selectedDateKey)) return;
+  const modal = document.getElementById('worship-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeWorshipModal() {
+  const modal = document.getElementById('worship-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function recordWorship(status) {
+  updateRecord(selectedDateKey, (record) => {
+    record.worshipStatus = status;
+    record.worshipMinutes = status === 'attended' || status === 'home' ? WORSHIP_AUTO_MINUTES : 0;
+    record.progress.worship = status === 'attended' || status === 'home';
+    return record;
+  });
+
+  renderVerificationState();
+  renderWorshipWidgetSummary();
+  renderDailyGoals();
+  closeWorshipModal();
 }
 
 function initHomeWidgets() {
@@ -773,8 +911,16 @@ function initHomeWidgets() {
     });
   }
 
+  const studyWidget = document.getElementById('widget-study');
+  if (studyWidget) studyWidget.addEventListener('click', openStudyHistoryModal);
+
+  const studyHistoryCloseBtn = document.getElementById('study-history-close');
+  const studyHistoryOverlay = document.getElementById('study-history-overlay');
+  if (studyHistoryCloseBtn) studyHistoryCloseBtn.addEventListener('click', closeStudyHistoryModal);
+  if (studyHistoryOverlay) studyHistoryOverlay.addEventListener('click', closeStudyHistoryModal);
+
   const recordBtn = document.getElementById('study-record-btn');
-  if (recordBtn) recordBtn.addEventListener('click', startRecording);
+  if (recordBtn) recordBtn.addEventListener('click', (e) => { e.stopPropagation(); startRecording(); });
 
   const pauseBtn = document.getElementById('study-pause-btn');
   if (pauseBtn) pauseBtn.addEventListener('click', stopRecording);
@@ -785,7 +931,7 @@ function initHomeWidgets() {
   window.addEventListener('blur', stopRecording);
 
   const studyAddBtn = document.getElementById('study-add-btn');
-  if (studyAddBtn) studyAddBtn.addEventListener('click', openStudyAddModal);
+  if (studyAddBtn) studyAddBtn.addEventListener('click', (e) => { e.stopPropagation(); openStudyAddModal(); });
 
   const studyAddCloseBtn = document.getElementById('study-add-modal-close');
   const studyAddOverlay = document.getElementById('study-add-overlay');
@@ -803,7 +949,7 @@ function initHomeWidgets() {
       if (!Number.isInteger(minutes) || minutes <= 0) return;
 
       updateRecord(selectedDateKey, (record) => {
-        record.studyMinutes = [...record.studyMinutes, { minutes }];
+        record.studySessions = [...record.studySessions, { source: 'manual', seconds: minutes * 60 }];
         record.progress.study = true;
         return record;
       });
@@ -814,6 +960,21 @@ function initHomeWidgets() {
       closeStudyAddModal();
     });
   }
+
+  const worshipWidget = document.getElementById('widget-worship');
+  if (worshipWidget) worshipWidget.addEventListener('click', openWorshipModal);
+
+  const worshipCloseBtn = document.getElementById('worship-modal-close');
+  const worshipOverlay = document.getElementById('worship-modal-overlay');
+  if (worshipCloseBtn) worshipCloseBtn.addEventListener('click', closeWorshipModal);
+  if (worshipOverlay) worshipOverlay.addEventListener('click', closeWorshipModal);
+
+  const worshipOBtn = document.getElementById('worship-o-btn');
+  const worshipXBtn = document.getElementById('worship-x-btn');
+  const worshipHomeBtn = document.getElementById('worship-home-btn');
+  if (worshipOBtn) worshipOBtn.addEventListener('click', () => recordWorship('attended'));
+  if (worshipXBtn) worshipXBtn.addEventListener('click', () => recordWorship('absent'));
+  if (worshipHomeBtn) worshipHomeBtn.addEventListener('click', () => recordWorship('home'));
 }
 
 window.initHomeWidgets = initHomeWidgets;
