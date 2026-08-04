@@ -56,10 +56,10 @@ body {
   bottom: -10%;
   z-index: -1;
   background:
-    radial-gradient(circle at 18% 22%, rgba(255, 75, 145, 0.26), transparent 45%),
-    radial-gradient(circle at 82% 18%, rgba(204, 169, 254, 0.28), transparent 48%),
-    radial-gradient(circle at 78% 85%, rgba(238, 102, 80, 0.20), transparent 45%),
-    radial-gradient(circle at 15% 82%, rgba(255, 217, 225, 0.4), transparent 48%),
+    radial-gradient(circle at 18% 22%, rgba(255, 75, 145, 0.21), transparent 45%),
+    radial-gradient(circle at 82% 18%, rgba(204, 169, 254, 0.23), transparent 48%),
+    radial-gradient(circle at 78% 85%, rgba(238, 102, 80, 0.16), transparent 45%),
+    radial-gradient(circle at 15% 82%, rgba(255, 217, 225, 0.35), transparent 48%),
     #fcf9f8;
   filter: blur(80px);
 }
@@ -112,12 +112,12 @@ body {
   background: #ffffff;
   color: #1c1b1b;
   font-weight: 600;
-  box-shadow: 0 8px 20px -8px rgba(255, 75, 145, 0.35);
+  box-shadow: 0 8px 20px -8px rgba(255, 75, 145, 0.28);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .pill-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px -6px rgba(255, 75, 145, 0.4);
+  box-shadow: 0 10px 24px -6px rgba(255, 75, 145, 0.32);
 }
 .pill-btn-primary:active {
   transform: translateY(0);
@@ -131,5 +131,5 @@ body {
 .nav-pill-active {
   background: linear-gradient(135deg, #ff4b91, #ee6650);
   color: #ffffff;
-  box-shadow: 0 6px 16px -6px rgba(255, 75, 145, 0.4);
+  box-shadow: 0 6px 16px -6px rgba(255, 75, 145, 0.32);
 }
