@@ -68,7 +68,7 @@ function renderShell(activePage) {
       <!-- Tablet sidebar (md~lg): floating glass icon rail -->
       <aside class="hidden md:flex lg:hidden w-20 m-4 rounded-[2rem] glass-panel flex-shrink-0 flex-col items-center py-4 z-20">
         <button class="icon-glass w-10 h-10 rounded-full flex items-center justify-center mb-6 text-on-surface-variant transition-colors" aria-label="Switch workspace">
-          <div class="w-6 h-6 bg-gradient-to-br from-primary to-tertiary text-white rounded-full text-xs flex items-center justify-center font-bold">S</div>
+          <div class="w-6 h-6 bg-gradient-to-br from-primary-container to-tertiary-container text-white rounded-full text-xs flex items-center justify-center font-bold">S</div>
         </button>
         <nav class="flex-1 w-full flex flex-col gap-2 px-2">${iconNav}</nav>
         <div class="mt-auto flex flex-col gap-2 items-center pb-2 w-full px-2">

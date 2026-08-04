@@ -56,17 +56,17 @@ body {
   bottom: -10%;
   z-index: -1;
   background:
-    radial-gradient(circle at 18% 22%, rgba(255, 75, 145, 0.55), transparent 42%),
-    radial-gradient(circle at 82% 18%, rgba(204, 169, 254, 0.55), transparent 46%),
-    radial-gradient(circle at 78% 85%, rgba(238, 102, 80, 0.45), transparent 42%),
-    radial-gradient(circle at 15% 82%, rgba(185, 4, 94, 0.35), transparent 46%),
+    radial-gradient(circle at 18% 22%, rgba(255, 75, 145, 0.26), transparent 45%),
+    radial-gradient(circle at 82% 18%, rgba(204, 169, 254, 0.28), transparent 48%),
+    radial-gradient(circle at 78% 85%, rgba(238, 102, 80, 0.20), transparent 45%),
+    radial-gradient(circle at 15% 82%, rgba(255, 217, 225, 0.4), transparent 48%),
     #fcf9f8;
   filter: blur(80px);
 }
 
 /* Surface Level 1 — glass panel: large structural containers (sidebar, hero banners) */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.34);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -74,7 +74,7 @@ body {
 
 /* Surface Level 2 — glass card: floating content that needs to pop (cards, popovers) */
 .glass-card {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -106,18 +106,18 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-/* High-opacity pill button with an ambient glow matching primary */
+/* High-opacity pill button with a soft ambient glow matching primary */
 .pill-btn-primary {
   border-radius: 9999px;
   background: #ffffff;
   color: #1c1b1b;
   font-weight: 600;
-  box-shadow: 0 8px 24px -8px rgba(185, 4, 94, 0.4);
+  box-shadow: 0 8px 20px -8px rgba(255, 75, 145, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .pill-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 28px -6px rgba(185, 4, 94, 0.5);
+  box-shadow: 0 10px 24px -6px rgba(255, 75, 145, 0.4);
 }
 .pill-btn-primary:active {
   transform: translateY(0);
@@ -127,9 +127,9 @@ body {
   transform: none;
 }
 
-/* Pill-shaped nav active state: primary -> tertiary gradient */
+/* Pill-shaped nav active state: soft primary -> tertiary container gradient */
 .nav-pill-active {
-  background: linear-gradient(135deg, #b9045e, #aa3524);
+  background: linear-gradient(135deg, #ff4b91, #ee6650);
   color: #ffffff;
-  box-shadow: 0 6px 18px -6px rgba(185, 4, 94, 0.5);
+  box-shadow: 0 6px 16px -6px rgba(255, 75, 145, 0.4);
 }
