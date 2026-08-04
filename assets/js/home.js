@@ -1,69 +1,89 @@
 // Home page only: date-scoped daily records, Progress checkmarks, widget verification rings,
 // the Daily Goals ring, the calendar date picker, and the 공부/예배 modals.
-// 기도/말씀은 assets/js/pray-word.js가 Supabase에 저장/조회한다 (Gallery와 공유).
-// 공부/예배는 그대로 localStorage(브라우저별)에 저장된다.
+// 기도/말씀은 assets/js/pray-word.js가, 공부/예배는 이 파일이 각각 Supabase에 저장/조회한다.
+// (기도/말씀만 Gallery와 공유되고, 공부/예배는 본인만 볼 수 있는 데이터라 별도 테이블.)
 
-const RECORDS_STORAGE_KEY = 'sap_daily_records_v1';
 const DAILY_GOAL_MINUTES = 300;
 const WORD_VERIFIED_MINUTES = 60; // 말씀 has no natural duration input, so a verified 말씀 is a flat 60분.
 
 let selectedDateKey = todayKey();
 
-function defaultRecord() {
+async function fetchStudyRecord(userId, dateKey) {
+  const { data, error } = await window.supabaseClient
+    .from('study_records').select('*').eq('user_id', userId).eq('record_date', dateKey).maybeSingle();
+  if (error) { console.error('[home] fetchStudyRecord', error); return null; }
+  return data;
+}
+
+async function fetchWorshipRecord(userId, dateKey) {
+  const { data, error } = await window.supabaseClient
+    .from('worship_records').select('*').eq('user_id', userId).eq('record_date', dateKey).maybeSingle();
+  if (error) { console.error('[home] fetchWorshipRecord', error); return null; }
+  return data;
+}
+
+async function saveStudySessions(userId, dateKey, sessions) {
+  const { error } = await window.supabaseClient.from('study_records').upsert(
+    { user_id: userId, record_date: dateKey, sessions, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,record_date' }
+  );
+  if (error) throw error;
+}
+
+async function deleteStudyRecord(userId, dateKey) {
+  const { error } = await window.supabaseClient.from('study_records').delete().eq('user_id', userId).eq('record_date', dateKey);
+  if (error) throw error;
+}
+
+async function saveWorshipRecord(userId, dateKey, status, minutes) {
+  const { error } = await window.supabaseClient.from('worship_records').upsert(
+    { user_id: userId, record_date: dateKey, status, minutes, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,record_date' }
+  );
+  if (error) throw error;
+}
+
+async function deleteWorshipRecord(userId, dateKey) {
+  const { error } = await window.supabaseClient.from('worship_records').delete().eq('user_id', userId).eq('record_date', dateKey);
+  if (error) throw error;
+}
+
+// 4개 카테고리(기도/말씀/공부/예배) 전부 이 캐시 하나에 모인다 (dateKey -> 상태).
+// 기도/말씀은 pray-word.js의 fetchPrayWordStatus, 공부/예배는 이 파일의 fetchStudyWorshipStatus가 채운다.
+let dailyStatus = {};
+
+async function fetchStudyWorshipStatus(userId, dateKey) {
+  const [studyRow, worshipRow] = await Promise.all([fetchStudyRecord(userId, dateKey), fetchWorshipRecord(userId, dateKey)]);
+  const sessions = studyRow ? studyRow.sessions : [];
+  const worshipAttended = worshipRow && (worshipRow.status === 'attended' || worshipRow.status === 'home');
   return {
-    progress: { study: false, worship: false },
-    studySessions: [], // { source: 'record' | 'manual', seconds }
-    worshipStatus: null, // 'attended' | 'absent' | 'home'
-    worshipMinutes: 0
+    study: { sessions, verified: sessions.length > 0 },
+    worship: { status: worshipRow ? worshipRow.status : null, minutes: worshipRow ? worshipRow.minutes : 0, verified: !!worshipAttended }
   };
 }
 
-function loadAllRecords() {
-  try {
-    return JSON.parse(localStorage.getItem(RECORDS_STORAGE_KEY) || '{}');
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveAllRecords(records) {
-  localStorage.setItem(RECORDS_STORAGE_KEY, JSON.stringify(records));
-}
-
-function getRecord(key) {
-  const stored = loadAllRecords()[key] || {};
-  const base = defaultRecord();
-  return {
-    progress: Object.assign({}, base.progress, stored.progress),
-    studySessions: stored.studySessions || base.studySessions,
-    worshipStatus: typeof stored.worshipStatus === 'string' ? stored.worshipStatus : base.worshipStatus,
-    worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes
-  };
-}
-
-function updateRecord(key, updater) {
-  const all = loadAllRecords();
-  all[key] = updater(getRecord(key));
-  saveAllRecords(all);
-}
-
-// 기도/말씀은 Supabase 기반(assets/js/pray-word.js)이라 localStorage record에 없음 —
-// 이 캐시가 selectedDateKey별 { pray, word } 인증 상태를 들고 있고, refreshPrayWordCache로 채운다.
-let prayWordStatus = {};
-
-async function refreshPrayWordCache(key) {
+async function refreshDailyStatus(key) {
   const userId = await getCurrentUserId();
-  prayWordStatus[key] = await fetchPrayWordStatus(userId, key);
+  const [prayWord, studyWorship] = await Promise.all([
+    fetchPrayWordStatus(userId, key),
+    fetchStudyWorshipStatus(userId, key)
+  ]);
+  dailyStatus[key] = Object.assign({}, prayWord, studyWorship);
 }
 
-function getPrayWordStatus(key) {
-  return prayWordStatus[key] || { pray: { entries: [], verified: false }, word: { verses: [], verified: false } };
+function getDailyStatus(key) {
+  return dailyStatus[key] || {
+    pray: { entries: [], verified: false },
+    word: { verses: [], verified: false },
+    study: { sessions: [], verified: false },
+    worship: { status: null, minutes: 0, verified: false }
+  };
 }
 
-// study/worship는 localStorage, pray/word는 캐시 — 인증 체크마크/셀레브레이션이 보는 통합 progress.
+// 인증 체크마크/셀레브레이션이 보는 통합 progress (4개 카테고리 전부 캐시에서 옴).
 function getMergedProgress(key) {
-  const pw = getPrayWordStatus(key);
-  return Object.assign({}, getRecord(key).progress, { pray: pw.pray.verified, word: pw.word.verified });
+  const s = getDailyStatus(key);
+  return { pray: s.pray.verified, word: s.word.verified, study: s.study.verified, worship: s.worship.verified };
 }
 
 // 활성화된(예배는 수/금만 해당) 카테고리 4개(또는 3개)가 모두 인증됐는지 판단할 때 쓰는 목록.
@@ -111,7 +131,7 @@ function renderPrayWidgetSummary() {
   const slot = document.querySelector('#widget-pray .widget-summary');
   if (!slot) return;
 
-  const entries = getPrayWordStatus(selectedDateKey).pray.entries;
+  const entries = getDailyStatus(selectedDateKey).pray.entries;
   const summary = formatPrayerSummary(entries);
 
   if (summary) {
@@ -129,7 +149,7 @@ function renderWordWidgetSummary() {
   const slot = document.querySelector('#widget-word .widget-summary');
   if (!slot) return;
 
-  const summary = formatWordSummary(getPrayWordStatus(selectedDateKey).word.verses);
+  const summary = formatWordSummary(getDailyStatus(selectedDateKey).word.verses);
   if (summary) {
     slot.innerHTML = `
       <p class="text-3xl font-bold text-primary">${WORD_VERIFIED_MINUTES}<span class="text-base font-semibold ml-0.5">분</span></p>
@@ -140,8 +160,8 @@ function renderWordWidgetSummary() {
   }
 }
 
-function getStudySeconds(record, source) {
-  return record.studySessions
+function getStudySeconds(sessions, source) {
+  return sessions
     .filter((entry) => entry.source === source)
     .reduce((sum, entry) => sum + entry.seconds, 0);
 }
@@ -150,9 +170,9 @@ function renderStudyWidgetSummary() {
   const slot = document.querySelector('#widget-study .widget-summary');
   if (!slot) return;
 
-  const record = getRecord(selectedDateKey);
-  const recordSeconds = getStudySeconds(record, 'record');
-  const manualSeconds = getStudySeconds(record, 'manual');
+  const sessions = getDailyStatus(selectedDateKey).study.sessions;
+  const recordSeconds = getStudySeconds(sessions, 'record');
+  const manualSeconds = getStudySeconds(sessions, 'manual');
 
   if (recordSeconds > 0 || manualSeconds > 0) {
     slot.innerHTML = `
@@ -173,9 +193,9 @@ function renderStudyWidgetSummary() {
 }
 
 function renderStudyHistoryModal() {
-  const record = getRecord(selectedDateKey);
-  // keep each entry's original index in record.studySessions so deletes target the right one
-  const indexed = record.studySessions.map((entry, index) => ({ ...entry, index }));
+  const sessions = getDailyStatus(selectedDateKey).study.sessions;
+  // keep each entry's original index in sessions so deletes target the right one
+  const indexed = sessions.map((entry, index) => ({ ...entry, index }));
   const recordSessions = indexed.filter((entry) => entry.source === 'record');
   const manualSessions = indexed.filter((entry) => entry.source === 'manual');
 
@@ -185,8 +205,8 @@ function renderStudyHistoryModal() {
   const manualListEl = document.getElementById('study-history-manual-list');
   if (!recordTotalEl || !manualTotalEl || !recordListEl || !manualListEl) return;
 
-  recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'record')) : '-';
-  manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'manual')) : '-';
+  recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(getStudySeconds(sessions, 'record')) : '-';
+  manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(getStudySeconds(sessions, 'manual')) : '-';
 
   const rowHTML = (entry, i) => {
     const hasTimestamps = entry.source === 'record' && entry.startedAt && entry.endedAt;
@@ -217,32 +237,31 @@ function renderStudyHistoryModal() {
     : '<p class="text-xs text-on-surface-variant">기록 없음</p>';
 }
 
-function removeStudySession(index) {
-  const target = getRecord(selectedDateKey).studySessions[index];
-  if (target && target.source === 'record' && !confirm('Record로 기록한 시간을 삭제할까요?')) return;
-
-  updateRecord(selectedDateKey, (record) => {
-    record.studySessions = record.studySessions.filter((_, i) => i !== index);
-    record.progress.study = record.studySessions.length > 0;
-    return record;
-  });
+async function saveStudySessionsAndRefresh(sessions) {
+  const userId = await getCurrentUserId();
+  if (sessions.length > 0) {
+    await saveStudySessions(userId, selectedDateKey, sessions);
+  } else {
+    await deleteStudyRecord(userId, selectedDateKey);
+  }
+  await refreshDailyStatus(selectedDateKey);
   renderVerificationState();
   renderStudyWidgetSummary();
   renderDailyGoals();
   renderStudyHistoryModal();
 }
 
-function resetStudyRecord() {
+async function removeStudySession(index) {
+  const sessions = getDailyStatus(selectedDateKey).study.sessions;
+  const target = sessions[index];
+  if (target && target.source === 'record' && !confirm('Record로 기록한 시간을 삭제할까요?')) return;
+
+  await saveStudySessionsAndRefresh(sessions.filter((_, i) => i !== index));
+}
+
+async function resetStudyRecord() {
   if (!confirm('공부 기록을 전체 초기화할까요?')) return;
-  updateRecord(selectedDateKey, (record) => {
-    record.studySessions = [];
-    record.progress.study = false;
-    return record;
-  });
-  renderVerificationState();
-  renderStudyWidgetSummary();
-  renderDailyGoals();
-  renderStudyHistoryModal();
+  await saveStudySessionsAndRefresh([]);
 }
 
 function openStudyHistoryModal() {
@@ -282,16 +301,16 @@ function renderWorshipWidgetSummary() {
   const slot = document.querySelector('#widget-worship .widget-summary');
   if (!slot) return;
 
-  const record = getRecord(selectedDateKey);
-  if (!record.worshipStatus) {
+  const worship = getDailyStatus(selectedDateKey).worship;
+  if (!worship.status) {
     slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
     return;
   }
 
-  const statusLabel = { attended: 'O 참석', absent: 'X 미참석', home: '가정예배' }[record.worshipStatus] || '';
-  if (record.worshipMinutes > 0) {
+  const statusLabel = { attended: 'O 참석', absent: 'X 미참석', home: '가정예배' }[worship.status] || '';
+  if (worship.minutes > 0) {
     slot.innerHTML = `
-      <p class="text-3xl font-bold text-primary">${record.worshipMinutes}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-3xl font-bold text-primary">${worship.minutes}<span class="text-base font-semibold ml-0.5">분</span></p>
       <p class="text-xs text-on-surface-variant mt-2">${statusLabel}</p>
     `;
   } else {
@@ -302,12 +321,11 @@ function renderWorshipWidgetSummary() {
 // 기도 sums real logged time; 말씀 is a flat 60분 once verified; 공부 sums Record + manual entries;
 // 예배 is a flat 120분 when O/가정 was chosen (수/금만 활성화).
 function getCategoryMinutes(key) {
-  const record = getRecord(selectedDateKey);
-  const pw = getPrayWordStatus(selectedDateKey);
-  if (key === 'pray') return pw.pray.entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
-  if (key === 'word') return pw.word.verified ? WORD_VERIFIED_MINUTES : 0;
-  if (key === 'study') return Math.round((getStudySeconds(record, 'record') + getStudySeconds(record, 'manual')) / 60);
-  if (key === 'worship') return record.worshipMinutes || 0;
+  const s = getDailyStatus(selectedDateKey);
+  if (key === 'pray') return s.pray.entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+  if (key === 'word') return s.word.verified ? WORD_VERIFIED_MINUTES : 0;
+  if (key === 'study') return Math.round((getStudySeconds(s.study.sessions, 'record') + getStudySeconds(s.study.sessions, 'manual')) / 60);
+  if (key === 'worship') return s.worship.minutes || 0;
   return 0;
 }
 
@@ -533,7 +551,7 @@ function renderAllForSelectedDate() {
 
 async function selectDate(key) {
   selectedDateKey = key;
-  await refreshPrayWordCache(key);
+  await refreshDailyStatus(key);
   renderAllForSelectedDate();
 }
 
@@ -656,7 +674,7 @@ function resumeRecording() {
 }
 
 // Off: 세션을 종료하고 지금까지 잰 시간을 기록으로 저장한다 (실행 중이었다면 마지막 구간도 합산).
-function stopRecording() {
+async function stopRecording() {
   if (!recordSessionStartedAt) return;
 
   if (recordStartTime) {
@@ -679,16 +697,9 @@ function stopRecording() {
   }
 
   if (elapsedSeconds > 0) {
-    updateRecord(selectedDateKey, (record) => {
-      record.studySessions = [...record.studySessions, { source: 'record', seconds: elapsedSeconds, startedAt, endedAt }];
-      record.progress.study = true;
-      return record;
-    });
+    const sessions = getDailyStatus(selectedDateKey).study.sessions;
+    await saveStudySessionsAndRefresh([...sessions, { source: 'record', seconds: elapsedSeconds, startedAt, endedAt }]);
   }
-
-  renderVerificationState();
-  renderStudyWidgetSummary();
-  renderDailyGoals();
 }
 
 function openStudyAddModal() {
@@ -722,13 +733,11 @@ function closeWorshipModal() {
   modal.classList.remove('flex');
 }
 
-function recordWorship(status) {
-  updateRecord(selectedDateKey, (record) => {
-    record.worshipStatus = status;
-    record.worshipMinutes = status === 'attended' || status === 'home' ? WORSHIP_AUTO_MINUTES : 0;
-    record.progress.worship = status === 'attended' || status === 'home';
-    return record;
-  });
+async function recordWorship(status) {
+  const userId = await getCurrentUserId();
+  const minutes = status === 'attended' || status === 'home' ? WORSHIP_AUTO_MINUTES : 0;
+  await saveWorshipRecord(userId, selectedDateKey, status, minutes);
+  await refreshDailyStatus(selectedDateKey);
 
   renderVerificationState();
   renderWorshipWidgetSummary();
@@ -736,13 +745,11 @@ function recordWorship(status) {
   closeWorshipModal();
 }
 
-function resetWorship() {
-  updateRecord(selectedDateKey, (record) => {
-    record.worshipStatus = null;
-    record.worshipMinutes = 0;
-    record.progress.worship = false;
-    return record;
-  });
+async function resetWorship() {
+  const userId = await getCurrentUserId();
+  await deleteWorshipRecord(userId, selectedDateKey);
+  await refreshDailyStatus(selectedDateKey);
+
   renderVerificationState();
   renderWorshipWidgetSummary();
   renderDailyGoals();
@@ -765,7 +772,7 @@ function showSaveToast() {
 
 // 기도/말씀 저장·초기화 이후 Home 쪽에서 다시 그려줘야 하는 것들 (pray-word.js가 호출).
 async function onPrayWordSaved() {
-  await refreshPrayWordCache(selectedDateKey);
+  await refreshDailyStatus(selectedDateKey);
   renderVerificationState();
   renderPrayWidgetSummary();
   renderWordWidgetSummary();
@@ -843,20 +850,13 @@ async function initHomeWidgets() {
   if (studyAddCancelBtn) studyAddCancelBtn.addEventListener('click', closeStudyAddModal);
 
   if (studyAddSaveBtn) {
-    studyAddSaveBtn.addEventListener('click', () => {
+    studyAddSaveBtn.addEventListener('click', async () => {
       const input = document.getElementById('study-add-minutes-input');
       const minutes = input ? parseInt(input.value, 10) : NaN;
       if (!Number.isInteger(minutes) || minutes <= 0) return;
 
-      updateRecord(selectedDateKey, (record) => {
-        record.studySessions = [...record.studySessions, { source: 'manual', seconds: minutes * 60 }];
-        record.progress.study = true;
-        return record;
-      });
-
-      renderVerificationState();
-      renderStudyWidgetSummary();
-      renderDailyGoals();
+      const sessions = getDailyStatus(selectedDateKey).study.sessions;
+      await saveStudySessionsAndRefresh([...sessions, { source: 'manual', seconds: minutes * 60 }]);
       closeStudyAddModal();
     });
   }
@@ -887,8 +887,8 @@ async function initHomeWidgets() {
     });
   }
 
-  // 버튼 wiring은 전부 즉시 끝내고, 기도/말씀 최초 데이터만 비동기로 불러온 뒤 첫 렌더를 한다.
-  await refreshPrayWordCache(selectedDateKey);
+  // 버튼 wiring은 전부 즉시 끝내고, 4개 카테고리 최초 데이터만 비동기로 불러온 뒤 첫 렌더를 한다.
+  await refreshDailyStatus(selectedDateKey);
   renderAllForSelectedDate();
 }
 
