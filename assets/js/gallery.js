@@ -1,174 +1,239 @@
-// Gallery page: 기도 인증/말씀 묵상 두 탭, 유저별 칸(선으로만 구분, 위젯 스타일 아님).
-// 데이터는 pray-word.js를 통해 Home과 동일한 Supabase 테이블을 읽고 쓴다 (동기화).
+// Sapians: 인스타그램 스타일 피드. 기도/말씀 인증(pray_records/word_records)을 그대로 읽어서
+// 하루 전체 기록 = 게시물 1개로 렌더링한다. 새 테이블/별도 sync 없음 — MyPage와 완전히 같은 데이터.
 
-let galleryCurrentUserId = null;
-let galleryUsers = []; // [{id, username, name}]
-let galleryActiveTab = 'pray'; // 'pray' | 'word'
-let galleryDateKey = todayKey(); // 그리드에 표시 중인 날짜 (날짜 입력으로 변경 가능)
-let galleryPrayMap = {}; // user_id -> pray_records row
-let galleryWordMap = {}; // user_id -> word_records row
+let sapiansCurrentUserId = null;
+let sapiansUsers = []; // [{id, username, name}]
+let sapiansFeedItems = []; // [{type: 'pray'|'word', user, row, sortKey}], 최신순
 
-async function loadGalleryUsers() {
+const FEED_WINDOW_DAYS = 30;
+
+function initialOf(name) {
+  return name ? name.charAt(0) : '?';
+}
+
+async function loadSapiansUsers() {
   const { data, error } = await window.supabaseClient.rpc('get_gallery_users');
   if (error) {
-    console.error('[gallery] loadGalleryUsers', error);
+    console.error('[sapians] loadSapiansUsers', error);
     return [];
   }
   return data || [];
 }
 
-async function loadGalleryRecords() {
-  const ids = galleryUsers.map((u) => u.id);
-  if (ids.length === 0) {
-    galleryPrayMap = {};
-    galleryWordMap = {};
-    return;
-  }
-  const [prayRes, wordRes] = await Promise.all([
-    window.supabaseClient.from('pray_records').select('*').eq('record_date', galleryDateKey).in('user_id', ids),
-    window.supabaseClient.from('word_records').select('*').eq('record_date', galleryDateKey).in('user_id', ids)
-  ]);
-  if (prayRes.error) console.error('[gallery] pray_records', prayRes.error);
-  if (wordRes.error) console.error('[gallery] word_records', wordRes.error);
-  galleryPrayMap = Object.fromEntries((prayRes.data || []).map((r) => [r.user_id, r]));
-  galleryWordMap = Object.fromEntries((wordRes.data || []).map((r) => [r.user_id, r]));
+function feedWindowStartKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - FEED_WINDOW_DAYS);
+  return dateKey(d);
 }
 
-function galleryCellHTML(user) {
-  const isOwn = user.id === galleryCurrentUserId;
-  const clickableCls = isOwn ? 'cursor-pointer hover:bg-white/40 transition-colors' : '';
-  const label = `${user.name} <span class="text-on-surface-variant">(${user.username})</span>`;
-
-  if (galleryActiveTab === 'pray') {
-    const row = galleryPrayMap[user.id];
-    const entries = row ? row.entries : [];
-    if (entries.length > 0) {
-      const photoPath = entries[0].photoUnavailable ? null : entries[0].photoPath;
-      const summary = formatPrayerSummary(entries);
-      return `
-        <div class="p-4 ${clickableCls}" data-user-id="${user.id}">
-          <img src="${getPhotoUrl(photoPath)}" class="w-full aspect-square object-cover rounded-xl mb-2" alt="${user.name} 기도 인증 사진">
-          <p class="text-sm font-semibold text-on-surface truncate">${label}</p>
-          <p class="text-xs text-on-surface-variant mt-1 leading-relaxed">${summary}</p>
-        </div>`;
-    }
-  } else {
-    const row = galleryWordMap[user.id];
-    const verses = row ? row.verses : [];
-    if (verses.length > 0) {
-      const photoPath = row.photo_unavailable ? null : row.photo_path;
-      const summary = formatWordSummary(verses);
-      return `
-        <div class="p-4 ${clickableCls}" data-user-id="${user.id}">
-          <img src="${getPhotoUrl(photoPath)}" class="w-full aspect-square object-cover rounded-xl mb-2" alt="${user.name} 말씀 인증 사진">
-          <p class="text-sm font-semibold text-on-surface truncate">${label}</p>
-          <p class="text-xs text-on-surface-variant mt-1 leading-relaxed">${summary}</p>
-        </div>`;
-    }
+async function loadSapiansFeed() {
+  const ids = sapiansUsers.map((u) => u.id);
+  if (ids.length === 0) {
+    sapiansFeedItems = [];
+    return;
   }
+  const sinceKey = feedWindowStartKey();
+
+  const [prayRes, wordRes] = await Promise.all([
+    window.supabaseClient.from('pray_records').select('*').gte('record_date', sinceKey).in('user_id', ids),
+    window.supabaseClient.from('word_records').select('*').gte('record_date', sinceKey).in('user_id', ids)
+  ]);
+  if (prayRes.error) console.error('[sapians] pray_records', prayRes.error);
+  if (wordRes.error) console.error('[sapians] word_records', wordRes.error);
+
+  const usersById = Object.fromEntries(sapiansUsers.map((u) => [u.id, u]));
+
+  const prayItems = (prayRes.data || [])
+    .filter((row) => row.entries && row.entries.length > 0)
+    .map((row) => ({ type: 'pray', user: usersById[row.user_id], row, sortKey: row.updated_at }));
+
+  const wordItems = (wordRes.data || [])
+    .filter((row) => row.verses && row.verses.length > 0)
+    .map((row) => ({ type: 'word', user: usersById[row.user_id], row, sortKey: row.updated_at }));
+
+  sapiansFeedItems = [...prayItems, ...wordItems].sort((a, b) => new Date(b.sortKey) - new Date(a.sortKey));
+}
+
+function feedItemPhotoPaths(item) {
+  if (item.type === 'pray') {
+    return item.row.entries.map((entry) => (entry.photoUnavailable ? null : entry.photoPath));
+  }
+  return [item.row.photo_unavailable ? null : item.row.photo_path];
+}
+
+function feedItemSummary(item) {
+  return item.type === 'pray' ? formatPrayerSummary(item.row.entries) : formatWordSummary(item.row.verses);
+}
+
+function feedItemTypeLabel(item) {
+  return item.type === 'pray' ? '기도 인증' : '말씀 묵상';
+}
+
+function relativeTimeFromNow(isoString) {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return '방금';
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  return `${days}일 전`;
+}
+
+function avatarHTML(user, sizeClass) {
+  const initial = initialOf(user ? user.name : null);
+  return `
+    <div class="story-ring ${sizeClass}">
+      <div class="story-ring-inner w-full h-full">
+        <div class="w-full h-full rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary flex items-center justify-center font-bold text-sm">${initial}</div>
+      </div>
+    </div>`;
+}
+
+function feedCardHTML(item, index) {
+  const isOwn = item.user && item.user.id === sapiansCurrentUserId;
+  const photoUrls = feedItemPhotoPaths(item).map((path) => getPhotoUrl(path));
+  const mediaHTML = photoUrls
+    .map((src) => `<img src="${src}" class="snap-center shrink-0 w-full h-full object-cover" alt="게시물 사진">`)
+    .join('');
+  const dotsHTML = photoUrls.length > 1
+    ? `<div class="flex justify-center gap-1 mt-2">${photoUrls.map((_, i) => `<span class="w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-primary' : 'bg-outline-variant'}"></span>`).join('')}</div>`
+    : '';
+  const name = item.user ? item.user.name : '?';
+  const username = item.user ? item.user.username : '?';
 
   return `
-    <div class="p-4 flex items-center justify-center min-h-[140px] text-center ${clickableCls}" data-user-id="${user.id}">
-      <p class="text-sm font-medium text-on-surface-variant">${label}</p>
-    </div>`;
+    <article class="pb-6 border-b border-outline-variant">
+      <div class="flex items-center justify-between px-1 pb-3">
+        <div class="flex items-center gap-3">
+          ${avatarHTML(item.user, 'w-9 h-9')}
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-semibold text-on-surface">${name} <span class="text-on-surface-variant font-normal">(${username})</span></span>
+            <span class="text-[11px] text-on-surface-variant">${feedItemTypeLabel(item)} · ${relativeTimeFromNow(item.sortKey)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="relative w-full aspect-square bg-surface-container rounded-2xl overflow-hidden ${isOwn ? 'cursor-pointer sapians-own-media' : ''}" data-feed-index="${index}">
+        <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full h-full">${mediaHTML}</div>
+      </div>
+      ${dotsHTML}
+      <div class="flex items-center gap-4 px-1 pt-3 text-on-surface-variant">
+        <i class="fa-regular fa-heart text-xl"></i>
+        <i class="fa-regular fa-comment text-xl"></i>
+        <i class="fa-regular fa-paper-plane text-xl"></i>
+      </div>
+      <p class="px-1 pt-2 text-sm text-on-surface"><span class="font-semibold mr-1">${name}</span>${feedItemSummary(item)}</p>
+    </article>`;
 }
 
-function renderGalleryGrid() {
-  const grid = document.getElementById('gallery-grid');
-  if (!grid) return;
+function renderSapiansFeed() {
+  const feedEl = document.getElementById('sapians-feed');
+  if (!feedEl) return;
 
-  if (galleryUsers.length === 0) {
-    grid.innerHTML = '<p class="text-sm text-on-surface-variant text-center py-12">표시할 이용자가 없습니다.</p>';
+  if (sapiansFeedItems.length === 0) {
+    feedEl.innerHTML = '<p class="text-sm text-on-surface-variant text-center py-16">아직 게시물이 없습니다.</p>';
     return;
   }
+  feedEl.innerHTML = sapiansFeedItems.map(feedCardHTML).join('');
+}
 
-  grid.innerHTML = `
-    <div class="border border-outline-variant rounded-[2rem] overflow-hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 divide-x divide-y divide-outline-variant">
-      ${galleryUsers.map(galleryCellHTML).join('')}
+function renderSapiansStories() {
+  const el = document.getElementById('sapians-stories');
+  if (!el) return;
+
+  const own = sapiansUsers.find((u) => u.id === sapiansCurrentUserId);
+  const others = sapiansUsers.filter((u) => u.id !== sapiansCurrentUserId);
+
+  const ownHTML = `
+    <div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer" id="sapians-own-story">
+      <div class="relative">
+        ${avatarHTML(own, 'w-16 h-16')}
+        <div class="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-surface text-xs pointer-events-none">
+          <i class="fa-solid fa-plus"></i>
+        </div>
+      </div>
+      <span class="text-[11px] text-on-surface-variant truncate w-16 text-center">나</span>
     </div>`;
+
+  const othersHTML = others.map((u) => `
+    <div class="flex flex-col items-center gap-1 shrink-0" data-user-id="${u.id}">
+      ${avatarHTML(u, 'w-16 h-16')}
+      <span class="text-[11px] text-on-surface-variant truncate w-16 text-center">${u.username}</span>
+    </div>`).join('');
+
+  el.innerHTML = ownHTML + othersHTML;
 }
 
-async function onGallerySaved() {
-  await loadGalleryRecords();
-  renderGalleryGrid();
+async function onFeedSaved() {
+  await loadSapiansFeed();
+  renderSapiansFeed();
 }
 
-function wireGalleryTabs() {
-  const prayBtn = document.getElementById('gallery-tab-pray');
-  const wordBtn = document.getElementById('gallery-tab-word');
-  if (!prayBtn || !wordBtn) return;
-
-  function selectTab(active, inactive, tab) {
-    active.classList.add('nav-pill-active');
-    active.classList.remove('text-on-surface-variant');
-    inactive.classList.remove('nav-pill-active');
-    inactive.classList.add('text-on-surface-variant');
-    galleryActiveTab = tab;
-    renderGalleryGrid();
-  }
-
-  prayBtn.addEventListener('click', () => selectTab(prayBtn, wordBtn, 'pray'));
-  wordBtn.addEventListener('click', () => selectTab(wordBtn, prayBtn, 'word'));
+function openComposeModal() {
+  const modal = document.getElementById('sapians-compose-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }
 
-function wireGalleryGridClicks() {
-  const grid = document.getElementById('gallery-grid');
-  if (!grid) return;
-
-  grid.addEventListener('click', (e) => {
-    const cell = e.target.closest('[data-user-id]');
-    if (!cell || cell.dataset.userId !== galleryCurrentUserId) return;
-
-    if (galleryActiveTab === 'pray') {
-      openPrayModal(galleryDateKey, onGallerySaved);
-    } else {
-      openWordModal(galleryDateKey, onGallerySaved);
-    }
-  });
+function closeComposeModal() {
+  const modal = document.getElementById('sapians-compose-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
 }
 
-function wireGalleryDateControl() {
-  const dateInput = document.getElementById('gallery-date-input');
-  const todayBtn = document.getElementById('gallery-date-today');
-  if (!dateInput) return;
+function wireCompose() {
+  const composeBtn = document.getElementById('sapians-compose-btn');
+  const overlay = document.getElementById('sapians-compose-overlay');
+  const cancelBtn = document.getElementById('sapians-compose-cancel');
+  const prayBtn = document.getElementById('sapians-compose-pray');
+  const wordBtn = document.getElementById('sapians-compose-word');
+  const storiesEl = document.getElementById('sapians-stories');
 
-  function syncTodayButton() {
-    if (todayBtn) todayBtn.classList.toggle('hidden', galleryDateKey === todayKey());
-  }
+  if (composeBtn) composeBtn.addEventListener('click', openComposeModal);
+  if (overlay) overlay.addEventListener('click', closeComposeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeComposeModal);
+  if (prayBtn) prayBtn.addEventListener('click', () => { closeComposeModal(); openPrayModal(todayKey(), onFeedSaved); });
+  if (wordBtn) wordBtn.addEventListener('click', () => { closeComposeModal(); openWordModal(todayKey(), onFeedSaved); });
 
-  dateInput.value = galleryDateKey;
-  syncTodayButton();
-
-  dateInput.addEventListener('change', async () => {
-    if (!dateInput.value) return;
-    galleryDateKey = dateInput.value;
-    syncTodayButton();
-    await loadGalleryRecords();
-    renderGalleryGrid();
-  });
-
-  if (todayBtn) {
-    todayBtn.addEventListener('click', async () => {
-      galleryDateKey = todayKey();
-      dateInput.value = galleryDateKey;
-      syncTodayButton();
-      await loadGalleryRecords();
-      renderGalleryGrid();
+  // 본인 스토리 원은 매번 다시 그려지므로(이벤트 위임) 상위 컨테이너에 한 번만 건다.
+  if (storiesEl) {
+    storiesEl.addEventListener('click', (e) => {
+      if (e.target.closest('#sapians-own-story')) openComposeModal();
     });
   }
 }
 
+function wireFeedClicks() {
+  const feedEl = document.getElementById('sapians-feed');
+  if (!feedEl) return;
+
+  feedEl.addEventListener('click', (e) => {
+    const mediaEl = e.target.closest('.sapians-own-media');
+    if (!mediaEl) return;
+    const item = sapiansFeedItems[Number(mediaEl.dataset.feedIndex)];
+    if (!item) return;
+
+    if (item.type === 'pray') {
+      openPrayModal(item.row.record_date, onFeedSaved);
+    } else {
+      openWordModal(item.row.record_date, onFeedSaved);
+    }
+  });
+}
+
 async function initGalleryWidgets() {
-  wireGalleryTabs();
-  wireGalleryGridClicks();
-  wireGalleryDateControl();
+  wireCompose();
+  wireFeedClicks();
   wirePrayModalStatic();
   wireWordModalStatic();
 
-  galleryCurrentUserId = await getCurrentUserId();
-  galleryUsers = await loadGalleryUsers();
-  await loadGalleryRecords();
-  renderGalleryGrid();
+  sapiansCurrentUserId = await getCurrentUserId();
+  sapiansUsers = await loadSapiansUsers();
+  renderSapiansStories();
+  await loadSapiansFeed();
+  renderSapiansFeed();
 }
 
 window.initGalleryWidgets = initGalleryWidgets;

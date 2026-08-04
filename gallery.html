@@ -12,20 +12,31 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="flex items-center justify-between mb-8 lg:mb-10">
-    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Sapians</h1>
-    <div class="glass-panel rounded-full p-1 flex text-sm font-semibold">
-      <button type="button" id="gallery-tab-pray" class="px-4 py-1.5 rounded-full nav-pill-active transition-colors">기도 인증</button>
-      <button type="button" id="gallery-tab-word" class="px-4 py-1.5 rounded-full text-on-surface-variant transition-colors">말씀 묵상</button>
+  <div class="max-w-[470px] mx-auto">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h1 class="sapians-wordmark text-2xl">SAPIANS</h1>
+      <button type="button" id="sapians-compose-btn" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="새 게시물">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </div>
+
+    <!-- 스토리 바: 본인 원(+ 배지, 새 게시물 작성용) + 노출 대상 유저들 -->
+    <div id="sapians-stories" class="flex gap-4 overflow-x-auto pb-4 mb-4 border-b border-outline-variant scrollbar-hide"></div>
+
+    <!-- 기도/말씀 인증이 하나의 타임라인에 시간순으로 섞여서 나오는 피드 -->
+    <div id="sapians-feed" class="flex flex-col gap-6"></div>
+  </div>
+
+  <!-- 새 게시물 작성: 기도/말씀 중 선택 -> 기존 인증 모달 그대로 재사용 -->
+  <div id="sapians-compose-modal" class="hidden fixed inset-0 z-[65] items-center justify-center px-4">
+    <div id="sapians-compose-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
+    <div class="glass-panel relative rounded-[2rem] w-full max-w-xs p-6 flex flex-col gap-3">
+      <h2 class="text-lg font-bold text-center mb-1">새 게시물</h2>
+      <button id="sapians-compose-pray" type="button" class="pill-btn-primary py-3 text-sm">기도 인증</button>
+      <button id="sapians-compose-word" type="button" class="glass-card py-3 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">말씀 묵상</button>
+      <button id="sapians-compose-cancel" type="button" class="text-xs text-on-surface-variant text-center mt-2 hover:text-on-surface">취소</button>
     </div>
   </div>
-
-  <div class="flex items-center justify-end gap-3 mb-6">
-    <button type="button" id="gallery-date-today" class="hidden text-xs font-medium text-primary hover:opacity-80">오늘로 이동</button>
-    <input type="date" id="gallery-date-input" class="glass-input px-3 py-1.5 rounded-xl text-sm">
-  </div>
-
-  <div id="gallery-grid"></div>
 
   <!-- 기도 인증 모달 (Home과 동일 마크업 — assets/js/pray-word.js가 두 페이지 공용으로 다룬다) -->
   <div id="pray-modal" class="hidden fixed inset-0 z-[60] items-center justify-center px-4">
@@ -172,7 +183,7 @@
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
 <script src="assets/js/pray-word.js?v=4"></script>
-<script src="assets/js/gallery.js?v=2"></script>
+<script src="assets/js/gallery.js?v=3"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });
