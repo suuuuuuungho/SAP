@@ -1,5 +1,5 @@
-// Home page only: Progress checkmarks + 기도 인증 모달.
-// Progress state is stored locally (per-browser) for now — not yet saved to Supabase.
+// Home page only: Progress checkmarks, widget verification rings, and the 기도 인증 모달.
+// State is stored locally (per-browser) for now — not yet saved to Supabase.
 const PROGRESS_STORAGE_KEY = 'sap_progress_v1';
 const PRAYER_CLASSES_STORAGE_KEY = 'sap_prayer_classes_v1';
 
@@ -18,14 +18,72 @@ function saveProgress(progress) {
   localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
 }
 
+function loadPrayerClasses() {
+  try {
+    return JSON.parse(localStorage.getItem(PRAYER_CLASSES_STORAGE_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
 // Same checkmark icon everywhere — colored gradient when verified, neutral glass when not.
-function renderProgressIcons() {
+// Verified widget cards also get a gradient ring matching the active nav pill color.
+function renderVerificationState() {
   const progress = loadProgress();
+
   document.querySelectorAll('[data-progress-icon]').forEach((el) => {
     const key = el.getAttribute('data-progress-icon');
     el.className = progress[key]
       ? 'w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary flex items-center justify-center shrink-0'
       : 'icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0';
+  });
+
+  document.querySelectorAll('[data-widget]').forEach((el) => {
+    const key = el.getAttribute('data-widget');
+    el.classList.toggle('is-verified', !!progress[key]);
+  });
+}
+
+function formatPrayerSummary(entries) {
+  return entries
+    .filter((entry) => entry.location)
+    .map((entry) => (entry.start && entry.end ? `${entry.location} ${entry.start}–${entry.end}` : entry.location))
+    .join(', ');
+}
+
+function renderPrayWidgetSummary() {
+  const slot = document.querySelector('#widget-pray .widget-summary');
+  if (!slot) return;
+
+  const summary = formatPrayerSummary(loadPrayerClasses());
+  if (summary) {
+    slot.innerHTML = `<p class="text-xs text-on-surface leading-relaxed">${summary}</p>`;
+  } else {
+    slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
+  }
+}
+
+function wirePhotoPreview(entryEl) {
+  const input = entryEl.querySelector('.pray-photo-input');
+  const preview = entryEl.querySelector('.pray-photo-preview');
+  if (!input || !preview) return;
+
+  input.addEventListener('change', () => {
+    if (preview.dataset.objectUrl) {
+      URL.revokeObjectURL(preview.dataset.objectUrl);
+      delete preview.dataset.objectUrl;
+    }
+
+    const file = input.files && input.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      preview.src = url;
+      preview.dataset.objectUrl = url;
+      preview.classList.remove('hidden');
+    } else {
+      preview.src = '';
+      preview.classList.add('hidden');
+    }
   });
 }
 
@@ -41,7 +99,9 @@ function addPrayClassEntry() {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
   if (!template || !list) return;
+
   list.appendChild(template.content.cloneNode(true));
+  wirePhotoPreview(list.lastElementChild);
   updatePrayRemoveButtons();
 }
 
@@ -63,7 +123,8 @@ function closePrayModal() {
 }
 
 function initHomeWidgets() {
-  renderProgressIcons();
+  renderVerificationState();
+  renderPrayWidgetSummary();
 
   const prayWidget = document.getElementById('widget-pray');
   if (prayWidget) prayWidget.addEventListener('click', openPrayModal);
@@ -102,8 +163,9 @@ function initHomeWidgets() {
       const progress = loadProgress();
       progress.pray = true;
       saveProgress(progress);
-      renderProgressIcons();
 
+      renderVerificationState();
+      renderPrayWidgetSummary();
       closePrayModal();
     });
   }

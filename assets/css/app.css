@@ -133,3 +133,20 @@ body {
   color: #ffffff;
   box-shadow: 0 6px 16px -6px rgba(255, 75, 145, 0.32);
 }
+
+/* Verified widget card: same gradient ring as the active nav pill, respects rounded corners */
+.widget-card {
+  position: relative;
+}
+.widget-card.is-verified::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #ff4b91, #ee6650);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
