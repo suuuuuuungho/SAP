@@ -48,7 +48,7 @@
 <div class="app-container" data-purpose="mobile-app-layout">
 <!-- BEGIN: TopHeader -->
 <header class="flex justify-between items-center px-4 py-3 border-b border-gray-200 mt-8" data-purpose="main-header">
-<div class="text-xl tracking-tighter" style="font-family: &quot;Times New Roman&quot;, Times, serif; font-weight: bold; font-style: italic;">SAPIAN</div>
+<div class="text-xl tracking-tighter" style="font-family: &quot;Times New Roman&quot;, Times, serif; font-weight: bold; font-style: italic;">SAPIANS</div>
 
 </header>
 <!-- END: TopHeader -->
