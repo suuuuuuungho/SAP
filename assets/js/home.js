@@ -905,9 +905,11 @@ function resetWordRecord() {
   closeWordModal();
 }
 
-// --- 공부: Record 타이머 (포그라운드 전용) + 수동 분 입력 ---
+// --- 공부: Record 타이머 (포그라운드 전용, Pause/On/Off) + 수동 분 입력 ---
 
-let recordStartTime = null;
+let recordStartTime = null; // 현재 진행 중인 구간의 시작 시각. 일시정지/미시작 상태면 null.
+let recordSessionStartedAt = null; // 이 Record 세션을 처음 시작한 시각(로그의 startedAt). 세션이 없으면 null.
+let recordAccumulatedSeconds = 0; // 지금까지 (일시정지 제외하고) 실제로 흐른 시간의 합.
 let recordIntervalId = null;
 
 function formatElapsed(ms) {
@@ -919,13 +921,26 @@ function formatElapsed(ms) {
 
 function updateRecordTimerDisplay() {
   const el = document.getElementById('study-record-timer');
-  if (!el || !recordStartTime) return;
-  el.textContent = formatElapsed(Date.now() - recordStartTime);
+  if (!el || !recordSessionStartedAt) return;
+  const runningMs = recordStartTime ? Date.now() - recordStartTime : 0;
+  el.textContent = formatElapsed(recordAccumulatedSeconds * 1000 + runningMs);
+}
+
+function updateRecordButtonsUI() {
+  const pauseBtn = document.getElementById('study-pause-btn');
+  const resumeBtn = document.getElementById('study-resume-btn');
+  const statusEl = document.getElementById('study-record-status');
+  const running = !!recordStartTime;
+  if (pauseBtn) pauseBtn.classList.toggle('hidden', !running);
+  if (resumeBtn) resumeBtn.classList.toggle('hidden', running);
+  if (statusEl) statusEl.textContent = running ? '공부 기록 중' : '일시정지됨';
 }
 
 function startRecording() {
-  if (recordStartTime) return;
-  recordStartTime = Date.now();
+  if (recordSessionStartedAt) return;
+  recordSessionStartedAt = Date.now();
+  recordStartTime = recordSessionStartedAt;
+  recordAccumulatedSeconds = 0;
 
   const modal = document.getElementById('study-record-modal');
   if (modal) {
@@ -933,24 +948,51 @@ function startRecording() {
     modal.classList.add('flex');
   }
 
+  updateRecordButtonsUI();
   updateRecordTimerDisplay();
   recordIntervalId = setInterval(updateRecordTimerDisplay, 1000);
 }
 
-// Triggered by Pause, or automatically when the tab/window loses focus — either way the elapsed
-// time is logged, since only the *continuation* while away is what must be prevented, not the
-// honest time already spent.
-function stopRecording() {
+// Pause (수동 클릭 또는 다른 화면/앱으로 이동 시 자동): 타이머만 멈추고 세션은 유지,
+// On으로 다시 이어서 잴 수 있다. 백그라운드에 있는 동안은 절대 카운트되지 않는다.
+function pauseRecording() {
   if (!recordStartTime) return;
+  // 표시되는 타임스탬프와 정확히 맞도록 구간별로도 초 단위로 끊어서 누적한다.
+  recordAccumulatedSeconds += Math.floor(Date.now() / 1000) - Math.floor(recordStartTime / 1000);
+  recordStartTime = null;
+  clearInterval(recordIntervalId);
+  recordIntervalId = null;
 
-  const startedAt = recordStartTime;
+  updateRecordButtonsUI();
+  updateRecordTimerDisplay();
+}
+
+// On: 일시정지 상태에서 다시 재개.
+function resumeRecording() {
+  if (!recordSessionStartedAt || recordStartTime) return;
+  recordStartTime = Date.now();
+
+  updateRecordButtonsUI();
+  updateRecordTimerDisplay();
+  recordIntervalId = setInterval(updateRecordTimerDisplay, 1000);
+}
+
+// Off: 세션을 종료하고 지금까지 잰 시간을 기록으로 저장한다 (실행 중이었다면 마지막 구간도 합산).
+function stopRecording() {
+  if (!recordSessionStartedAt) return;
+
+  if (recordStartTime) {
+    recordAccumulatedSeconds += Math.floor(Date.now() / 1000) - Math.floor(recordStartTime / 1000);
+  }
+  const startedAt = recordSessionStartedAt;
   const endedAt = Date.now();
-  // Match the whole-second timestamps shown in the history list (no ms), so the
-  // displayed duration always equals endedAt's second minus startedAt's second.
-  const elapsedSeconds = Math.floor(endedAt / 1000) - Math.floor(startedAt / 1000);
+  const elapsedSeconds = recordAccumulatedSeconds;
+
   clearInterval(recordIntervalId);
   recordIntervalId = null;
   recordStartTime = null;
+  recordSessionStartedAt = null;
+  recordAccumulatedSeconds = 0;
 
   const modal = document.getElementById('study-record-modal');
   if (modal) {
@@ -1214,12 +1256,18 @@ function initHomeWidgets() {
   if (recordBtn) recordBtn.addEventListener('click', (e) => { e.stopPropagation(); startRecording(); });
 
   const pauseBtn = document.getElementById('study-pause-btn');
-  if (pauseBtn) pauseBtn.addEventListener('click', stopRecording);
+  if (pauseBtn) pauseBtn.addEventListener('click', pauseRecording);
+
+  const resumeBtn = document.getElementById('study-resume-btn');
+  if (resumeBtn) resumeBtn.addEventListener('click', resumeRecording);
+
+  const stopBtn = document.getElementById('study-stop-btn');
+  if (stopBtn) stopBtn.addEventListener('click', stopRecording);
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopRecording();
+    if (document.hidden) pauseRecording();
   });
-  window.addEventListener('blur', stopRecording);
+  window.addEventListener('blur', pauseRecording);
 
   const studyAddBtn = document.getElementById('study-add-btn');
   if (studyAddBtn) studyAddBtn.addEventListener('click', (e) => { e.stopPropagation(); openStudyAddModal(); });
