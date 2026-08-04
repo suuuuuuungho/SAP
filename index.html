@@ -55,83 +55,28 @@
     </div>
   </section>
 
-  <!-- Section 2: Metrics Grid -->
-  <h2 class="text-lg lg:text-xl font-bold mb-4">Section 2</h2>
-  <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-16">
-    <!-- Total tokens -->
+  <!-- Section 2: 인증하기 -->
+  <h2 class="text-lg lg:text-xl font-bold mb-4">인증하기</h2>
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-16">
+    <!-- 기도 (blank widget) -->
     <div class="glass-card rounded-[1.5rem] p-6">
-      <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Total tokens <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
-      </div>
-      <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="relative w-full h-1 bg-surface-highest rounded-full mt-10">
-        <div class="absolute top-0 left-0 h-full bg-primary-container rounded-full w-full"></div>
-        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-primary-container bg-white"></div>
-      </div>
-    </div>
-    <!-- Responses and Chat Completions -->
-    <div class="glass-card rounded-[1.5rem] p-6">
-      <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Responses and Chat Completions <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
-      </div>
-      <div class="text-2xl font-semibold mb-8">0</div>
+      <h3 class="text-sm font-medium text-on-surface-variant">기도</h3>
       <div class="w-full border-t-2 border-dashed border-outline-variant mt-10"></div>
     </div>
-    <!-- Safety: Blocked Responses -->
+    <!-- 말씀 (blank widget) -->
     <div class="glass-card rounded-[1.5rem] p-6">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="text-sm font-medium text-on-surface-variant cursor-pointer group hover:text-on-surface">Safety: Blocked Responses Requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
-        <i class="fa-regular fa-circle-info text-on-surface-variant text-sm"></i>
-      </div>
-      <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="flex gap-1 mt-10">
-        <div class="h-1 bg-surface-highest rounded-full flex-1"></div>
-        <div class="h-1 bg-surface-highest rounded-full flex-1"></div>
-      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant">말씀</h3>
+      <div class="w-full border-t-2 border-dashed border-outline-variant mt-10"></div>
     </div>
-    <!-- August spend -->
+    <!-- 공부 (blank widget) -->
     <div class="glass-card rounded-[1.5rem] p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-sm font-medium text-on-surface-variant">August spend</h3>
-        <i class="fa-solid fa-gear text-on-surface-variant text-sm cursor-pointer hover:text-on-surface"></i>
-      </div>
-      <div class="mb-4">
-        <div class="flex justify-between text-sm mb-2">
-          <span>Personal</span>
-          <span class="text-on-surface-variant">$0.00 / $100.00</span>
-        </div>
-        <div class="w-full bg-surface-highest rounded-full h-3 relative overflow-hidden">
-          <div class="absolute right-[20%] top-0 bottom-0 w-0.5 bg-on-surface"></div>
-        </div>
-      </div>
-      <div>
-        <div class="flex justify-between text-sm mb-2">
-          <span class="font-bold">SAP 1기</span>
-          <span class="text-on-surface-variant">$0.00 / $10.00</span>
-        </div>
-        <div class="w-full bg-surface-highest rounded-full h-3"></div>
-      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant">공부</h3>
+      <div class="w-full border-t-2 border-dashed border-outline-variant mt-10"></div>
     </div>
-    <!-- Credit balance -->
-    <div class="glass-card rounded-[1.5rem] p-6 flex flex-col justify-between">
-      <div>
-        <h3 class="text-sm font-medium text-on-surface-variant mb-2">Credit balance</h3>
-        <div class="text-2xl font-semibold">$4.53</div>
-      </div>
-      <button class="pill-btn-primary flex items-center justify-center gap-2 px-4 py-2 text-sm self-start w-fit mt-4">
-        <i class="fa-regular fa-credit-card"></i> Add credits
-      </button>
-    </div>
-    <!-- Total requests -->
+    <!-- 예배 (blank widget) -->
     <div class="glass-card rounded-[1.5rem] p-6">
-      <div class="flex items-center justify-between mb-2 cursor-pointer group">
-        <h3 class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">Total requests <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></h3>
-      </div>
-      <div class="text-2xl font-semibold mb-8">0</div>
-      <div class="relative w-full h-1 bg-surface-highest rounded-full mt-10">
-        <div class="absolute top-0 left-0 h-full bg-tertiary-container rounded-full w-full"></div>
-        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-tertiary-container bg-white"></div>
-      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant">예배</h3>
+      <div class="w-full border-t-2 border-dashed border-outline-variant mt-10"></div>
     </div>
   </section>
 </template>
