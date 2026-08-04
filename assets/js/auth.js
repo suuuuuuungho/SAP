@@ -10,16 +10,26 @@ async function initAuthUI() {
 
   const { data: { session } } = await window.supabaseClient.auth.getSession();
 
+  let displayName = '';
+  if (session && session.user) {
+    displayName = session.user.email || '';
+    const { data: profile } = await window.supabaseClient
+      .from('profiles')
+      .select('name, username')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    if (profile) displayName = `${profile.name} (${profile.username})`;
+  }
+
   profiles.forEach((el) => {
     const avatar = el.querySelector('[data-role="avatar"]');
     const name = el.querySelector('[data-role="name"]');
     const subtext = el.querySelector('[data-role="subtext"]');
 
     if (session && session.user) {
-      const email = session.user.email || '';
-      const initial = email.charAt(0).toUpperCase() || 'U';
+      const initial = displayName.charAt(0).toUpperCase() || 'U';
       if (avatar) avatar.textContent = initial;
-      if (name) name.textContent = email;
+      if (name) name.textContent = displayName;
       if (subtext) subtext.textContent = '로그아웃';
       el.href = '#';
       el.onclick = async (e) => {

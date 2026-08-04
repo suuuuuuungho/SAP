@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회원가입 - SAP 1기</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="assets/js/tailwind-config.js"></script>
+<link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body class="bg-white text-text-primary min-h-screen flex items-center justify-center px-4 py-10">
+<div class="w-full max-w-md">
+  <div class="text-center mb-8">
+    <div class="w-10 h-10 bg-gray-800 text-white rounded-lg text-sm flex items-center justify-center font-bold mx-auto mb-4">S</div>
+    <h1 class="text-2xl font-bold tracking-tight">SAP 1기 회원가입</h1>
+    <p class="text-sm text-text-secondary mt-2">아래 정보를 입력해 계정을 만드세요.</p>
+  </div>
+
+  <form id="signup-form" class="flex flex-col gap-4">
+    <div>
+      <label for="username-input" class="block text-sm font-medium text-text-primary mb-1">아이디</label>
+      <input type="text" id="username-input" required autocomplete="username"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+      <p id="username-hint" class="text-xs mt-1 hidden"></p>
+    </div>
+
+    <div>
+      <label for="password-input" class="block text-sm font-medium text-text-primary mb-1">비밀번호</label>
+      <input type="password" id="password-input" required autocomplete="new-password"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+    </div>
+
+    <div>
+      <label for="password-confirm-input" class="block text-sm font-medium text-text-primary mb-1">비밀번호 확인</label>
+      <input type="password" id="password-confirm-input" required autocomplete="new-password"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+      <p id="password-match-hint" class="text-xs mt-1 hidden text-red-600">비밀번호가 일치하지 않습니다.</p>
+    </div>
+
+    <div>
+      <label for="name-input" class="block text-sm font-medium text-text-primary mb-1">이름</label>
+      <input type="text" id="name-input" required autocomplete="name"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+    </div>
+
+    <div>
+      <label for="grade-class-input" class="block text-sm font-medium text-text-primary mb-1">학년반</label>
+      <select id="grade-class-input" required
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"></select>
+    </div>
+
+    <div>
+      <label for="phone-input" class="block text-sm font-medium text-text-primary mb-1">전화번호</label>
+      <input type="tel" id="phone-input" required autocomplete="tel" placeholder="010-0000-0000"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+    </div>
+
+    <div>
+      <label for="email-input" class="block text-sm font-medium text-text-primary mb-1">이메일</label>
+      <input type="email" id="email-input" required autocomplete="email" placeholder="you@example.com"
+        class="w-full px-4 py-2.5 border border-border-color rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+      <p class="text-xs text-text-secondary mt-1">로그인에는 사용되지 않으며, 비밀번호 재설정 용도로만 사용됩니다.</p>
+    </div>
+
+    <button type="submit" id="signup-submit"
+      class="w-full bg-accent text-white font-medium text-sm rounded-md px-4 py-2.5 hover:opacity-90 transition-opacity mt-2">
+      회원가입
+    </button>
+  </form>
+
+  <p id="signup-status" class="text-sm text-center mt-4 hidden"></p>
+
+  <p class="text-center text-sm text-text-secondary mt-6">
+    이미 계정이 있으신가요? <a href="login.html" class="text-accent font-medium hover:opacity-80">로그인</a>
+  </p>
+  <a href="index.html" class="block text-center text-sm text-text-secondary hover:text-text-primary mt-4">
+    ← Home으로 돌아가기
+  </a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/grade-class.js"></script>
+<script>
+  const form = document.getElementById('signup-form');
+  const usernameInput = document.getElementById('username-input');
+  const usernameHint = document.getElementById('username-hint');
+  const passwordInput = document.getElementById('password-input');
+  const passwordConfirmInput = document.getElementById('password-confirm-input');
+  const passwordMatchHint = document.getElementById('password-match-hint');
+  const nameInput = document.getElementById('name-input');
+  const gradeClassInput = document.getElementById('grade-class-input');
+  const phoneInput = document.getElementById('phone-input');
+  const emailInput = document.getElementById('email-input');
+  const submitBtn = document.getElementById('signup-submit');
+  const status = document.getElementById('signup-status');
+
+  renderGradeClassOptions(gradeClassInput);
+
+  function showStatus(message, isError) {
+    status.textContent = message;
+    status.classList.remove('hidden', 'text-red-600', 'text-text-secondary');
+    status.classList.add(isError ? 'text-red-600' : 'text-text-secondary');
+  }
+
+  usernameInput.addEventListener('blur', async () => {
+    const username = usernameInput.value.trim();
+    usernameHint.classList.add('hidden');
+    if (!username || !window.supabaseClient) return;
+
+    const { data: exists, error } = await window.supabaseClient.rpc('username_exists', { p_username: username });
+    if (error) return;
+
+    usernameHint.classList.remove('hidden');
+    if (exists) {
+      usernameHint.textContent = '이미 사용 중인 아이디입니다.';
+      usernameHint.classList.add('text-red-600');
+      usernameHint.classList.remove('text-text-secondary');
+    } else {
+      usernameHint.textContent = '사용할 수 있는 아이디입니다.';
+      usernameHint.classList.add('text-text-secondary');
+      usernameHint.classList.remove('text-red-600');
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    passwordMatchHint.classList.add('hidden');
+
+    if (passwordInput.value !== passwordConfirmInput.value) {
+      passwordMatchHint.classList.remove('hidden');
+      return;
+    }
+
+    if (!window.supabaseClient) {
+      showStatus('Supabase 설정이 없습니다. assets/config.example.js를 assets/config.js로 복사하고 값을 채워주세요.', true);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '가입 중...';
+
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email: emailInput.value.trim(),
+      password: passwordInput.value,
+      options: {
+        data: {
+          username: usernameInput.value.trim(),
+          name: nameInput.value.trim(),
+          grade_class: gradeClassInput.value,
+          phone: phoneInput.value.trim()
+        }
+      }
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = '회원가입';
+
+    if (error) {
+      showStatus(error.message, true);
+      return;
+    }
+
+    if (data.session) {
+      showStatus('가입이 완료되었습니다. Home으로 이동합니다...', false);
+      setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+    } else {
+      showStatus('가입이 완료되었습니다. 이메일을 확인해 인증을 완료한 뒤 로그인해주세요.', false);
+    }
+  });
+</script>
+</body>
+</html>
