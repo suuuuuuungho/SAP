@@ -157,7 +157,7 @@
       </div>
 
       <div id="pray-class-list" class="flex flex-col gap-4"></div>
-      <p id="pray-class-hint" class="text-xs text-error mt-2 hidden">사진 첨부, 기도 장소, 시작/종료 시간을 모두 입력해주세요.</p>
+      <p id="pray-class-hint" class="text-xs text-error mt-2 hidden">사진 첨부, 기도 장소, 시작/종료 일시를 모두 입력해주세요.</p>
 
       <button id="pray-add-class" type="button" aria-label="클래스 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
         <i class="fa-solid fa-plus"></i>
@@ -193,10 +193,6 @@
           </label>
         </div>
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">날짜 <span class="text-error">*</span></label>
-          <input type="date" class="pray-date-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
           <label class="block text-xs font-medium text-on-surface-variant mb-1">기도 장소 <span class="text-error">*</span></label>
           <select class="pray-location-input glass-input w-full px-3 py-2 rounded-xl text-sm">
             <option value="대성전">대성전</option>
@@ -207,16 +203,15 @@
           </select>
           <input type="text" placeholder="기도 장소를 입력해주세요" class="pray-location-other-input hidden glass-input w-full px-3 py-2 rounded-xl text-sm mt-2">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 시간 <span class="text-error">*</span></label>
-            <input type="time" class="pray-start-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-on-surface-variant mb-1">종료 시간 <span class="text-error">*</span></label>
-            <input type="time" class="pray-end-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-          </div>
+        <div>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 일시 <span class="text-error">*</span></label>
+          <input type="datetime-local" class="pray-start-input glass-input w-full px-3 py-2 rounded-xl text-sm">
         </div>
+        <div>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">종료 일시 <span class="text-error">*</span></label>
+          <input type="datetime-local" class="pray-end-input glass-input w-full px-3 py-2 rounded-xl text-sm">
+        </div>
+        <p class="text-[10px] text-on-surface-variant -mt-2">기록은 시작 일시의 날짜 기준으로 저장돼요 (예: 12/31 23시 시작 → 1/1 1시 종료는 12/31 기록).</p>
         <p class="pray-entry-datetime text-[11px] text-on-surface-variant"></p>
       </div>
     </div>
@@ -384,7 +379,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/pray-word.js?v=3"></script>
+<script src="assets/js/pray-word.js?v=4"></script>
 <script src="assets/js/home.js?v=25"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {

@@ -111,27 +111,41 @@ async function deleteWordRecord(userId, dateKey) {
 
 // --- Formatters (used by Home widget summaries and Gallery cells alike) ---
 
-function formatPrayerSummary(entries) {
-  return entries
-    .filter((entry) => entry.location)
-    .map((entry) => (entry.start && entry.end ? `${entry.location} ${entry.start}–${entry.end}` : entry.location))
-    .join(', ');
-}
-
-function timeToMinutes(hhmm) {
-  if (!hhmm) return null;
-  const [h, m] = hhmm.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return null;
-  return h * 60 + m;
+// 시작/종료는 "YYYY-MM-DDTHH:MM" 전체 일시(신규 데이터)이며, 자정을 넘겨도(예: 12/31 23:00 ~
+// 1/1 01:00) 그대로 계산된다. 예전 "HH:MM"만 있던 데이터는 파싱 불가하면 null.
+function parsePrayDateTime(value) {
+  if (!value || !value.includes('T')) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function durationMinutes(start, end) {
-  const s = timeToMinutes(start);
-  const e = timeToMinutes(end);
-  if (s === null || e === null) return 0;
-  let diff = e - s;
-  if (diff < 0) diff += 24 * 60; // crossed midnight
-  return diff;
+  const s = parsePrayDateTime(start);
+  const e = parsePrayDateTime(end);
+  if (!s || !e) return 0;
+  return Math.max(0, Math.round((e - s) / 60000));
+}
+
+function formatTimeShort(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+// 같은 날이면 "07:00–07:30", 자정을 넘기면 "23:00–1/1 01:00"처럼 종료 쪽에만 날짜를 붙인다.
+function formatPrayerTimeRange(start, end) {
+  const s = parsePrayDateTime(start);
+  const e = parsePrayDateTime(end);
+  if (!s || !e) return (start && end) ? `${start}–${end}` : ''; // 예전 데이터 그대로 표시
+  const sameDay = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth() && s.getDate() === e.getDate();
+  return sameDay
+    ? `${formatTimeShort(s)}–${formatTimeShort(e)}`
+    : `${formatTimeShort(s)}–${e.getMonth() + 1}/${e.getDate()} ${formatTimeShort(e)}`;
+}
+
+function formatPrayerSummary(entries) {
+  return entries
+    .filter((entry) => entry.location)
+    .map((entry) => (entry.start && entry.end ? `${entry.location} ${formatPrayerTimeRange(entry.start, entry.end)}` : entry.location))
+    .join(', ');
 }
 
 function formatVerseRange(entry) {
@@ -222,24 +236,23 @@ function updatePrayRemoveButtons() {
   });
 }
 
-// "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 보여주는 캡션. 항목 자체의 날짜 입력값을 쓴다
-// (항목마다 다른 날짜를 지정할 수 있으므로, 모달을 연 날짜가 아니라 이 항목의 날짜 기준).
+// "YYYY.MM.DD HH:MM ~ YYYY.MM.DD HH:MM" 형태로 보여주는 캡션. 시작/종료 일시 입력값에서 직접 뽑는다.
 function updatePrayEntryDateTimeLabel(entryEl) {
   const label = entryEl.querySelector('.pray-entry-datetime');
   if (!label) return;
-  const dateValue = entryEl.querySelector('.pray-date-input').value;
   const start = entryEl.querySelector('.pray-start-input').value;
   const end = entryEl.querySelector('.pray-end-input').value;
-  if (!dateValue || !start || !end) {
+  const s = parsePrayDateTime(start);
+  const e = parsePrayDateTime(end);
+  if (!s || !e) {
     label.textContent = '';
     return;
   }
-  const [y, m, d] = dateValue.split('-');
-  const datePrefix = `${y}.${m}.${d}`;
-  label.textContent = `${datePrefix} ${start} ~ ${datePrefix} ${end}`;
+  const fmt = (d) => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${formatTimeShort(d)}`;
+  label.textContent = `${fmt(s)} ~ ${fmt(e)}`;
 }
 
-function addPrayClassEntry(dateKey, data) {
+function addPrayClassEntry(data) {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
   if (!template || !list) return;
@@ -247,9 +260,6 @@ function addPrayClassEntry(dateKey, data) {
   list.appendChild(template.content.cloneNode(true));
   const entryEl = list.lastElementChild;
   wirePhotoPreview(entryEl);
-
-  const dateInput = entryEl.querySelector('.pray-date-input');
-  dateInput.value = (data && data.date) || dateKey;
 
   const locationSelect = entryEl.querySelector('.pray-location-input');
   const locationOtherInput = entryEl.querySelector('.pray-location-other-input');
@@ -285,7 +295,6 @@ function addPrayClassEntry(dateKey, data) {
   }
 
   updatePrayEntryDateTimeLabel(entryEl);
-  dateInput.addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
   entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
   entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
 
@@ -321,9 +330,9 @@ async function openPrayModal(dateKey, onSaved) {
   const record = await fetchPrayRecord(userId, dateKey);
   const existing = record ? record.entries : [];
   if (existing.length > 0) {
-    existing.forEach((entry) => addPrayClassEntry(dateKey, entry));
+    existing.forEach((entry) => addPrayClassEntry(entry));
   } else {
-    addPrayClassEntry(dateKey);
+    addPrayClassEntry();
   }
 
   const hint = document.getElementById('pray-class-hint');
@@ -357,18 +366,24 @@ async function savePrayModal() {
     const photoUnavailable = entry.querySelector('.pray-photo-unavailable-input').checked;
     const newFile = entry.querySelector('.pray-photo-input').files[0] || null;
     const existingPhotoPath = entry.dataset.existingPhotoPath || null;
+    const start = entry.querySelector('.pray-start-input').value;
+    const end = entry.querySelector('.pray-end-input').value;
     return {
-      entry, location, photoUnavailable, newFile, existingPhotoPath,
-      date: entry.querySelector('.pray-date-input').value,
-      start: entry.querySelector('.pray-start-input').value,
-      end: entry.querySelector('.pray-end-input').value,
+      entry, location, photoUnavailable, newFile, existingPhotoPath, start, end,
+      date: start ? start.slice(0, 10) : null, // 기록은 시작 일시의 날짜 기준
       hasPhoto: photoUnavailable || !!newFile || !!existingPhotoPath
     };
   });
 
   const hasIncompleteEntry = drafts.some((d) => !d.hasPhoto || !d.location || !d.start || !d.end || !d.date);
-  if (hasIncompleteEntry) {
-    if (prayClassHint) prayClassHint.classList.remove('hidden');
+  const hasInvalidRange = !hasIncompleteEntry && drafts.some((d) => new Date(d.end) <= new Date(d.start));
+  if (hasIncompleteEntry || hasInvalidRange) {
+    if (prayClassHint) {
+      prayClassHint.textContent = hasInvalidRange
+        ? '종료 일시는 시작 일시보다 나중이어야 합니다.'
+        : '사진 첨부, 기도 장소, 시작/종료 일시를 모두 입력해주세요.';
+      prayClassHint.classList.remove('hidden');
+    }
     return;
   }
   if (prayClassHint) prayClassHint.classList.add('hidden');
@@ -428,7 +443,7 @@ function wirePrayModalStatic() {
   if (closeBtn) closeBtn.addEventListener('click', closePrayModal);
   if (overlay) overlay.addEventListener('click', closePrayModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closePrayModal);
-  if (addBtn) addBtn.addEventListener('click', () => addPrayClassEntry(prayModalDateKey));
+  if (addBtn) addBtn.addEventListener('click', () => addPrayClassEntry());
   if (resetBtn) resetBtn.addEventListener('click', resetPrayerRecord);
   if (saveBtn) saveBtn.addEventListener('click', savePrayModal);
 
