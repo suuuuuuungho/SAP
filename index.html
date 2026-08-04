@@ -108,7 +108,13 @@
   </section>
 
   <!-- Section 2: 인증하기 -->
-  <h2 class="text-lg lg:text-xl font-bold mb-4">인증하기</h2>
+  <div class="flex items-center gap-3 mb-1">
+    <h2 class="text-lg lg:text-xl font-bold">인증하기</h2>
+  </div>
+  <div class="flex items-center gap-2 mb-4">
+    <p id="selected-date-label" class="text-xs text-on-surface-variant"></p>
+    <button id="selected-date-reset" type="button" class="hidden text-xs font-medium text-primary hover:opacity-80">오늘로 돌아가기</button>
+  </div>
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-16">
     <!-- 기도 (blank widget) -->
     <div id="widget-pray" data-widget="pray" class="widget-card glass-card rounded-[1.5rem] p-6 cursor-pointer hover:bg-white transition-colors">
@@ -124,11 +130,21 @@
         <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
       </div>
     </div>
-    <!-- 공부 (blank widget) -->
-    <div data-widget="study" class="widget-card glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant">공부</h3>
-      <div class="widget-summary mt-10">
-        <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
+    <!-- 공부 (Record 타이머 + 수동 추가) -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <button id="study-record-btn" type="button" class="pill-btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-circle text-[7px] text-error"></i> Record
+        </button>
+        <button id="study-add-btn" type="button" aria-label="공부 시간 추가" class="icon-glass w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant shrink-0">
+          <i class="fa-solid fa-plus text-xs"></i>
+        </button>
+      </div>
+      <div id="widget-study" data-widget="study" class="widget-card glass-card rounded-[1.5rem] p-6">
+        <h3 class="text-sm font-medium text-on-surface-variant">공부</h3>
+        <div class="widget-summary mt-10">
+          <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
+        </div>
       </div>
     </div>
     <!-- 예배 (blank widget) -->
@@ -266,6 +282,37 @@
       </div>
     </div>
   </template>
+
+  <!-- 공부 시간 수동 추가 모달 (숫자 입력만 허용, 텍스트 입력 불가) -->
+  <div id="study-add-modal" class="hidden fixed inset-0 z-[60] items-center justify-center px-4">
+    <div id="study-add-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
+    <div class="glass-panel relative rounded-[2rem] w-full max-w-sm p-6 sm:p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold">공부 시간 추가</h2>
+        <button id="study-add-modal-close" type="button" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="닫기">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <label class="block text-xs font-medium text-on-surface-variant mb-1">공부한 시간 (분)</label>
+      <input type="number" id="study-add-minutes-input" inputmode="numeric" min="1" step="1" placeholder="예: 30" class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
+      <div class="flex gap-3 mt-6">
+        <button id="study-add-cancel" type="button" class="glass-card flex-1 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">취소</button>
+        <button id="study-add-save" type="button" class="pill-btn-primary flex-1 py-2.5 text-sm">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공부 Record 전체화면 타이머 (다른 화면으로 이동/백그라운드 전환 시 자동 종료) -->
+  <div id="study-record-modal" class="hidden fixed inset-0 z-[70] items-center justify-center bg-surface">
+    <div class="flex flex-col items-center gap-8">
+      <p class="text-sm font-medium text-on-surface-variant tracking-wide">공부 기록 중</p>
+      <p id="study-record-timer" class="text-6xl font-bold text-on-surface tabular-nums">00:00</p>
+      <button id="study-pause-btn" type="button" class="pill-btn-primary px-8 py-3 text-base flex items-center gap-2">
+        <i class="fa-solid fa-pause"></i> Pause
+      </button>
+      <p class="text-xs text-on-surface-variant text-center max-w-xs">다른 화면으로 이동하면 기록이 자동으로 중단돼요.</p>
+    </div>
+  </div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
@@ -273,7 +320,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=7"></script>
+<script src="assets/js/home.js?v=9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => renderApp({ activePage: 'home' }));
 </script>

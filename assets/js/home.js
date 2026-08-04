@@ -1,44 +1,74 @@
-// Home page only: Progress checkmarks, widget verification rings, and the 기도 인증 모달.
+// Home page only: date-scoped daily records, Progress checkmarks, widget verification rings,
+// the Daily Goals ring, the calendar date picker, and the 기도/말씀/공부 인증 modals.
 // State is stored locally (per-browser) for now — not yet saved to Supabase.
-const PROGRESS_STORAGE_KEY = 'sap_progress_v1';
-const PRAYER_CLASSES_STORAGE_KEY = 'sap_prayer_classes_v1';
-const WORD_VERSES_STORAGE_KEY = 'sap_word_verses_v1';
 
-function loadProgress() {
+const RECORDS_STORAGE_KEY = 'sap_daily_records_v1';
+const DAILY_GOAL_MINUTES = 300;
+const WORD_VERIFIED_MINUTES = 60; // 말씀 has no natural duration input, so a verified 말씀 is a flat 60분.
+
+function todayKey() {
+  return dateKey(new Date());
+}
+
+function dateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+let selectedDateKey = todayKey();
+
+function defaultRecord() {
+  return {
+    progress: { pray: false, word: false, study: false, worship: false },
+    prayerClasses: [],
+    wordVerses: [],
+    studyMinutes: [],
+    goalCelebrated: false
+  };
+}
+
+function loadAllRecords() {
   try {
-    return Object.assign(
-      { pray: false, word: false, study: false, worship: false },
-      JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) || '{}')
-    );
+    return JSON.parse(localStorage.getItem(RECORDS_STORAGE_KEY) || '{}');
   } catch (e) {
-    return { pray: false, word: false, study: false, worship: false };
+    return {};
   }
 }
 
-function saveProgress(progress) {
-  localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+function saveAllRecords(records) {
+  localStorage.setItem(RECORDS_STORAGE_KEY, JSON.stringify(records));
 }
 
-function loadPrayerClasses() {
-  try {
-    return JSON.parse(localStorage.getItem(PRAYER_CLASSES_STORAGE_KEY) || '[]');
-  } catch (e) {
-    return [];
-  }
+function getRecord(key) {
+  const stored = loadAllRecords()[key] || {};
+  const base = defaultRecord();
+  return {
+    progress: Object.assign({}, base.progress, stored.progress),
+    prayerClasses: stored.prayerClasses || base.prayerClasses,
+    wordVerses: stored.wordVerses || base.wordVerses,
+    studyMinutes: stored.studyMinutes || base.studyMinutes,
+    goalCelebrated: typeof stored.goalCelebrated === 'boolean' ? stored.goalCelebrated : base.goalCelebrated
+  };
 }
 
-function loadWordVerses() {
-  try {
-    return JSON.parse(localStorage.getItem(WORD_VERSES_STORAGE_KEY) || '[]');
-  } catch (e) {
-    return [];
-  }
+function updateRecord(key, updater) {
+  const all = loadAllRecords();
+  all[key] = updater(getRecord(key));
+  saveAllRecords(all);
+}
+
+function formatSelectedDateShort() {
+  if (selectedDateKey === todayKey()) return '';
+  const [, m, d] = selectedDateKey.split('-').map(Number);
+  return ` (${m}/${d})`;
 }
 
 // Same checkmark icon everywhere — colored gradient when verified, neutral glass when not.
 // Verified widget cards also get a gradient ring matching the active nav pill color.
 function renderVerificationState() {
-  const progress = loadProgress();
+  const progress = getRecord(selectedDateKey).progress;
 
   document.querySelectorAll('[data-progress-icon]').forEach((el) => {
     const key = el.getAttribute('data-progress-icon');
@@ -80,7 +110,7 @@ function renderPrayWidgetSummary() {
   const slot = document.querySelector('#widget-pray .widget-summary');
   if (!slot) return;
 
-  const entries = loadPrayerClasses();
+  const entries = getRecord(selectedDateKey).prayerClasses;
   const summary = formatPrayerSummary(entries);
 
   if (summary) {
@@ -108,14 +138,11 @@ function formatWordSummary(entries) {
   return entries.map(formatVerseRange).filter(Boolean).join(', ');
 }
 
-// 말씀 has no natural duration input, so a verified 말씀 counts as a flat 60 minutes.
-const WORD_VERIFIED_MINUTES = 60;
-
 function renderWordWidgetSummary() {
   const slot = document.querySelector('#widget-word .widget-summary');
   if (!slot) return;
 
-  const summary = formatWordSummary(loadWordVerses());
+  const summary = formatWordSummary(getRecord(selectedDateKey).wordVerses);
   if (summary) {
     slot.innerHTML = `
       <p class="text-3xl font-bold text-primary">${WORD_VERIFIED_MINUTES}<span class="text-base font-semibold ml-0.5">분</span></p>
@@ -126,10 +153,39 @@ function renderWordWidgetSummary() {
   }
 }
 
-const DAILY_GOAL_MINUTES = 300;
-const GOAL_CELEBRATED_KEY = 'sap_goal_celebrated_v1';
+function getStudyTotalMinutes(record) {
+  return record.studyMinutes.reduce((sum, entry) => sum + entry.minutes, 0);
+}
 
-// Small dependency-free confetti burst, fired once the moment the goal is first reached.
+function renderStudyWidgetSummary() {
+  const slot = document.querySelector('#widget-study .widget-summary');
+  if (!slot) return;
+
+  const record = getRecord(selectedDateKey);
+  const total = getStudyTotalMinutes(record);
+
+  if (total > 0) {
+    const breakdown = record.studyMinutes.map((entry) => `${entry.minutes}분`).join(' + ');
+    slot.innerHTML = `
+      <p class="text-3xl font-bold text-primary">${total}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${breakdown}</p>
+    `;
+  } else {
+    slot.innerHTML = '<div class="w-full border-t-2 border-dashed border-outline-variant"></div>';
+  }
+}
+
+// 예배 has no tracked minutes yet until its own input flow exists.
+// 기도 sums real logged time; 말씀 is a flat 60분 once verified; 공부 sums Record + manual entries.
+function getCategoryMinutes(key) {
+  const record = getRecord(selectedDateKey);
+  if (key === 'pray') return record.prayerClasses.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
+  if (key === 'word') return record.progress.word ? WORD_VERIFIED_MINUTES : 0;
+  if (key === 'study') return getStudyTotalMinutes(record);
+  return 0;
+}
+
+// Small dependency-free confetti burst, fired once the moment a day's goal is first reached.
 function launchConfetti() {
   const colors = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
   const container = document.createElement('div');
@@ -156,18 +212,6 @@ function launchConfetti() {
   setTimeout(() => container.remove(), 4000);
 }
 
-// 공부/예배 have no tracked minutes yet until their own input flows exist,
-// same as the Progress checkmarks. 기도 sums real logged time; 말씀 is a flat 60분 once verified.
-function getCategoryMinutes(key) {
-  if (key === 'pray') {
-    return loadPrayerClasses().reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
-  }
-  if (key === 'word') {
-    return loadProgress().word ? WORD_VERIFIED_MINUTES : 0;
-  }
-  return 0;
-}
-
 function renderDailyGoals() {
   const ring = document.getElementById('daily-goal-ring');
   const percentEl = document.getElementById('daily-goal-percent');
@@ -178,12 +222,12 @@ function renderDailyGoals() {
   const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
   const filledPercent = Math.min(percent, 100);
 
-  const alreadyCelebrated = localStorage.getItem(GOAL_CELEBRATED_KEY) === 'true';
-  if (percent >= 100 && !alreadyCelebrated) {
+  const record = getRecord(selectedDateKey);
+  if (percent >= 100 && !record.goalCelebrated) {
     launchConfetti();
-    localStorage.setItem(GOAL_CELEBRATED_KEY, 'true');
-  } else if (percent < 100 && alreadyCelebrated) {
-    localStorage.setItem(GOAL_CELEBRATED_KEY, 'false');
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: true }));
+  } else if (percent < 100 && record.goalCelebrated) {
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: false }));
   }
 
   const radius = 52;
@@ -195,6 +239,25 @@ function renderDailyGoals() {
   captionEl.textContent = percent > 100 ? '목표 초과 달성' : '달성';
 }
 
+function renderSelectedDateLabel() {
+  const label = document.getElementById('selected-date-label');
+  const resetBtn = document.getElementById('selected-date-reset');
+  if (!label) return;
+
+  const [y, m, d] = selectedDateKey.split('-').map(Number);
+  label.textContent = `${y}년 ${m}월 ${d}일 기록`;
+  if (resetBtn) resetBtn.classList.toggle('hidden', selectedDateKey === todayKey());
+}
+
+function calendarCellHTML(d, { isToday, isSelected }) {
+  const filled = isSelected
+    ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold'
+    : isToday
+      ? 'ring-2 ring-primary text-on-surface font-semibold'
+      : 'text-on-surface';
+  return { filled };
+}
+
 function renderCalendarStrip() {
   const stripEl = document.getElementById('calendar-strip');
   const monthEl = document.getElementById('calendar-month');
@@ -203,22 +266,27 @@ function renderCalendarStrip() {
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const today = new Date();
+  const todayKeyValue = todayKey();
+  const [sy, sm, sd] = selectedDateKey.split('-').map(Number);
+  const selectedDate = new Date(sy, sm - 1, sd);
 
-  monthEl.textContent = monthNames[today.getMonth()];
-  dayEl.textContent = String(today.getDate());
+  monthEl.textContent = monthNames[selectedDate.getMonth()];
+  dayEl.textContent = String(selectedDate.getDate());
 
   stripEl.innerHTML = '';
   for (let offset = -3; offset <= 3; offset += 1) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + offset);
-    const isToday = offset === 0;
+    const d = new Date(selectedDate);
+    d.setDate(selectedDate.getDate() + offset);
+    const key = dateKey(d);
+    const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
 
-    const cell = document.createElement('div');
-    cell.className = 'flex flex-col items-center gap-2';
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'calendar-day-cell flex flex-col items-center gap-2';
+    cell.dataset.dateKey = key;
     cell.innerHTML = `
-      <span class="text-[10px] font-semibold ${isToday ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>
-      <span class="w-9 h-9 flex items-center justify-center rounded-full text-sm ${isToday ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold' : 'text-on-surface'}">${d.getDate()}</span>
+      <span class="text-[10px] font-semibold ${key === todayKeyValue ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>
+      <span class="w-9 h-9 flex items-center justify-center rounded-full text-sm ${filled}">${d.getDate()}</span>
     `;
     stripEl.appendChild(cell);
   }
@@ -229,9 +297,10 @@ function renderMonthlyCalendar() {
   if (!grid) return;
 
   const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  const todayKeyValue = todayKey();
+  const [sy, sm] = selectedDateKey.split('-').map(Number);
+  const year = sy;
+  const month = sm - 1;
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -249,12 +318,46 @@ function renderMonthlyCalendar() {
   }
 
   for (let date = 1; date <= daysInMonth; date += 1) {
-    const isToday = date === today.getDate();
-    const cell = document.createElement('div');
-    cell.className = 'flex items-center justify-center py-1';
-    cell.innerHTML = `<span class="w-8 h-8 flex items-center justify-center rounded-full text-sm ${isToday ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold' : 'text-on-surface'}">${date}</span>`;
+    const d = new Date(year, month, date);
+    const key = dateKey(d);
+    const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
+
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'calendar-day-cell flex items-center justify-center py-1';
+    cell.dataset.dateKey = key;
+    cell.innerHTML = `<span class="w-8 h-8 flex items-center justify-center rounded-full text-sm ${filled}">${date}</span>`;
     grid.appendChild(cell);
   }
+}
+
+function renderAllForSelectedDate() {
+  renderVerificationState();
+  renderPrayWidgetSummary();
+  renderWordWidgetSummary();
+  renderStudyWidgetSummary();
+  renderDailyGoals();
+  renderSelectedDateLabel();
+  renderCalendarStrip();
+  renderMonthlyCalendar();
+}
+
+function selectDate(key) {
+  selectedDateKey = key;
+  renderAllForSelectedDate();
+}
+
+function wireCalendarSelection() {
+  const weeklyView = document.getElementById('calendar-weekly-view');
+  const monthlyView = document.getElementById('calendar-monthly-view');
+  [weeklyView, monthlyView].forEach((container) => {
+    if (!container) return;
+    container.addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-date-key]');
+      if (!cell) return;
+      selectDate(cell.dataset.dateKey);
+    });
+  });
 }
 
 function wireCalendarTabs() {
@@ -282,7 +385,6 @@ function wireCalendarTabs() {
 
   monthlyBtn.addEventListener('click', () => {
     selectTab(monthlyBtn, weeklyBtn);
-    renderMonthlyCalendar();
     if (monthlyView) {
       monthlyView.classList.remove('hidden');
       monthlyView.classList.add('grid');
@@ -350,7 +452,7 @@ function addPrayClassEntry(data) {
   updatePrayRemoveButtons();
 }
 
-// Re-opening loads previously saved classes so they can be edited, not just appended to.
+// Re-opening loads the selected date's previously saved classes so they can be edited.
 // (사진은 브라우저에만 임시로 있던 미리보기라 저장되지 않으므로 다시 열면 비어 있습니다.)
 function openPrayModal() {
   const modal = document.getElementById('pray-modal');
@@ -358,7 +460,10 @@ function openPrayModal() {
   if (!modal || !list) return;
   list.innerHTML = '';
 
-  const existing = loadPrayerClasses();
+  const titleEl = modal.querySelector('h2');
+  if (titleEl) titleEl.textContent = `기도 인증${formatSelectedDateShort()}`;
+
+  const existing = getRecord(selectedDateKey).prayerClasses;
   if (existing.length > 0) {
     existing.forEach((entry) => addPrayClassEntry(entry));
   } else {
@@ -443,15 +548,18 @@ function addWordVerseEntry(data) {
   updateWordRemoveButtons();
 }
 
-// Re-opening loads previously saved verse ranges for editing. The required photo can't be
-// restored (only an in-memory preview URL was ever kept), so it must be re-attached to save again.
+// Re-opening loads the selected date's saved verse ranges for editing. The required photo can't
+// be restored (only an in-memory preview URL was ever kept), so it must be re-attached to save again.
 function openWordModal() {
   const modal = document.getElementById('word-modal');
   const list = document.getElementById('word-verse-list');
   if (!modal || !list) return;
   list.innerHTML = '';
 
-  const existing = loadWordVerses();
+  const titleEl = modal.querySelector('h2');
+  if (titleEl) titleEl.textContent = `말씀 인증${formatSelectedDateShort()}`;
+
+  const existing = getRecord(selectedDateKey).wordVerses;
   if (existing.length > 0) {
     existing.forEach((entry) => addWordVerseEntry(entry));
   } else {
@@ -476,14 +584,92 @@ function closeWordModal() {
   modal.classList.remove('flex');
 }
 
-function initHomeWidgets() {
+// --- 공부: Record 타이머 (포그라운드 전용) + 수동 분 입력 ---
+
+let recordStartTime = null;
+let recordIntervalId = null;
+
+function formatElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const ss = String(totalSeconds % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+
+function updateRecordTimerDisplay() {
+  const el = document.getElementById('study-record-timer');
+  if (!el || !recordStartTime) return;
+  el.textContent = formatElapsed(Date.now() - recordStartTime);
+}
+
+function startRecording() {
+  if (recordStartTime) return;
+  recordStartTime = Date.now();
+
+  const modal = document.getElementById('study-record-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  updateRecordTimerDisplay();
+  recordIntervalId = setInterval(updateRecordTimerDisplay, 1000);
+}
+
+// Triggered by Pause, or automatically when the tab/window loses focus — either way the elapsed
+// time is logged, since only the *continuation* while away is what must be prevented, not the
+// honest time already spent.
+function stopRecording() {
+  if (!recordStartTime) return;
+
+  const elapsedMinutes = Math.round((Date.now() - recordStartTime) / 60000);
+  clearInterval(recordIntervalId);
+  recordIntervalId = null;
+  recordStartTime = null;
+
+  const modal = document.getElementById('study-record-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  if (elapsedMinutes > 0) {
+    updateRecord(selectedDateKey, (record) => {
+      record.studyMinutes = [...record.studyMinutes, { minutes: elapsedMinutes }];
+      record.progress.study = true;
+      return record;
+    });
+  }
+
   renderVerificationState();
-  renderPrayWidgetSummary();
-  renderWordWidgetSummary();
+  renderStudyWidgetSummary();
   renderDailyGoals();
-  renderCalendarStrip();
+}
+
+function openStudyAddModal() {
+  const modal = document.getElementById('study-add-modal');
+  const input = document.getElementById('study-add-minutes-input');
+  if (!modal) return;
+  if (input) input.value = '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeStudyAddModal() {
+  const modal = document.getElementById('study-add-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function initHomeWidgets() {
+  renderAllForSelectedDate();
   wireCalendarTabs();
+  wireCalendarSelection();
   wireWordPhotoPreview();
+
+  const dateResetBtn = document.getElementById('selected-date-reset');
+  if (dateResetBtn) dateResetBtn.addEventListener('click', () => selectDate(todayKey()));
 
   const prayWidget = document.getElementById('widget-pray');
   if (prayWidget) prayWidget.addEventListener('click', openPrayModal);
@@ -501,7 +687,7 @@ function initHomeWidgets() {
   if (closeBtn) closeBtn.addEventListener('click', closePrayModal);
   if (overlay) overlay.addEventListener('click', closePrayModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closePrayModal);
-  if (addBtn) addBtn.addEventListener('click', addPrayClassEntry);
+  if (addBtn) addBtn.addEventListener('click', () => addPrayClassEntry());
 
   if (list) {
     list.addEventListener('click', (e) => {
@@ -520,11 +706,11 @@ function initHomeWidgets() {
         end: entry.querySelector('.pray-end-input').value
       }));
 
-      localStorage.setItem(PRAYER_CLASSES_STORAGE_KEY, JSON.stringify(entries));
-
-      const progress = loadProgress();
-      progress.pray = true;
-      saveProgress(progress);
+      updateRecord(selectedDateKey, (record) => {
+        record.prayerClasses = entries;
+        record.progress.pray = true;
+        return record;
+      });
 
       renderVerificationState();
       renderPrayWidgetSummary();
@@ -574,16 +760,58 @@ function initHomeWidgets() {
         endVerse: entry.querySelector('.word-end-verse').value
       }));
 
-      localStorage.setItem(WORD_VERSES_STORAGE_KEY, JSON.stringify(entries));
-
-      const progress = loadProgress();
-      progress.word = true;
-      saveProgress(progress);
+      updateRecord(selectedDateKey, (record) => {
+        record.wordVerses = entries;
+        record.progress.word = true;
+        return record;
+      });
 
       renderVerificationState();
       renderWordWidgetSummary();
       renderDailyGoals();
       closeWordModal();
+    });
+  }
+
+  const recordBtn = document.getElementById('study-record-btn');
+  if (recordBtn) recordBtn.addEventListener('click', startRecording);
+
+  const pauseBtn = document.getElementById('study-pause-btn');
+  if (pauseBtn) pauseBtn.addEventListener('click', stopRecording);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopRecording();
+  });
+  window.addEventListener('blur', stopRecording);
+
+  const studyAddBtn = document.getElementById('study-add-btn');
+  if (studyAddBtn) studyAddBtn.addEventListener('click', openStudyAddModal);
+
+  const studyAddCloseBtn = document.getElementById('study-add-modal-close');
+  const studyAddOverlay = document.getElementById('study-add-overlay');
+  const studyAddCancelBtn = document.getElementById('study-add-cancel');
+  const studyAddSaveBtn = document.getElementById('study-add-save');
+
+  if (studyAddCloseBtn) studyAddCloseBtn.addEventListener('click', closeStudyAddModal);
+  if (studyAddOverlay) studyAddOverlay.addEventListener('click', closeStudyAddModal);
+  if (studyAddCancelBtn) studyAddCancelBtn.addEventListener('click', closeStudyAddModal);
+
+  if (studyAddSaveBtn) {
+    studyAddSaveBtn.addEventListener('click', () => {
+      const input = document.getElementById('study-add-minutes-input');
+      const minutes = input ? parseInt(input.value, 10) : NaN;
+      if (!Number.isInteger(minutes) || minutes <= 0) return;
+
+      updateRecord(selectedDateKey, (record) => {
+        record.studyMinutes = [...record.studyMinutes, { minutes }];
+        record.progress.study = true;
+        return record;
+      });
+
+      renderVerificationState();
+      renderStudyWidgetSummary();
+      renderDailyGoals();
+      closeStudyAddModal();
     });
   }
 }
