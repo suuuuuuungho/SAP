@@ -97,7 +97,7 @@
           </div>
           <span class="text-sm lg:text-base font-medium">공부</span>
         </div>
-        <div class="flex items-center gap-3 lg:gap-4">
+        <div id="progress-row-worship" class="flex items-center gap-3 lg:gap-4">
           <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="worship">
             <i class="fa-solid fa-check text-sm"></i>
           </div>
@@ -115,7 +115,7 @@
     <p id="selected-date-label" class="text-xs text-on-surface-variant"></p>
     <button id="selected-date-reset" type="button" class="hidden text-xs font-medium text-primary hover:opacity-80">오늘로 돌아가기</button>
   </div>
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-16">
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
     <!-- 기도 (blank widget) -->
     <div id="widget-pray" data-widget="pray" class="widget-card glass-card rounded-[1.5rem] p-6 cursor-pointer hover:bg-white transition-colors">
       <h3 class="text-sm font-medium text-on-surface-variant">기도</h3>
@@ -154,6 +154,10 @@
     </div>
   </section>
 
+  <div class="flex justify-center mb-16">
+    <button id="verification-save-btn" type="button" class="pill-btn-primary px-8 py-2.5 text-sm">저장하기</button>
+  </div>
+
   <!-- 기도 인증 모달 -->
   <div id="pray-modal" class="hidden fixed inset-0 z-[60] items-center justify-center px-4">
     <div id="pray-modal-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
@@ -175,6 +179,7 @@
         <button id="pray-cancel" type="button" class="glass-card flex-1 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">취소</button>
         <button id="pray-save" type="button" class="pill-btn-primary flex-1 py-2.5 text-sm">저장</button>
       </div>
+      <button id="pray-reset" type="button" class="block mx-auto mt-4 text-xs font-medium text-error hover:opacity-80">전체 초기화</button>
     </div>
   </div>
 
@@ -214,6 +219,7 @@
             <input type="time" class="pray-end-input glass-input w-full px-3 py-2 rounded-xl text-sm">
           </div>
         </div>
+        <p class="pray-entry-datetime text-[11px] text-on-surface-variant"></p>
       </div>
     </div>
   </template>
@@ -251,6 +257,7 @@
         <button id="word-cancel" type="button" class="glass-card flex-1 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">취소</button>
         <button id="word-save" type="button" class="pill-btn-primary flex-1 py-2.5 text-sm">저장</button>
       </div>
+      <button id="word-reset" type="button" class="block mx-auto mt-4 text-xs font-medium text-error hover:opacity-80">전체 초기화</button>
     </div>
   </div>
 
@@ -338,6 +345,8 @@
         </div>
         <div id="study-history-manual-list" class="flex flex-col gap-2"></div>
       </div>
+
+      <button id="study-history-reset" type="button" class="block mx-auto mt-6 text-xs font-medium text-error hover:opacity-80">전체 초기화</button>
     </div>
   </div>
 
@@ -357,6 +366,7 @@
         <button id="worship-x-btn" type="button" class="glass-card rounded-2xl py-4 text-lg font-bold text-on-surface-variant hover:bg-white transition-colors">X</button>
         <button id="worship-home-btn" type="button" class="glass-card rounded-2xl py-4 text-sm font-bold text-primary hover:bg-white transition-colors">가정</button>
       </div>
+      <button id="worship-reset" type="button" class="block mx-auto mt-6 text-xs font-medium text-error hover:opacity-80">선택 취소(초기화)</button>
     </div>
   </div>
 </template>
@@ -366,7 +376,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=10"></script>
+<script src="assets/js/home.js?v=11"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => renderApp({ activePage: 'home' }));
 </script>

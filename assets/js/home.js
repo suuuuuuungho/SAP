@@ -27,7 +27,8 @@ function defaultRecord() {
     studySessions: [], // { source: 'record' | 'manual', seconds }
     worshipStatus: null, // 'attended' | 'absent' | 'home'
     worshipMinutes: 0,
-    goalCelebrated: false
+    goalCelebrated: false,
+    allDoneCelebrated: false
   };
 }
 
@@ -53,7 +54,8 @@ function getRecord(key) {
     studySessions: stored.studySessions || base.studySessions,
     worshipStatus: typeof stored.worshipStatus === 'string' ? stored.worshipStatus : base.worshipStatus,
     worshipMinutes: typeof stored.worshipMinutes === 'number' ? stored.worshipMinutes : base.worshipMinutes,
-    goalCelebrated: typeof stored.goalCelebrated === 'boolean' ? stored.goalCelebrated : base.goalCelebrated
+    goalCelebrated: typeof stored.goalCelebrated === 'boolean' ? stored.goalCelebrated : base.goalCelebrated,
+    allDoneCelebrated: typeof stored.allDoneCelebrated === 'boolean' ? stored.allDoneCelebrated : base.allDoneCelebrated
   };
 }
 
@@ -67,6 +69,18 @@ function formatSelectedDateShort() {
   if (selectedDateKey === todayKey()) return '';
   const [, m, d] = selectedDateKey.split('-').map(Number);
   return ` (${m}/${d})`;
+}
+
+function formatFullDateKorean(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+}
+
+// 활성화된(예배는 수/금만 해당) 카테고리 4개(또는 3개)가 모두 인증됐는지 판단할 때 쓰는 목록.
+function getActiveCategoriesForDate(key) {
+  const categories = ['pray', 'word', 'study'];
+  if (isWorshipDayActive(key)) categories.push('worship');
+  return categories;
 }
 
 // Same checkmark icon everywhere — colored gradient when verified, neutral glass when not.
@@ -85,6 +99,14 @@ function renderVerificationState() {
     const key = el.getAttribute('data-widget');
     el.classList.toggle('is-verified', !!progress[key]);
   });
+
+  checkAllCategoriesCelebration();
+}
+
+function renderProgressRowVisibility() {
+  const row = document.getElementById('progress-row-worship');
+  if (!row) return;
+  row.classList.toggle('hidden', !isWorshipDayActive(selectedDateKey));
 }
 
 function formatPrayerSummary(entries) {
@@ -197,8 +219,10 @@ function renderStudyWidgetSummary() {
 
 function renderStudyHistoryModal() {
   const record = getRecord(selectedDateKey);
-  const recordSessions = record.studySessions.filter((entry) => entry.source === 'record');
-  const manualSessions = record.studySessions.filter((entry) => entry.source === 'manual');
+  // keep each entry's original index in record.studySessions so deletes target the right one
+  const indexed = record.studySessions.map((entry, index) => ({ ...entry, index }));
+  const recordSessions = indexed.filter((entry) => entry.source === 'record');
+  const manualSessions = indexed.filter((entry) => entry.source === 'manual');
 
   const recordTotalEl = document.getElementById('study-history-record-total');
   const manualTotalEl = document.getElementById('study-history-manual-total');
@@ -206,16 +230,18 @@ function renderStudyHistoryModal() {
   const manualListEl = document.getElementById('study-history-manual-list');
   if (!recordTotalEl || !manualTotalEl || !recordListEl || !manualListEl) return;
 
-  const recordTotal = getStudySeconds(record, 'record');
-  const manualTotal = getStudySeconds(record, 'manual');
-
-  recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(recordTotal) : '-';
-  manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(manualTotal) : '-';
+  recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'record')) : '-';
+  manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'manual')) : '-';
 
   const rowHTML = (entry, i) => `
     <div class="glass-card rounded-xl px-4 py-2.5 text-sm flex items-center justify-between">
       <span class="text-on-surface-variant">${i + 1}회차</span>
-      <span class="font-semibold">${formatMinutesSeconds(entry.seconds)}</span>
+      <span class="flex items-center gap-3">
+        <span class="font-semibold">${formatMinutesSeconds(entry.seconds)}</span>
+        <button type="button" class="study-session-remove text-on-surface-variant hover:text-error" data-index="${entry.index}" aria-label="삭제">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </span>
     </div>`;
 
   recordListEl.innerHTML = recordSessions.length
@@ -225,6 +251,31 @@ function renderStudyHistoryModal() {
   manualListEl.innerHTML = manualSessions.length
     ? manualSessions.map(rowHTML).join('')
     : '<p class="text-xs text-on-surface-variant">기록 없음</p>';
+}
+
+function removeStudySession(index) {
+  updateRecord(selectedDateKey, (record) => {
+    record.studySessions = record.studySessions.filter((_, i) => i !== index);
+    record.progress.study = record.studySessions.length > 0;
+    return record;
+  });
+  renderVerificationState();
+  renderStudyWidgetSummary();
+  renderDailyGoals();
+  renderStudyHistoryModal();
+}
+
+function resetStudyRecord() {
+  if (!confirm('공부 기록을 전체 초기화할까요?')) return;
+  updateRecord(selectedDateKey, (record) => {
+    record.studySessions = [];
+    record.progress.study = false;
+    return record;
+  });
+  renderVerificationState();
+  renderStudyWidgetSummary();
+  renderDailyGoals();
+  renderStudyHistoryModal();
 }
 
 function openStudyHistoryModal() {
@@ -292,16 +343,18 @@ function getCategoryMinutes(key) {
   return 0;
 }
 
-// Small dependency-free confetti burst, fired once the moment a day's goal is first reached.
-function launchConfetti() {
+// Dependency-free confetti burst. `big` (300분 목표 달성) is a grander effect than the default
+// (모든 카테고리 인증 완료) so the two celebrations feel clearly different in scale.
+function launchConfetti({ big = false } = {}) {
   const colors = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
+  const pieceCount = big ? 220 : 45;
   const container = document.createElement('div');
   container.className = 'confetti-container';
 
-  for (let i = 0; i < 120; i += 1) {
+  for (let i = 0; i < pieceCount; i += 1) {
     const piece = document.createElement('div');
-    const size = 6 + Math.random() * 6;
-    const duration = 2.2 + Math.random() * 1.4;
+    const size = (big ? 8 : 5) + Math.random() * (big ? 8 : 4);
+    const duration = (big ? 2.8 : 1.6) + Math.random() * (big ? 1.8 : 0.7);
 
     piece.className = 'confetti-piece';
     piece.style.left = `${Math.random() * 100}vw`;
@@ -309,14 +362,37 @@ function launchConfetti() {
     piece.style.height = `${size * 0.4}px`;
     piece.style.background = colors[Math.floor(Math.random() * colors.length)];
     piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * 220}px`);
+    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * (big ? 260 : 140)}px`);
     piece.style.animation = `confetti-fall ${duration}s ease-in ${Math.random() * 0.4}s forwards`;
 
     container.appendChild(piece);
   }
 
   document.body.appendChild(container);
-  setTimeout(() => container.remove(), 4000);
+  setTimeout(() => container.remove(), big ? 5000 : 2500);
+}
+
+function launchSmallConfetti() {
+  launchConfetti({ big: false });
+}
+
+function launchBigConfetti() {
+  launchConfetti({ big: true });
+}
+
+// 인증하기의 활성 카테고리(예배는 수/금만)가 모두 완료된 첫 순간에 작은 confetti.
+// 300분 목표 달성(renderDailyGoals)의 큰 confetti와 차등을 둠.
+function checkAllCategoriesCelebration() {
+  const record = getRecord(selectedDateKey);
+  const categories = getActiveCategoriesForDate(selectedDateKey);
+  const allDone = categories.every((key) => record.progress[key]);
+
+  if (allDone && !record.allDoneCelebrated) {
+    launchSmallConfetti();
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { allDoneCelebrated: true }));
+  } else if (!allDone && record.allDoneCelebrated) {
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { allDoneCelebrated: false }));
+  }
 }
 
 function renderDailyGoals() {
@@ -331,7 +407,7 @@ function renderDailyGoals() {
 
   const record = getRecord(selectedDateKey);
   if (percent >= 100 && !record.goalCelebrated) {
-    launchConfetti();
+    launchBigConfetti();
     updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: true }));
   } else if (percent < 100 && record.goalCelebrated) {
     updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: false }));
@@ -439,6 +515,7 @@ function renderMonthlyCalendar() {
 }
 
 function renderAllForSelectedDate() {
+  renderProgressRowVisibility();
   renderVerificationState();
   renderPrayWidgetSummary();
   renderWordWidgetSummary();
@@ -543,6 +620,17 @@ function updatePrayRemoveButtons() {
   });
 }
 
+// 저장된 기록을 열었을 때 "YYYY년 M월 D일 HH:MM부터 HH:MM까지" 형태로 정확히 보여주는 캡션.
+function updatePrayEntryDateTimeLabel(entryEl) {
+  const label = entryEl.querySelector('.pray-entry-datetime');
+  if (!label) return;
+  const start = entryEl.querySelector('.pray-start-input').value;
+  const end = entryEl.querySelector('.pray-end-input').value;
+  label.textContent = start && end
+    ? `${formatFullDateKorean(selectedDateKey)} ${start}부터 ${end}까지`
+    : '';
+}
+
 function addPrayClassEntry(data) {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
@@ -558,7 +646,24 @@ function addPrayClassEntry(data) {
     if (data.end) entryEl.querySelector('.pray-end-input').value = data.end;
   }
 
+  updatePrayEntryDateTimeLabel(entryEl);
+  entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
+  entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
+
   updatePrayRemoveButtons();
+}
+
+function resetPrayerRecord() {
+  if (!confirm('기도 기록을 전체 초기화할까요?')) return;
+  updateRecord(selectedDateKey, (record) => {
+    record.prayerClasses = [];
+    record.progress.pray = false;
+    return record;
+  });
+  renderVerificationState();
+  renderPrayWidgetSummary();
+  renderDailyGoals();
+  closePrayModal();
 }
 
 // Re-opening loads the selected date's previously saved classes so they can be edited.
@@ -693,6 +798,19 @@ function closeWordModal() {
   modal.classList.remove('flex');
 }
 
+function resetWordRecord() {
+  if (!confirm('말씀 기록을 전체 초기화할까요?')) return;
+  updateRecord(selectedDateKey, (record) => {
+    record.wordVerses = [];
+    record.progress.word = false;
+    return record;
+  });
+  renderVerificationState();
+  renderWordWidgetSummary();
+  renderDailyGoals();
+  closeWordModal();
+}
+
 // --- 공부: Record 타이머 (포그라운드 전용) + 수동 분 입력 ---
 
 let recordStartTime = null;
@@ -800,6 +918,33 @@ function recordWorship(status) {
   closeWorshipModal();
 }
 
+function resetWorship() {
+  updateRecord(selectedDateKey, (record) => {
+    record.worshipStatus = null;
+    record.worshipMinutes = 0;
+    record.progress.worship = false;
+    return record;
+  });
+  renderVerificationState();
+  renderWorshipWidgetSummary();
+  renderDailyGoals();
+  closeWorshipModal();
+}
+
+// 각 modal의 개별 저장은 이미 즉시 반영되지만, 페이지 하단 "저장하기"로 한 번 더
+// 명확한 확인 피드백을 준다 (별도 데이터 변경 없음).
+function showSaveToast() {
+  const existing = document.getElementById('save-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'save-toast';
+  toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] glass-card rounded-full px-5 py-2.5 text-sm font-medium text-on-surface';
+  toast.textContent = '저장되었습니다';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
 function initHomeWidgets() {
   renderAllForSelectedDate();
   wireCalendarTabs();
@@ -820,12 +965,14 @@ function initHomeWidgets() {
   const cancelBtn = document.getElementById('pray-cancel');
   const addBtn = document.getElementById('pray-add-class');
   const saveBtn = document.getElementById('pray-save');
+  const resetBtn = document.getElementById('pray-reset');
   const list = document.getElementById('pray-class-list');
 
   if (closeBtn) closeBtn.addEventListener('click', closePrayModal);
   if (overlay) overlay.addEventListener('click', closePrayModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closePrayModal);
   if (addBtn) addBtn.addEventListener('click', () => addPrayClassEntry());
+  if (resetBtn) resetBtn.addEventListener('click', resetPrayerRecord);
 
   if (list) {
     list.addEventListener('click', (e) => {
@@ -862,12 +1009,14 @@ function initHomeWidgets() {
   const wordCancelBtn = document.getElementById('word-cancel');
   const wordAddBtn = document.getElementById('word-add-verse');
   const wordSaveBtn = document.getElementById('word-save');
+  const wordResetBtn = document.getElementById('word-reset');
   const wordList = document.getElementById('word-verse-list');
 
   if (wordCloseBtn) wordCloseBtn.addEventListener('click', closeWordModal);
   if (wordOverlay) wordOverlay.addEventListener('click', closeWordModal);
   if (wordCancelBtn) wordCancelBtn.addEventListener('click', closeWordModal);
   if (wordAddBtn) wordAddBtn.addEventListener('click', () => addWordVerseEntry());
+  if (wordResetBtn) wordResetBtn.addEventListener('click', resetWordRecord);
 
   if (wordList) {
     wordList.addEventListener('click', (e) => {
@@ -916,8 +1065,19 @@ function initHomeWidgets() {
 
   const studyHistoryCloseBtn = document.getElementById('study-history-close');
   const studyHistoryOverlay = document.getElementById('study-history-overlay');
+  const studyHistoryResetBtn = document.getElementById('study-history-reset');
   if (studyHistoryCloseBtn) studyHistoryCloseBtn.addEventListener('click', closeStudyHistoryModal);
   if (studyHistoryOverlay) studyHistoryOverlay.addEventListener('click', closeStudyHistoryModal);
+  if (studyHistoryResetBtn) studyHistoryResetBtn.addEventListener('click', resetStudyRecord);
+
+  const studyHistoryModal = document.getElementById('study-history-modal');
+  if (studyHistoryModal) {
+    studyHistoryModal.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.study-session-remove');
+      if (!removeBtn) return;
+      removeStudySession(Number(removeBtn.dataset.index));
+    });
+  }
 
   const recordBtn = document.getElementById('study-record-btn');
   if (recordBtn) recordBtn.addEventListener('click', (e) => { e.stopPropagation(); startRecording(); });
@@ -972,9 +1132,14 @@ function initHomeWidgets() {
   const worshipOBtn = document.getElementById('worship-o-btn');
   const worshipXBtn = document.getElementById('worship-x-btn');
   const worshipHomeBtn = document.getElementById('worship-home-btn');
+  const worshipResetBtn = document.getElementById('worship-reset');
   if (worshipOBtn) worshipOBtn.addEventListener('click', () => recordWorship('attended'));
   if (worshipXBtn) worshipXBtn.addEventListener('click', () => recordWorship('absent'));
   if (worshipHomeBtn) worshipHomeBtn.addEventListener('click', () => recordWorship('home'));
+  if (worshipResetBtn) worshipResetBtn.addEventListener('click', resetWorship);
+
+  const verificationSaveBtn = document.getElementById('verification-save-btn');
+  if (verificationSaveBtn) verificationSaveBtn.addEventListener('click', showSaveToast);
 }
 
 window.initHomeWidgets = initHomeWidgets;
