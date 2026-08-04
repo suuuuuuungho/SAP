@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mobile Profile Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style data-purpose="custom-styles">
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f0f0f0; /* Slight gray background to simulate device frame if viewed on desktop */
+      display: flex;
+      justify-content: center;
+    }
+    .mobile-container {
+      width: 100%;
+      max-width: 400px; /* Limit width for mobile feel on larger screens */
+      background-color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .story-ring {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      padding: 2px;
+      border-radius: 50%;
+    }
+    .story-ring-inner {
+      background-color: white;
+      padding: 2px;
+      border-radius: 50%;
+    }
+    /* Hide scrollbar for horizontal scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body>
+<!-- BEGIN: MobileContainer -->
+<div class="mobile-container relative pb-[50px]"> <!-- pb to account for bottom nav -->
+<!-- BEGIN: TopHeader -->
+<header class="flex justify-between items-center p-3 border-b border-gray-200 bg-white sticky top-0 z-10">
+<button class="text-gray-800 focus:outline-none">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<h1 class="font-bold text-lg text-gray-900 tracking-tight">USERNAME</h1>
+<button class="text-gray-800 focus:outline-none">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</header>
+<!-- END: TopHeader -->
+<main class="flex-grow">
+<!-- BEGIN: ProfileHeaderSection -->
+<section class="px-4 pt-4 pb-2">
+<div class="flex items-center">
+<!-- Profile Picture -->
+<div class="flex-shrink-0 mr-4">
+<div class="story-ring w-20 h-20">
+<div class="story-ring-inner w-full h-full">
+<div class="w-full h-full rounded-full bg-gray-300 border border-gray-200"></div>
+</div>
+</div>
+</div>
+<!-- Stats -->
+<div class="flex-grow flex justify-center text-center">
+<div class="flex flex-col">
+<span class="font-bold text-gray-900 text-lg leading-tight">100</span>
+<span class="text-xs text-gray-600">Posts</span>
+</div>
+</div>
+</div>
+<!-- Bio Area -->
+<div class="mt-3">
+<p class="font-bold text-gray-900 text-sm">username</p>
+<p class="text-gray-800 text-sm whitespace-pre-wrap">Lorem ipsum dolor sit amet, consectetur
+adipiscing elit.
+<a class="text-blue-900 font-medium" href="#">Loremipsum.com</a></p>
+</div>
+</section>
+<!-- END: ProfileHeaderSection -->
+<!-- BEGIN: ActionButtons -->
+<section class="px-4 py-2 flex gap-2">
+<button class="flex-grow py-1.5 px-4 bg-gray-100 hover:bg-gray-200 rounded font-semibold text-sm text-gray-900 border border-gray-300">
+          Edit Profile
+        </button>
+<button class="flex-grow py-1.5 px-4 bg-gray-100 hover:bg-gray-200 rounded font-semibold text-sm text-gray-900 border border-gray-300">
+          Share Profile
+        </button>
+<button class="py-1.5 px-2 bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 flex items-center justify-center">
+<svg class="h-4 w-4 text-gray-800" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</section>
+<!-- END: ActionButtons -->
+<!-- BEGIN: HighlightsSection -->
+<section class="pt-2 pb-4 border-b border-gray-200">
+<div class="flex overflow-x-auto px-4 gap-4 no-scrollbar">
+<!-- Highlight Item -->
+<div class="flex flex-col items-center flex-shrink-0">
+<div class="w-16 h-16 rounded-full border border-gray-300 p-0.5 mb-1 flex items-center justify-center">
+<div class="w-full h-full rounded-full bg-gray-300 border border-white"></div>
+</div>
+<span class="text-xs text-gray-800 truncate w-16 text-center">Highlight 1</span>
+</div>
+<!-- Highlight Item -->
+<div class="flex flex-col items-center flex-shrink-0">
+<div class="w-16 h-16 rounded-full border border-gray-300 p-0.5 mb-1 flex items-center justify-center">
+<div class="w-full h-full rounded-full bg-gray-300 border border-white"></div>
+</div>
+<span class="text-xs text-gray-800 truncate w-16 text-center">Highlight 2</span>
+</div>
+<!-- Highlight Item -->
+<div class="flex flex-col items-center flex-shrink-0">
+<div class="w-16 h-16 rounded-full border border-gray-300 p-0.5 mb-1 flex items-center justify-center">
+<div class="w-full h-full rounded-full bg-gray-300 border border-white"></div>
+</div>
+<span class="text-xs text-gray-800 truncate w-16 text-center">Highlight 3</span>
+</div>
+<!-- Highlight Item -->
+<div class="flex flex-col items-center flex-shrink-0">
+<div class="w-16 h-16 rounded-full border border-gray-300 p-0.5 mb-1 flex items-center justify-center">
+<div class="w-full h-full rounded-full bg-gray-300 border border-white"></div>
+</div>
+<span class="text-xs text-gray-800 truncate w-16 text-center">Highlight 4</span>
+</div>
+<!-- Add Highlight -->
+<div class="flex flex-col items-center flex-shrink-0">
+<div class="w-16 h-16 rounded-full border border-gray-300 mb-1 flex items-center justify-center bg-gray-50">
+<svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+</div>
+<span class="text-xs text-gray-800 truncate w-16 text-center">New</span>
+</div>
+</div>
+</section>
+<!-- END: HighlightsSection -->
+<!-- BEGIN: ContentTabs -->
+<section class="flex justify-around items-center h-12 border-b border-gray-200">
+<button class="flex-1 flex justify-center items-center h-full border-b-2 border-gray-900 focus:outline-none">
+<svg aria-label="Posts" class="_ab6-" color="#262626" fill="#262626" height="24" role="img" viewbox="0 0 24 24" width="24"><rect fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" width="18" x="3" y="3"></rect><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="9.015" x2="9.015" y1="3" y2="21"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="14.985" x2="14.985" y1="3" y2="21"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="9.015" y2="9.015"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="14.985" y2="14.985"></line></svg>
+</button>
+<button class="flex-1 flex justify-center items-center h-full text-gray-400 focus:outline-none">
+<svg aria-label="Reels" class="_ab6-" color="#8e8e8e" fill="#8e8e8e" height="24" role="img" viewbox="0 0 24 24" width="24"><line fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2" x1="2.049" x2="21.95" y1="7.002" y2="7.002"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="13.504" x2="16.362" y1="2.001" y2="7.002"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="7.207" x2="10.002" y1="2.11" y2="7.002"></line><path d="M2 12.001v3.449c0 2.849.698 4.005 1.606 4.944.94.909 2.098 1.608 4.946 1.608h6.896c2.848 0 4.006-.7 4.946-1.608C21.302 19.455 22 18.3 22 15.45V8.552c0-2.849-.698-4.006-1.606-4.945C19.454 2.7 18.296 2 15.448 2H8.552c-2.848 0-4.006.699-4.946 1.607C2.698 4.546 2 5.704 2 8.552z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><polygon fill="none" points="9.718 14.694 15.207 11.598 9.718 8.502 9.718 14.694" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></polygon></svg>
+</button>
+<button class="flex-1 flex justify-center items-center h-full text-gray-400 focus:outline-none">
+<svg aria-label="Tagged" class="_ab6-" color="#8e8e8e" fill="#8e8e8e" height="24" role="img" viewbox="0 0 24 24" width="24"><path d="M10.201 3.797 12 1.997l1.799 1.8a1.59 1.59 0 0 0 1.124.465h5.259A1.818 1.818 0 0 1 22 6.08v14.104a1.818 1.818 0 0 1-1.818 1.818H3.818A1.818 1.818 0 0 1 2 20.184V6.08a1.818 1.818 0 0 1 1.818-1.818h5.26a1.59 1.59 0 0 0 1.123-.465Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M18.598 22.002V21.4a3.949 3.949 0 0 0-3.948-3.949H9.495A3.949 3.949 0 0 0 5.546 21.4v.603" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><circle cx="12.072" cy="11.075" fill="none" r="3.556" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></circle></svg>
+</button>
+</section>
+<!-- END: ContentTabs -->
+<!-- BEGIN: PostGrid -->
+<section class="grid grid-cols-3 gap-0.5 bg-gray-200">
+<!-- Post items -->
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+<div class="aspect-square bg-gray-400"></div>
+</section>
+<!-- END: PostGrid -->
+</main>
+<!-- BEGIN: BottomNavigation -->
+<nav class="fixed bottom-0 w-full max-w-[400px] bg-white border-t border-gray-200 flex justify-around items-center h-[50px] pb-safe z-20">
+<button class="p-2 focus:outline-none">
+<svg aria-label="Home" class="_ab6-" color="#262626" fill="#262626" height="24" role="img" viewbox="0 0 24 24" width="24"><path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.997 2.997 0 1 0-5.993 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31-.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-2 focus:outline-none">
+<svg aria-label="Search" class="_ab6-" color="#262626" fill="#262626" height="24" role="img" viewbox="0 0 24 24" width="24"><path d="M19 10.5A8.5 8.5 0 1 1 10.5 2a8.5 8.5 0 0 1 8.5 8.5Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="16.511" x2="22" y1="16.511" y2="22"></line></svg>
+</button>
+<button class="p-2 focus:outline-none">
+<svg aria-label="New post" class="_ab6-" color="#262626" fill="#262626" height="24" role="img" viewbox="0 0 24 24" width="24"><path d="M2 12v3.45c0 2.849.698 4.005 1.606 4.944.94.909 2.098 1.608 4.946 1.608h6.896c2.848 0 4.006-.7 4.946-1.608C21.302 19.455 22 18.3 22 15.45V8.552c0-2.849-.698-4.006-1.606-4.945C19.454 2.7 18.296 2 15.448 2H8.552c-2.848 0-4.006.699-4.946 1.607C2.698 4.546 2 5.704 2 8.552Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="6.545" x2="17.455" y1="12.001" y2="12.001"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="12.003" x2="12.003" y1="6.545" y2="17.455"></line></svg>
+</button>
+<button class="p-2 focus:outline-none">
+<svg aria-label="Reels" class="_ab6-" color="#262626" fill="#262626" height="24" role="img" viewbox="0 0 24 24" width="24"><line fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2" x1="2.049" x2="21.95" y1="7.002" y2="7.002"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="13.504" x2="16.362" y1="2.001" y2="7.002"></line><line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="7.207" x2="10.002" y1="2.11" y2="7.002"></line><path d="M2 12.001v3.449c0 2.849.698 4.005 1.606 4.944.94.909 2.098 1.608 4.946 1.608h6.896c2.848 0 4.006-.7 4.946-1.608C21.302 19.455 22 18.3 22 15.45V8.552c0-2.849-.698-4.006-1.606-4.945C19.454 2.7 18.296 2 15.448 2H8.552c-2.848 0-4.006.699-4.946 1.607C2.698 4.546 2 5.704 2 8.552z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><polygon fill="none" points="9.718 14.694 15.207 11.598 9.718 8.502 9.718 14.694" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></polygon></svg>
+</button>
+<button class="p-2 focus:outline-none">
+<div class="w-6 h-6 rounded-full border border-gray-900 overflow-hidden bg-gray-300"></div>
+</button>
+</nav>
+<!-- END: BottomNavigation -->
+</div>
+<!-- END: MobileContainer -->
+</body></html>
