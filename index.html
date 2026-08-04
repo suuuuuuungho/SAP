@@ -69,44 +69,6 @@
     </div>
   </section>
 
-  <!-- Section 1: Progress -->
-  <section class="mb-8 lg:mb-12">
-    <div class="flex items-center justify-between mb-3 lg:mb-4">
-      <h2 class="text-lg lg:text-xl font-bold">Progress</h2>
-      <button class="glass-card text-sm text-on-surface-variant flex items-center gap-1.5 rounded-full px-3.5 py-1.5 hover:text-on-surface transition-colors">
-        <i class="fa-solid fa-xmark"></i> Dismiss
-      </button>
-    </div>
-    <div class="glass-panel rounded-[2rem] p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-12 relative overflow-hidden">
-      <div class="flex-1 space-y-4 lg:space-y-5 relative z-10">
-        <div class="flex items-center gap-3 lg:gap-4">
-          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="pray">
-            <i class="fa-solid fa-check text-sm"></i>
-          </div>
-          <span class="text-sm lg:text-base font-medium">기도</span>
-        </div>
-        <div class="flex items-center gap-3 lg:gap-4">
-          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="word">
-            <i class="fa-solid fa-check text-sm"></i>
-          </div>
-          <span class="text-sm lg:text-base font-medium">말씀</span>
-        </div>
-        <div class="flex items-center gap-3 lg:gap-4">
-          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="study">
-            <i class="fa-solid fa-check text-sm"></i>
-          </div>
-          <span class="text-sm lg:text-base font-medium">공부</span>
-        </div>
-        <div id="progress-row-worship" class="flex items-center gap-3 lg:gap-4">
-          <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="worship">
-            <i class="fa-solid fa-check text-sm"></i>
-          </div>
-          <span class="text-sm lg:text-base font-medium">예배</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- Section 2: 인증하기 -->
   <div class="flex items-center gap-3 mb-1">
     <h2 class="text-lg lg:text-xl font-bold">인증하기</h2>
@@ -118,21 +80,36 @@
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
     <!-- 기도 (blank widget) -->
     <div id="widget-pray" data-widget="pray" class="widget-card glass-card rounded-[1.5rem] p-6 cursor-pointer hover:bg-white transition-colors">
-      <h3 class="text-sm font-medium text-on-surface-variant">기도</h3>
+      <div class="absolute top-4 right-4">
+        <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="pray">
+          <i class="fa-solid fa-check text-sm"></i>
+        </div>
+      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant pr-8">기도</h3>
       <div class="widget-summary mt-10">
         <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
       </div>
     </div>
     <!-- 말씀 (blank widget) -->
     <div id="widget-word" data-widget="word" class="widget-card glass-card rounded-[1.5rem] p-6 cursor-pointer hover:bg-white transition-colors">
-      <h3 class="text-sm font-medium text-on-surface-variant">말씀</h3>
+      <div class="absolute top-4 right-4">
+        <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="word">
+          <i class="fa-solid fa-check text-sm"></i>
+        </div>
+      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant pr-8">말씀</h3>
       <div class="widget-summary mt-10">
         <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
       </div>
     </div>
     <!-- 공부 (Record 타이머 + 수동 추가, 클릭 시 기록 내역) -->
     <div id="widget-study" data-widget="study" class="widget-card glass-card rounded-[1.5rem] p-6 cursor-pointer hover:bg-white transition-colors">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-3">공부</h3>
+      <div class="absolute top-4 right-4">
+        <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="study">
+          <i class="fa-solid fa-check text-sm"></i>
+        </div>
+      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant mb-3 pr-8">공부</h3>
       <div class="flex items-center gap-2 flex-wrap mb-4">
         <button id="study-record-btn" type="button" class="pill-btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5">
           <i class="fa-solid fa-circle text-[7px] text-error"></i> Record
@@ -147,7 +124,12 @@
     </div>
     <!-- 예배 (수/금만 활성화, O·X·가정 선택) -->
     <div id="widget-worship" data-widget="worship" class="widget-card glass-card rounded-[1.5rem] p-6 transition-colors">
-      <h3 class="text-sm font-medium text-on-surface-variant">예배</h3>
+      <div class="absolute top-4 right-4">
+        <div class="icon-glass w-8 h-8 rounded-full text-on-surface-variant flex items-center justify-center shrink-0" data-progress-icon="worship">
+          <i class="fa-solid fa-check text-sm"></i>
+        </div>
+      </div>
+      <h3 class="text-sm font-medium text-on-surface-variant pr-8">예배</h3>
       <div class="widget-summary mt-10">
         <div class="w-full border-t-2 border-dashed border-outline-variant"></div>
       </div>
@@ -363,7 +345,7 @@
       <p class="text-sm text-on-surface-variant mb-6">예배에 참석하셨나요?</p>
       <div class="grid grid-cols-3 gap-3">
         <button id="worship-o-btn" type="button" class="glass-card rounded-2xl py-4 text-lg font-bold text-primary hover:bg-white transition-colors">O</button>
-        <button id="worship-x-btn" type="button" class="glass-card rounded-2xl py-4 text-lg font-bold text-on-surface-variant hover:bg-white transition-colors">X</button>
+        <button id="worship-x-btn" type="button" class="glass-card rounded-2xl py-4 text-lg font-bold text-primary hover:bg-white transition-colors">X</button>
         <button id="worship-home-btn" type="button" class="glass-card rounded-2xl py-4 text-sm font-bold text-primary hover:bg-white transition-colors">가정</button>
       </div>
       <button id="worship-reset" type="button" class="block mx-auto mt-6 text-xs font-medium text-error hover:opacity-80">선택 취소(초기화)</button>
@@ -376,7 +358,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/home.js?v=11"></script>
+<script src="assets/js/home.js?v=13"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => renderApp({ activePage: 'home' }));
 </script>

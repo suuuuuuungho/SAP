@@ -99,14 +99,6 @@ function renderVerificationState() {
     const key = el.getAttribute('data-widget');
     el.classList.toggle('is-verified', !!progress[key]);
   });
-
-  checkAllCategoriesCelebration();
-}
-
-function renderProgressRowVisibility() {
-  const row = document.getElementById('progress-row-worship');
-  if (!row) return;
-  row.classList.toggle('hidden', !isWorshipDayActive(selectedDateKey));
 }
 
 function formatPrayerSummary(entries) {
@@ -136,6 +128,13 @@ function formatMinutesSeconds(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
+}
+
+function formatFullTimestamp(ms) {
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${hh}:${mm}`;
 }
 
 function renderPrayWidgetSummary() {
@@ -233,16 +232,25 @@ function renderStudyHistoryModal() {
   recordTotalEl.textContent = recordSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'record')) : '-';
   manualTotalEl.textContent = manualSessions.length ? formatMinutesSeconds(getStudySeconds(record, 'manual')) : '-';
 
-  const rowHTML = (entry, i) => `
-    <div class="glass-card rounded-xl px-4 py-2.5 text-sm flex items-center justify-between">
-      <span class="text-on-surface-variant">${i + 1}회차</span>
-      <span class="flex items-center gap-3">
-        <span class="font-semibold">${formatMinutesSeconds(entry.seconds)}</span>
-        <button type="button" class="study-session-remove text-on-surface-variant hover:text-error" data-index="${entry.index}" aria-label="삭제">
-          <i class="fa-solid fa-xmark text-xs"></i>
-        </button>
-      </span>
+  const rowHTML = (entry, i) => {
+    const hasTimestamps = entry.source === 'record' && entry.startedAt && entry.endedAt;
+    const timestampCaption = hasTimestamps
+      ? `<p class="study-session-timestamp hidden text-[11px] text-on-surface-variant mt-2 pt-2 border-t border-outline-variant">${formatFullTimestamp(entry.startedAt)} 부터 ${formatFullTimestamp(entry.endedAt)} 까지</p>`
+      : '';
+    return `
+    <div class="glass-card rounded-xl px-4 py-2.5 text-sm ${hasTimestamps ? 'study-session-row cursor-pointer' : ''}" data-index="${entry.index}">
+      <div class="flex items-center justify-between">
+        <span class="text-on-surface-variant">${i + 1}회차</span>
+        <span class="flex items-center gap-3">
+          <span class="font-semibold">${formatMinutesSeconds(entry.seconds)}</span>
+          <button type="button" class="study-session-remove text-on-surface-variant hover:text-error" data-index="${entry.index}" aria-label="삭제">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </span>
+      </div>
+      ${timestampCaption}
     </div>`;
+  };
 
   recordListEl.innerHTML = recordSessions.length
     ? recordSessions.map(rowHTML).join('')
@@ -343,11 +351,14 @@ function getCategoryMinutes(key) {
   return 0;
 }
 
-// Dependency-free confetti burst. `big` (300분 목표 달성) is a grander effect than the default
-// (모든 카테고리 인증 완료) so the two celebrations feel clearly different in scale.
+// Dependency-free confetti burst. `big` (300분 목표 달성) is a grander effect — more pieces, a
+// richer/more varied palette, larger drift — than the small one (모든 카테고리 인증 완료).
+const SMALL_CONFETTI_COLORS = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
+const BIG_CONFETTI_COLORS = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c', '#ffd23f', '#4ecdc4', '#ff9f1c', '#2ec4b6', '#f72585', '#7bdff2'];
+
 function launchConfetti({ big = false } = {}) {
-  const colors = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
-  const pieceCount = big ? 220 : 45;
+  const colors = big ? BIG_CONFETTI_COLORS : SMALL_CONFETTI_COLORS;
+  const pieceCount = big ? 150 : 45;
   const container = document.createElement('div');
   container.className = 'confetti-container';
 
@@ -376,12 +387,16 @@ function launchSmallConfetti() {
   launchConfetti({ big: false });
 }
 
+// 3연속 발사로 300분 달성을 더 크게 축하한다.
 function launchBigConfetti() {
   launchConfetti({ big: true });
+  setTimeout(() => launchConfetti({ big: true }), 250);
+  setTimeout(() => launchConfetti({ big: true }), 500);
 }
 
 // 인증하기의 활성 카테고리(예배는 수/금만)가 모두 완료된 첫 순간에 작은 confetti.
-// 300분 목표 달성(renderDailyGoals)의 큰 confetti와 차등을 둠.
+// 300분 목표 달성(checkGoalCelebration)의 큰 confetti와 차등을 둠.
+// 둘 다 개별 modal 저장이 아니라 "저장하기" 버튼을 눌러야만 확인/발사된다.
 function checkAllCategoriesCelebration() {
   const record = getRecord(selectedDateKey);
   const categories = getActiveCategoriesForDate(selectedDateKey);
@@ -395,6 +410,19 @@ function checkAllCategoriesCelebration() {
   }
 }
 
+function checkGoalCelebration() {
+  const record = getRecord(selectedDateKey);
+  const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
+  const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
+
+  if (percent >= 100 && !record.goalCelebrated) {
+    launchBigConfetti();
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: true }));
+  } else if (percent < 100 && record.goalCelebrated) {
+    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: false }));
+  }
+}
+
 function renderDailyGoals() {
   const ring = document.getElementById('daily-goal-ring');
   const percentEl = document.getElementById('daily-goal-percent');
@@ -404,14 +432,6 @@ function renderDailyGoals() {
   const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
   const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
   const filledPercent = Math.min(percent, 100);
-
-  const record = getRecord(selectedDateKey);
-  if (percent >= 100 && !record.goalCelebrated) {
-    launchBigConfetti();
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: true }));
-  } else if (percent < 100 && record.goalCelebrated) {
-    updateRecord(selectedDateKey, (r) => Object.assign(r, { goalCelebrated: false }));
-  }
 
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -515,7 +535,6 @@ function renderMonthlyCalendar() {
 }
 
 function renderAllForSelectedDate() {
-  renderProgressRowVisibility();
   renderVerificationState();
   renderPrayWidgetSummary();
   renderWordWidgetSummary();
@@ -849,7 +868,9 @@ function startRecording() {
 function stopRecording() {
   if (!recordStartTime) return;
 
-  const elapsedSeconds = Math.round((Date.now() - recordStartTime) / 1000);
+  const startedAt = recordStartTime;
+  const endedAt = Date.now();
+  const elapsedSeconds = Math.round((endedAt - startedAt) / 1000);
   clearInterval(recordIntervalId);
   recordIntervalId = null;
   recordStartTime = null;
@@ -862,7 +883,7 @@ function stopRecording() {
 
   if (elapsedSeconds > 0) {
     updateRecord(selectedDateKey, (record) => {
-      record.studySessions = [...record.studySessions, { source: 'record', seconds: elapsedSeconds }];
+      record.studySessions = [...record.studySessions, { source: 'record', seconds: elapsedSeconds, startedAt, endedAt }];
       record.progress.study = true;
       return record;
     });
@@ -1074,8 +1095,15 @@ function initHomeWidgets() {
   if (studyHistoryModal) {
     studyHistoryModal.addEventListener('click', (e) => {
       const removeBtn = e.target.closest('.study-session-remove');
-      if (!removeBtn) return;
-      removeStudySession(Number(removeBtn.dataset.index));
+      if (removeBtn) {
+        removeStudySession(Number(removeBtn.dataset.index));
+        return;
+      }
+      const row = e.target.closest('.study-session-row');
+      if (row) {
+        const timestamp = row.querySelector('.study-session-timestamp');
+        if (timestamp) timestamp.classList.toggle('hidden');
+      }
     });
   }
 
@@ -1139,7 +1167,13 @@ function initHomeWidgets() {
   if (worshipResetBtn) worshipResetBtn.addEventListener('click', resetWorship);
 
   const verificationSaveBtn = document.getElementById('verification-save-btn');
-  if (verificationSaveBtn) verificationSaveBtn.addEventListener('click', showSaveToast);
+  if (verificationSaveBtn) {
+    verificationSaveBtn.addEventListener('click', () => {
+      showSaveToast();
+      checkAllCategoriesCelebration();
+      checkGoalCelebration();
+    });
+  }
 }
 
 window.initHomeWidgets = initHomeWidgets;
