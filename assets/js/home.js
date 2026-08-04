@@ -395,10 +395,10 @@ function launchConfettiBurst(origin) {
   const container = document.createElement('div');
   container.className = 'confetti-container';
 
-  for (let i = 0; i < 360; i += 1) {
+  for (let i = 0; i < 540; i += 1) {
     const piece = document.createElement('div');
     const size = 6 + Math.random() * 8;
-    const duration = 1.1 + Math.random() * 0.6;
+    const duration = 1.5 + Math.random() * 0.8;
     const tx = origin.txRange[0] + Math.random() * (origin.txRange[1] - origin.txRange[0]);
     const ty = origin.tyRange[0] + Math.random() * (origin.tyRange[1] - origin.tyRange[0]);
 
@@ -419,7 +419,7 @@ function launchConfettiBurst(origin) {
   }
 
   document.body.appendChild(container);
-  setTimeout(() => container.remove(), 2200);
+  setTimeout(() => container.remove(), 2600);
 }
 
 function launchBigConfetti() {
