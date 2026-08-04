@@ -150,3 +150,30 @@ body {
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* Confetti burst, fired once when a Daily Goal is first reached */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  border-radius: 2px;
+  opacity: 0.9;
+}
+@keyframes confetti-fall {
+  0% {
+    top: -10px;
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    top: 110vh;
+    transform: translateX(var(--drift, 0px)) rotate(720deg);
+    opacity: 0.85;
+  }
+}

@@ -86,6 +86,34 @@ function renderPrayWidgetSummary() {
 }
 
 const DAILY_GOAL_MINUTES = 300;
+const GOAL_CELEBRATED_KEY = 'sap_goal_celebrated_v1';
+
+// Small dependency-free confetti burst, fired once the moment the goal is first reached.
+function launchConfetti() {
+  const colors = ['#ff4b91', '#ee6650', '#cca9fe', '#b9045e', '#6e4f9c'];
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+
+  for (let i = 0; i < 120; i += 1) {
+    const piece = document.createElement('div');
+    const size = 6 + Math.random() * 6;
+    const duration = 2.2 + Math.random() * 1.4;
+
+    piece.className = 'confetti-piece';
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.width = `${size}px`;
+    piece.style.height = `${size * 0.4}px`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * 220}px`);
+    piece.style.animation = `confetti-fall ${duration}s ease-in ${Math.random() * 0.4}s forwards`;
+
+    container.appendChild(piece);
+  }
+
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 4000);
+}
 
 // Only 기도 has real tracked minutes so far; 말씀/공부/예배 default to 0
 // until their own input flows exist, same as the Progress checkmarks.
@@ -105,6 +133,14 @@ function renderDailyGoals() {
   const totalMinutes = ['pray', 'word', 'study', 'worship'].reduce((sum, key) => sum + getCategoryMinutes(key), 0);
   const percent = Math.round((totalMinutes / DAILY_GOAL_MINUTES) * 100);
   const filledPercent = Math.min(percent, 100);
+
+  const alreadyCelebrated = localStorage.getItem(GOAL_CELEBRATED_KEY) === 'true';
+  if (percent >= 100 && !alreadyCelebrated) {
+    launchConfetti();
+    localStorage.setItem(GOAL_CELEBRATED_KEY, 'true');
+  } else if (percent < 100 && alreadyCelebrated) {
+    localStorage.setItem(GOAL_CELEBRATED_KEY, 'false');
+  }
 
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -201,22 +237,39 @@ function updatePrayRemoveButtons() {
   });
 }
 
-function addPrayClassEntry() {
+function addPrayClassEntry(data) {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
   if (!template || !list) return;
 
   list.appendChild(template.content.cloneNode(true));
-  wirePhotoPreview(list.lastElementChild);
+  const entryEl = list.lastElementChild;
+  wirePhotoPreview(entryEl);
+
+  if (data) {
+    if (data.location) entryEl.querySelector('.pray-location-input').value = data.location;
+    if (data.start) entryEl.querySelector('.pray-start-input').value = data.start;
+    if (data.end) entryEl.querySelector('.pray-end-input').value = data.end;
+  }
+
   updatePrayRemoveButtons();
 }
 
+// Re-opening loads previously saved classes so they can be edited, not just appended to.
+// (사진은 브라우저에만 임시로 있던 미리보기라 저장되지 않으므로 다시 열면 비어 있습니다.)
 function openPrayModal() {
   const modal = document.getElementById('pray-modal');
   const list = document.getElementById('pray-class-list');
   if (!modal || !list) return;
   list.innerHTML = '';
-  addPrayClassEntry();
+
+  const existing = loadPrayerClasses();
+  if (existing.length > 0) {
+    existing.forEach((entry) => addPrayClassEntry(entry));
+  } else {
+    addPrayClassEntry();
+  }
+
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 }
