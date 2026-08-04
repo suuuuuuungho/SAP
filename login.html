@@ -35,6 +35,11 @@
       placeholder="비밀번호"
       class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
     >
+    <label class="flex items-center gap-2 text-sm text-on-surface-variant select-none cursor-pointer">
+      <input type="checkbox" id="remember-me-input" class="w-4 h-4 rounded accent-primary">
+      자동 로그인
+    </label>
+
     <button
       type="submit"
       id="login-submit"
@@ -66,6 +71,7 @@
   const form = document.getElementById('login-form');
   const usernameInput = document.getElementById('username-input');
   const passwordInput = document.getElementById('password-input');
+  const rememberMeInput = document.getElementById('remember-me-input');
   const submitBtn = document.getElementById('login-submit');
   const status = document.getElementById('login-status');
 
@@ -85,6 +91,8 @@
 
     submitBtn.disabled = true;
     submitBtn.textContent = '로그인 중...';
+
+    window.localStorage.setItem('sap_remember_me', rememberMeInput.checked ? '1' : '0');
 
     const { data: email, error: lookupError } = await window.supabaseClient.rpc('get_login_email', {
       p_username: usernameInput.value.trim()
