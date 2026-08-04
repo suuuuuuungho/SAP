@@ -143,4 +143,5 @@ function renderApp({ activePage }) {
   wireMobileMenu();
 
   if (window.initAuthUI) window.initAuthUI();
+  if (window.initHomeWidgets) window.initHomeWidgets();
 }
