@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Instagram Layout</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style data-purpose="custom-styles">
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 414px; /* iPhone Max width roughly */
+      background-color: white;
+      height: 896px; /* iPhone Max height roughly */
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .story-ring {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      padding: 2px;
+      border-radius: 50%;
+    }
+
+    .story-ring-inner {
+      background-color: white;
+      padding: 2px;
+      border-radius: 50%;
+    }
+  </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" data-snapdom="injected-import"></head>
+<body>
+<!-- BEGIN: AppContainer -->
+<div class="app-container" data-purpose="mobile-app-layout">
+<!-- BEGIN: TopHeader -->
+<header class="flex justify-between items-center px-4 py-3 border-b border-gray-200 mt-8" data-purpose="main-header">
+<div class="text-xl tracking-tighter" style="font-family: &quot;Times New Roman&quot;, Times, serif; font-weight: bold; font-style: italic;">SAPIAN</div>
+
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: MainContentScrollable -->
+<main class="flex-1 overflow-y-auto pb-14" data-purpose="scrollable-feed">
+<!-- BEGIN: StoriesSection -->
+<section class="flex space-x-4 p-4 border-b border-gray-200 overflow-x-auto" data-purpose="stories-bar">
+<!-- Your Story -->
+<div class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-gray-200 relative">
+<div class="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center border-2 border-white text-xs">
+<i class="fa-solid fa-plus"></i>
+</div>
+</div>
+<span class="text-xs text-gray-500">your story</span>
+</div>
+<!-- Other Stories -->
+<div class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer">
+<div class="story-ring">
+<div class="story-ring-inner">
+<div class="w-[56px] h-[56px] rounded-full bg-gray-200"></div>
+</div>
+</div>
+<span class="text-xs text-gray-800">username</span>
+</div>
+<div class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer">
+<div class="story-ring">
+<div class="story-ring-inner">
+<div class="w-[56px] h-[56px] rounded-full bg-gray-200"></div>
+</div>
+</div>
+<span class="text-xs text-gray-800">username</span>
+</div>
+<div class="flex flex-col items-center space-y-1 shrink-0 cursor-pointer">
+<div class="story-ring">
+<div class="story-ring-inner">
+<div class="w-[56px] h-[56px] rounded-full bg-gray-200"></div>
+</div>
+</div>
+<span class="text-xs text-gray-800">username</span>
+</div>
+</section>
+<!-- END: StoriesSection -->
+<!-- BEGIN: FeedPost -->
+<article class="bg-white" data-purpose="single-post">
+<!-- Post Header -->
+<div class="flex justify-between items-center p-3" data-purpose="post-header">
+<div class="flex items-center space-x-3">
+<div class="story-ring w-9 h-9">
+<div class="story-ring-inner w-full h-full">
+<div class="w-full h-full rounded-full bg-gray-200"></div>
+</div>
+</div>
+<span class="font-semibold text-sm">username</span>
+</div>
+<i class="fa-solid fa-ellipsis-vertical text-gray-600 px-2 cursor-pointer"></i>
+</div>
+<!-- Post Image/Content -->
+<div class="w-full aspect-square bg-gray-100 flex items-center justify-center" data-purpose="post-media">
+<!-- Placeholder for Post Image -->
+<div class="text-gray-400 text-sm">Image Placeholder</div>
+</div>
+<!-- Post Actions -->
+<div class="flex justify-between items-center px-3 py-2" data-purpose="post-actions">
+<div class="flex space-x-4">
+
+<i class="fa-regular fa-comment text-2xl cursor-pointer text-gray-800 transform -scale-x-100"></i>
+<i class="fa-regular fa-paper-plane text-2xl cursor-pointer text-gray-800"></i>
+</div>
+<i class="fa-regular fa-bookmark text-2xl cursor-pointer text-gray-800"></i>
+</div>
+<!-- Post Likes & Caption -->
+<div class="px-3 pb-3" data-purpose="post-details">
+
+<p class="text-sm"><span class="font-semibold mr-1">@username</span> 2026.08.04 23:30 ~ 2026.08.05 00:30</p>
+
+</div>
+</article>
+<!-- END: FeedPost -->
+</main>
+<!-- END: MainContentScrollable -->
+<!-- BEGIN: BottomNavigation -->
+
+<!-- END: BottomNavigation -->
+</div>
+<!-- END: AppContainer -->
+
+
+</body></html>
