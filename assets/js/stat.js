@@ -72,13 +72,26 @@ function buildDailySeries(history) {
   history.study.forEach((r) => { byDate.study[r.record_date] = r; });
   history.worship.forEach((r) => { byDate.worship[r.record_date] = r; });
 
+  const allDates = [
+    ...history.pray.map((r) => r.record_date),
+    ...history.word.map((r) => r.record_date),
+    ...history.study.map((r) => r.record_date),
+    ...history.worship.map((r) => r.record_date)
+  ];
+
   const start = new Date(`${STAT_PROGRAM_START_KEY}T00:00:00`);
   const programEnd = new Date(`${STAT_PROGRAM_END_KEY}T00:00:00`);
   const today = new Date(`${todayKey()}T00:00:00`);
-  const end = today < programEnd ? today : programEnd;
+  // 브라우저의 "오늘"이 실제 운영 시작일에 아직 못 미치더라도(로컬 테스트 등), 이미 입력된 기록이
+  // 있는 날짜까지는 보여준다 — 종료 상한은 오늘과 최신 기록일 중 늦은 쪽, 단 운영 종료일은 못 넘음.
+  const latestDataDate = allDates.length > 0
+    ? new Date(Math.max(...allDates.map((d) => new Date(`${d}T00:00:00`).getTime())))
+    : today;
+  const cappedEnd = today > latestDataDate ? today : latestDataDate;
+  const end = cappedEnd < programEnd ? cappedEnd : programEnd;
 
   const days = [];
-  if (end < start) return days; // 아직 운영기간이 시작되지 않음
+  if (end < start) return days; // 아직 운영기간이 시작되지 않았고 기록도 없음
 
   const cursor = new Date(start);
   while (cursor <= end) {
