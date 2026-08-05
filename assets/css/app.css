@@ -199,6 +199,29 @@ body {
   }
 }
 
+/* Stat 탭: 완료 히트맵 셀 (GitHub 잔디 스타일) */
+.heatmap-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 0.25rem;
+  transition: transform 0.15s ease;
+}
+.heatmap-cell:hover {
+  transform: scale(1.15);
+}
+
+/* Stat 탭: 스트릭 카드의 손그림 불꽃 아이콘 — 은은하게 흔들리는 느낌 */
+.streak-flame {
+  display: inline-block;
+  transform-origin: 50% 85%;
+  animation: streak-flicker 2.4s ease-in-out infinite;
+}
+@keyframes streak-flicker {
+  0%, 100% { transform: rotate(-2deg) scale(1); }
+  25% { transform: rotate(1.5deg) scale(1.03); }
+  50% { transform: rotate(-1deg) scale(0.98); }
+  75% { transform: rotate(2deg) scale(1.02); }
+}
+
 /* 300분 목표 달성: 코너에서 터지는 confetti (bottom-left / bottom-right / top) */
 .confetti-burst-piece {
   position: absolute;

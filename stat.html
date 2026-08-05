@@ -12,21 +12,125 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mb-8">Stat</h1>
-  <div class="glass-panel rounded-[2rem] p-12 flex flex-col items-center justify-center text-center gap-3">
-    <div class="icon-glass w-14 h-14 rounded-full flex items-center justify-center text-on-surface-variant">
-      <i class="fa-regular fa-hourglass-half text-xl"></i>
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-8 lg:mb-10">
+    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Stat</h1>
+    <div class="glass-panel rounded-full p-1 flex text-sm font-semibold">
+      <button type="button" id="stat-range-weekly" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">주간</button>
+      <button type="button" id="stat-range-monthly" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">월간</button>
+      <button type="button" id="stat-range-all" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">전체기간</button>
     </div>
-    <p class="font-medium text-on-surface">준비 중입니다</p>
-    <p class="text-sm text-on-surface-variant">Stat 기능은 추후 추가될 예정입니다.</p>
   </div>
+
+  <!-- 스트릭 + 범위 목표 링 -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-6">
+    <div class="glass-card rounded-[1.5rem] p-6 flex flex-col items-center justify-center text-center">
+      <h3 class="text-sm font-medium text-on-surface-variant mb-4 self-start">연속 기록</h3>
+      <i class="fa-solid fa-fire text-5xl text-tertiary streak-flame"></i>
+      <p id="stat-streak-current" class="text-3xl font-bold text-primary mt-3">0일</p>
+      <p id="stat-streak-longest" class="text-xs text-on-surface-variant mt-1">최장 0일</p>
+    </div>
+
+    <div class="glass-card rounded-[1.5rem] p-6">
+      <h3 class="text-sm font-medium text-on-surface-variant mb-6">목표 달성률</h3>
+      <div class="relative w-36 h-36 mx-auto">
+        <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+          <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
+          <circle id="stat-goal-ring" cx="60" cy="60" r="52" fill="none" stroke-width="12" stroke-linecap="round" stroke="url(#stat-goal-gradient-low)"></circle>
+          <defs>
+            <linearGradient id="stat-goal-gradient-low" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#aa3524"></stop>
+              <stop offset="100%" stop-color="#ee6650"></stop>
+            </linearGradient>
+            <linearGradient id="stat-goal-gradient-high" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff4b91"></stop>
+              <stop offset="100%" stop-color="#6e4f9c"></stop>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <p id="stat-goal-percent" class="text-3xl font-bold text-on-surface">0%</p>
+          <p class="text-[11px] font-semibold text-on-surface-variant tracking-wide mt-0.5">300분 달성일 비율</p>
+        </div>
+      </div>
+      <p id="stat-goal-sub" class="text-center text-xs text-on-surface-variant mt-4">0/0일 300분 달성</p>
+    </div>
+  </section>
+
+  <!-- KPI 타일 -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="glass-card rounded-[1.5rem] p-4">
+      <p class="text-xs text-on-surface-variant mb-1">총 활동시간</p>
+      <p id="stat-kpi-total" class="text-2xl font-bold text-primary">0분</p>
+    </div>
+    <div class="glass-card rounded-[1.5rem] p-4">
+      <p class="text-xs text-on-surface-variant mb-1">평균 달성률</p>
+      <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0%</p>
+    </div>
+    <div class="glass-card rounded-[1.5rem] p-4">
+      <p class="text-xs text-on-surface-variant mb-1">완료일수</p>
+      <p id="stat-kpi-completed" class="text-2xl font-bold text-primary">0 / 0일</p>
+    </div>
+    <div class="glass-card rounded-[1.5rem] p-4">
+      <p class="text-xs text-on-surface-variant mb-1">최다 기록일</p>
+      <p id="stat-kpi-best" class="text-2xl font-bold text-primary">-</p>
+    </div>
+  </section>
+
+  <!-- 완료 히트맵 -->
+  <section class="glass-card rounded-[1.5rem] p-6 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <h3 class="text-sm font-medium text-on-surface-variant">완료 히트맵</h3>
+      <div id="stat-heatmap-metric-tabs" class="glass-panel rounded-full p-1 flex text-xs font-semibold">
+        <button type="button" data-metric="completed" class="px-2.5 py-1 rounded-full nav-pill-active transition-colors">완료</button>
+        <button type="button" data-metric="pray" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">기도</button>
+        <button type="button" data-metric="word" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">말씀</button>
+        <button type="button" data-metric="study" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">공부</button>
+        <button type="button" data-metric="worship" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">예배</button>
+      </div>
+    </div>
+    <div id="stat-heatmap" class="flex gap-1 overflow-x-auto scrollbar-hide pb-1"></div>
+  </section>
+
+  <!-- 추세 라인 -->
+  <section class="glass-card rounded-[1.5rem] p-6 mb-6">
+    <h3 class="text-sm font-medium text-on-surface-variant mb-4">활동 추세</h3>
+    <div class="relative h-56 sm:h-64 lg:h-72">
+      <canvas id="stat-trend-chart"></canvas>
+    </div>
+  </section>
+
+  <!-- 밸런스 레이더 + 시간 배분 도넛 -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
+    <div class="glass-card rounded-[1.5rem] p-6">
+      <h3 class="text-sm font-medium text-on-surface-variant mb-4">카테고리 밸런스</h3>
+      <div class="relative h-64">
+        <canvas id="stat-radar-chart"></canvas>
+      </div>
+    </div>
+    <div class="glass-card rounded-[1.5rem] p-6">
+      <h3 class="text-sm font-medium text-on-surface-variant mb-4">시간 배분</h3>
+      <div class="relative h-64">
+        <canvas id="stat-donut-chart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 퍼스널 베스트 -->
+  <section class="mb-16">
+    <h3 class="text-sm font-medium text-on-surface-variant mb-3">베스트 기록</h3>
+    <div id="stat-best-chips" class="flex flex-wrap gap-3"></div>
+  </section>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js"></script>
-<script src="assets/js/layout.js"></script>
+<script src="assets/js/layout.js?v=2"></script>
+<script src="assets/js/pray-word.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="assets/js/stat.js?v=4"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });
