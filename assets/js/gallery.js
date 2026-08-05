@@ -91,7 +91,7 @@ function feedCardHTML(item, index) {
   const isOwn = item.user && item.user.id === sapiansCurrentUserId;
   const photoUrls = feedItemPhotoPaths(item).map((path) => getPhotoUrl(path));
   const mediaHTML = photoUrls
-    .map((src) => `<img src="${src}" class="snap-center shrink-0 w-full h-full object-cover" alt="게시물 사진">`)
+    .map((src) => `<img src="${src}" class="snap-center shrink-0 w-full h-full object-contain" alt="게시물 사진">`)
     .join('');
   const dotsHTML = photoUrls.length > 1
     ? `<div class="flex justify-center gap-1 mt-2">${photoUrls.map((_, i) => `<span class="w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-primary' : 'bg-outline-variant'}"></span>`).join('')}</div>`
@@ -116,7 +116,7 @@ function feedCardHTML(item, index) {
       ${dotsHTML}
       <div class="flex items-center gap-4 px-4 pt-3 text-on-surface-variant">
         <i class="fa-regular fa-heart text-xl"></i>
-        <i class="fa-regular fa-comment text-xl"></i>
+        <i class="fa-regular fa-comment text-xl cursor-pointer sapians-comment-btn" data-feed-index="${index}"></i>
         <i class="fa-regular fa-paper-plane text-xl"></i>
       </div>
       <p class="px-4 pt-2 text-sm text-on-surface"><span class="font-semibold mr-1">${name}</span>${feedItemSummary(item)}</p>
@@ -208,6 +208,13 @@ function wireFeedClicks() {
   if (!feedEl) return;
 
   feedEl.addEventListener('click', (e) => {
+    const commentBtn = e.target.closest('.sapians-comment-btn');
+    if (commentBtn) {
+      const item = sapiansFeedItems[Number(commentBtn.dataset.feedIndex)];
+      if (item) openCommentsModal(item);
+      return;
+    }
+
     const mediaEl = e.target.closest('.sapians-own-media');
     if (!mediaEl) return;
     const item = sapiansFeedItems[Number(mediaEl.dataset.feedIndex)];
@@ -221,9 +228,124 @@ function wireFeedClicks() {
   });
 }
 
+// --- 댓글 (post_comments 테이블. 게시물은 별도 테이블이 없어 owner/date/type 조합으로 특정) ---
+
+let activeCommentsPost = null; // { ownerId, date, type }
+let sapiansComments = [];
+
+function userById(userId) {
+  return sapiansUsers.find((u) => u.id === userId) || null;
+}
+
+// 댓글은 상대적 시간이 자연스러운 곳 — 게시물 자체의 날짜 표기(formatPostDate)와는 별개.
+function relativeTimeShort(isoString) {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return '방금';
+  if (mins < 60) return `${mins}분`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간`;
+  const days = Math.floor(hours / 24);
+  return `${days}일`;
+}
+
+async function loadComments(post) {
+  const { data, error } = await window.supabaseClient
+    .from('post_comments')
+    .select('*')
+    .eq('post_owner_id', post.ownerId)
+    .eq('post_date', post.date)
+    .eq('post_type', post.type)
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('[sapians] loadComments', error);
+    return [];
+  }
+  return data || [];
+}
+
+function commentRowHTML(comment) {
+  const user = userById(comment.author_id);
+  return `
+    <div class="flex items-start gap-3">
+      ${avatarHTML(user, 'w-8 h-8')}
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-on-surface break-words"><span class="font-semibold mr-1">${user ? user.username : '?'}</span>${comment.body}</p>
+        <span class="text-[11px] text-on-surface-variant">${relativeTimeShort(comment.created_at)} 전</span>
+      </div>
+    </div>`;
+}
+
+function renderComments() {
+  const list = document.getElementById('sapians-comments-list');
+  if (!list) return;
+  list.innerHTML = sapiansComments.length > 0
+    ? sapiansComments.map(commentRowHTML).join('')
+    : '<p class="text-xs text-on-surface-variant text-center py-6">첫 댓글을 남겨보세요.</p>';
+}
+
+async function openCommentsModal(item) {
+  activeCommentsPost = { ownerId: item.user.id, date: item.row.record_date, type: item.type };
+  const modal = document.getElementById('sapians-comments-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  const list = document.getElementById('sapians-comments-list');
+  if (list) list.innerHTML = '<p class="text-xs text-on-surface-variant text-center py-6">불러오는 중...</p>';
+
+  sapiansComments = await loadComments(activeCommentsPost);
+  renderComments();
+}
+
+function closeCommentsModal() {
+  const modal = document.getElementById('sapians-comments-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  activeCommentsPost = null;
+}
+
+async function submitComment(e) {
+  e.preventDefault();
+  const input = document.getElementById('sapians-comments-input');
+  const submitBtn = document.getElementById('sapians-comments-submit');
+  const body = input.value.trim();
+  if (!body || !activeCommentsPost) return;
+
+  submitBtn.disabled = true;
+  const { error } = await window.supabaseClient.from('post_comments').insert({
+    post_owner_id: activeCommentsPost.ownerId,
+    post_date: activeCommentsPost.date,
+    post_type: activeCommentsPost.type,
+    author_id: sapiansCurrentUserId,
+    body
+  });
+  submitBtn.disabled = false;
+
+  if (error) {
+    console.error('[sapians] submitComment', error);
+    return;
+  }
+  input.value = '';
+  sapiansComments = await loadComments(activeCommentsPost);
+  renderComments();
+}
+
+function wireComments() {
+  const overlay = document.getElementById('sapians-comments-overlay');
+  const closeBtn = document.getElementById('sapians-comments-close');
+  const form = document.getElementById('sapians-comments-form');
+
+  if (overlay) overlay.addEventListener('click', closeCommentsModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeCommentsModal);
+  if (form) form.addEventListener('submit', submitComment);
+}
+
 async function initGalleryWidgets() {
   wireCompose();
   wireFeedClicks();
+  wireComments();
   wirePrayModalStatic();
   wireWordModalStatic();
 
