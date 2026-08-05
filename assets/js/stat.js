@@ -14,6 +14,7 @@ const STAT_CATEGORY_LABEL = { pray: '기도', word: '말씀', study: '공부', w
 const STAT_PROGRAM_START_KEY = '2026-08-10';
 const STAT_PROGRAM_END_KEY = '2026-09-06';
 const STAT_ACTIVE_WEEKDAYS = [1, 2, 3, 4, 5]; // 월~금
+const STAT_PROGRAM_TOTAL_WEEKDAYS = 20; // 8/10~9/6 평일 총 일수 (고정값 — 프로그램 진행 중에도 분모가 바뀌지 않도록)
 
 const STAT_RING_RADIUS = 52;
 const STAT_RING_CIRCUMFERENCE = 2 * Math.PI * STAT_RING_RADIUS;
@@ -235,9 +236,9 @@ function renderKpiTiles(days) {
 
   if (totalEl) totalEl.textContent = formatStatMinutes(stats.totalMin);
   if (avgEl) avgEl.textContent = `${stats.avgPercent}%`;
-  // Days Completed는 탭(주간/월간)과 무관하게 항상 전체 운영기간(평일) 기준 — "총 며칠 중 몇 일"인지
-  // 탭을 바꿔도 흔들리지 않게 하기 위함 (Streak/Personal Bests와 같은 이유).
-  if (completedEl) completedEl.textContent = `${statFullDays.filter((d) => d.completed).length} / ${statFullDays.length}일`;
+  // Days Completed는 탭(주간/월간)과도, 진행 중인 날짜와도 무관하게 항상 "완료일수 / 20일" 고정 —
+  // 프로그램이 끝나기 전에도 분모가 계속 바뀌지 않게 하기 위함 (Streak/Personal Bests와 같은 이유).
+  if (completedEl) completedEl.textContent = `${statFullDays.filter((d) => d.completed).length} / ${STAT_PROGRAM_TOTAL_WEEKDAYS}일`;
   if (bestEl) bestEl.textContent = stats.best && stats.best.totalMin > 0
     ? `${formatStatMinutes(stats.best.totalMin)} · ${formatStatDateLabel(stats.best.key)}`
     : '-';

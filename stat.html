@@ -106,8 +106,7 @@
 
   <!-- 추세 라인 -->
   <section class="glass-card rounded-[1.5rem] p-6 mb-6">
-    <h3 class="text-sm font-medium text-on-surface-variant">Activity Trend</h3>
-    <p class="text-[11px] text-on-surface-variant/70 mb-4">일별 총 활동 시간의 흐름과 300분 목표선</p>
+    <h3 class="text-sm font-medium text-on-surface-variant mb-4">Trend</h3>
     <div class="relative h-56 sm:h-64 lg:h-72">
       <canvas id="stat-trend-chart"></canvas>
     </div>
@@ -116,7 +115,7 @@
   <!-- 밸런스 레이더 + 시간 배분 도넛 -->
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant">Category Balance</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant">Balance</h3>
       <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 하루 평균 활동 시간</p>
       <div class="relative h-64">
         <canvas id="stat-radar-chart"></canvas>
@@ -146,7 +145,7 @@
 <script src="assets/js/layout.js?v=2"></script>
 <script src="assets/js/pray-word.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=6"></script>
+<script src="assets/js/stat.js?v=7"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });
