@@ -1,6 +1,6 @@
 -- SAP 1기 대시보드: Study 탭 — Lv.5(수능 2000) 단어 2000개 (Day 01~50, 40단어/일).
 -- 출처: "Word Master 수능2000" 엑셀 Sheet1, 운영자가 제공.
--- Supabase 대시보드 → SQL Editor에서 실행하세요. (study_vocab_level_migration.sql 실행 이후에 실행)
+-- Supabase 대시보드 → SQL Editor에서 실행하세요. 실행 순서: study_vocab_lv4_seed.sql 다음 (마지막).
 -- ⚠️ 품사/예문은 아직 비워둠(NULL/빈 배열) — 나중에 별도 UPDATE로 채울 예정.
 
 insert into public.vocab_words (word, meaning, level, study_day, sort_order)

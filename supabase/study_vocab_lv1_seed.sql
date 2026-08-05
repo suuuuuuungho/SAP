@@ -1,6 +1,6 @@
 -- SAP 1기 대시보드: Study 탭 — Lv.1(중등 실력) 단어 1200개 (Day 01~40, 30단어/일).
 -- 출처: "Word Master 중등 실력(2022개정)" 배포본 엑셀의 "원본" 시트, 운영자가 제공.
--- Supabase 대시보드 → SQL Editor에서 실행하세요. (study_vocab_level_migration.sql 실행 이후에 실행)
+-- Supabase 대시보드 → SQL Editor에서 실행하세요. 실행 순서: study_vocab_lv0_seed.sql 다음.
 -- ⚠️ 품사/예문은 아직 비워둠(NULL/빈 배열) — 나중에 별도 UPDATE로 채울 예정.
 
 insert into public.vocab_words (word, meaning, level, study_day, sort_order)

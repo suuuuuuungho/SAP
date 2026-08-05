@@ -1,6 +1,6 @@
 -- SAP 1기 대시보드: Study 탭 — Lv.4(고등 Basic) 단어 1150개 (Day 01~30, Day별 30~40단어).
 -- 출처: "Word Master_고등 Basic" 엑셀, 운영자가 제공. Day 1~25는 40단어, Day 26~30은 30단어.
--- Supabase 대시보드 → SQL Editor에서 실행하세요. (study_vocab_level_migration.sql 실행 이후에 실행)
+-- Supabase 대시보드 → SQL Editor에서 실행하세요. 실행 순서: study_vocab_lv1_seed.sql 다음.
 -- ⚠️ 품사/예문은 아직 비워둠(NULL/빈 배열) — 나중에 별도 UPDATE로 채울 예정.
 
 insert into public.vocab_words (word, meaning, level, study_day, sort_order)
