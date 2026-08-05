@@ -11,7 +11,8 @@ alter table public.vocab_words alter column part_of_speech drop not null;
 
 create index if not exists vocab_words_level_day_idx on public.vocab_words (level, study_day, sort_order);
 
--- 이전에 검증용으로 넣었던 placeholder 더미 단어(love/faith/apple/run 등, study_vocab_schema.sql의
--- 3번 섹션) 삭제 — 실제 Lv.1 단어의 Day 1~4 번호와 겹쳐서 혼란을 주므로 정리한다.
+-- 이전에 검증용으로 넣었던 placeholder 더미 단어(study_vocab_schema.sql의 3번 섹션: apple/run/
+-- happy/quickly/friend/decide/important/however/explain/curious/brave/gentle) 삭제 —
+-- 실제 레벨 단어의 Day 1~4 번호와 겹쳐서 혼란을 주므로 정리한다.
 delete from public.vocab_words
-where word in ('love','faith','peace','grace','wisdom','strength','joy','hope','truth','mercy','humble','obey');
+where word in ('apple','run','happy','quickly','friend','decide','important','however','explain','curious','brave','gentle');
