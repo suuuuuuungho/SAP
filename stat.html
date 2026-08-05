@@ -70,7 +70,7 @@
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
       <p class="text-xs text-on-surface-variant">Avg. Completion</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">하루 300분 목표 대비 평균 달성률</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">일별 (활동시간÷300분) 값의 평균</p>
       <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0%</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
@@ -150,7 +150,7 @@
 <script src="assets/js/layout.js?v=2"></script>
 <script src="assets/js/pray-word.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=9"></script>
+<script src="assets/js/stat.js?v=10"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });

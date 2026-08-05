@@ -6,7 +6,6 @@
 
 const STAT_DAILY_GOAL_MINUTES = 300;
 const STAT_WORD_VERIFIED_MINUTES = 60;
-const STAT_WORSHIP_ACTIVE_WEEKDAYS = [3, 5]; // 수(3), 금(5)
 const STAT_CATEGORY_TOKEN = { pray: 'primary', word: 'secondary', study: 'tertiary', worship: 'quaternary' };
 const STAT_CATEGORY_LABEL = { pray: '기도', word: '말씀', study: '공부', worship: '예배' };
 
@@ -50,17 +49,6 @@ async function fetchFullHistory(userId) {
 
 function statGetStudySeconds(sessions, source) {
   return (sessions || []).filter((s) => s.source === source).reduce((sum, s) => sum + (s.seconds || 0), 0);
-}
-
-function statIsWorshipDayActive(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return STAT_WORSHIP_ACTIVE_WEEKDAYS.includes(new Date(y, m - 1, d).getDay());
-}
-
-function statActiveCategories(key) {
-  const cats = ['pray', 'word', 'study'];
-  if (statIsWorshipDayActive(key)) cats.push('worship');
-  return cats;
 }
 
 // 운영기간(8/10~9/6) 중 평일만 순회하며, 기록이 없는 날은 0분/미인증 기본값으로 채운다.
@@ -108,14 +96,6 @@ function buildDailySeries(history) {
       const worshipMin = worshipRow ? (worshipRow.minutes || 0) : 0;
       const totalMin = prayMin + wordMin + studyMin + worshipMin;
 
-      const verified = {
-        pray: entries.length > 0,
-        word: verses.length > 0,
-        study: sessions.length > 0,
-        worship: !!worshipRow && (worshipRow.status === 'attended' || worshipRow.status === 'home')
-      };
-      const activeCategories = statActiveCategories(key);
-
       days.push({
         key,
         prayMin,
@@ -123,10 +103,7 @@ function buildDailySeries(history) {
         studyMin,
         worshipMin,
         totalMin,
-        percent: Math.round((totalMin / STAT_DAILY_GOAL_MINUTES) * 100),
-        verified,
-        activeCategories,
-        completed: activeCategories.every((cat) => verified[cat])
+        percent: Math.round((totalMin / STAT_DAILY_GOAL_MINUTES) * 100)
       });
     }
     cursor.setDate(cursor.getDate() + 1);
@@ -136,8 +113,8 @@ function buildDailySeries(history) {
 
 // --- 스트릭 (연속 기록) ---
 
-// 스트릭 = "연속적으로 300분(하루 목표)을 달성한 일 수" — 카테고리 전체 인증 여부(day.completed)와는
-// 별개 기준이다. day.completed는 Days Completed KPI/Heatmap "완료" 탭에서 계속 쓰인다.
+// 스트릭 = "연속적으로 300분(하루 목표)을 달성한 일 수" — day.percent >= 100 기준.
+// Days Completed KPI, Heatmap "완료" 탭도 전부 이 기준을 함께 쓴다(카테고리 전체 인증 여부가 아님).
 function currentStreak(days) {
   let i = days.length - 1;
   if (i < 0) return 0;
@@ -203,12 +180,12 @@ function formatStatDateLabel(key) {
 
 // --- KPI / 목표 달성률 계산 ---
 
+// avgPercent = 일별 percent(활동시간 ÷ 300분 × 100)의 평균 — Avg. Completion KPI에 그대로 표시된다.
 function computeRangeStats(days) {
   const totalMin = days.reduce((s, d) => s + d.totalMin, 0);
   const avgPercent = days.length > 0 ? Math.round(days.reduce((s, d) => s + d.percent, 0) / days.length) : 0;
-  const completedCount = days.filter((d) => d.completed).length;
   const best = days.reduce((acc, d) => (!acc || d.totalMin > acc.totalMin ? d : acc), null);
-  return { totalMin, avgPercent, completedCount, totalCount: days.length, best };
+  return { totalMin, avgPercent, totalCount: days.length, best };
 }
 
 function computeGoalHitRate(days) {
@@ -251,9 +228,10 @@ function renderKpiTiles(days) {
 
   if (totalEl) totalEl.textContent = formatStatMinutes(stats.totalMin);
   if (avgEl) avgEl.textContent = `${stats.avgPercent}%`;
-  // Days Completed는 탭(주간/월간)과도, 진행 중인 날짜와도 무관하게 항상 "완료일수 / 20일" 고정 —
+  // Days Completed는 탭(주간/월간)과도, 진행 중인 날짜와도 무관하게 항상 "달성일수 / 20일" 고정 —
   // 프로그램이 끝나기 전에도 분모가 계속 바뀌지 않게 하기 위함 (Streak/Personal Bests와 같은 이유).
-  if (completedEl) completedEl.textContent = `${statFullDays.filter((d) => d.completed).length} / ${STAT_PROGRAM_TOTAL_WEEKDAYS}일`;
+  // "달성"의 기준은 Streak와 동일하게 하루 300분 목표(percent>=100) — 카테고리 전체 인증 여부(completed)와는 다르다.
+  if (completedEl) completedEl.textContent = `${statFullDays.filter((d) => d.percent >= 100).length} / ${STAT_PROGRAM_TOTAL_WEEKDAYS}일`;
   if (bestEl) bestEl.textContent = stats.best && stats.best.totalMin > 0
     ? `${formatStatMinutes(stats.best.totalMin)} · ${formatStatDateLabel(stats.best.key)}`
     : '-';
@@ -285,8 +263,8 @@ function groupByWeeks(days) {
 // 옅은/빈 셀은 어두운 글자.
 function heatmapCellStyle(day, maxValue) {
   if (statHeatmapMetric === 'completed') {
-    if (day.activeCategories.length === 0) return { bg: 'bg-surface-container', text: 'text-on-surface-variant/40' };
-    if (day.completed) return { bg: 'bg-gradient-to-br from-primary-container to-tertiary-container', text: 'text-white' };
+    // "완료"의 기준은 Streak/Days Completed와 동일하게 하루 300분 목표(percent>=100).
+    if (day.percent >= 100) return { bg: 'bg-gradient-to-br from-primary-container to-tertiary-container', text: 'text-white' };
     if (day.totalMin > 0) return { bg: 'bg-primary/25', text: 'text-on-surface-variant' };
     return { bg: 'bg-surface-container', text: 'text-on-surface-variant/40' };
   }
@@ -302,7 +280,7 @@ function heatmapCellStyle(day, maxValue) {
 }
 
 function statHeatmapTooltip(day) {
-  if (statHeatmapMetric === 'completed') return `${formatStatDateLabel(day.key)} · ${day.completed ? '완료' : `${day.totalMin}분`}`;
+  if (statHeatmapMetric === 'completed') return `${formatStatDateLabel(day.key)} · ${day.percent >= 100 ? '완료' : `${day.totalMin}분`}`;
   const label = STAT_CATEGORY_LABEL[statHeatmapMetric];
   return `${formatStatDateLabel(day.key)} · ${label} ${day[`${statHeatmapMetric}Min`] || 0}분`;
 }
