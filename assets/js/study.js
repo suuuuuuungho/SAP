@@ -5,12 +5,23 @@
 
 const STUDY_QUIZ_MAX_QUESTIONS = 15; // 세트가 커질 때 퀴즈 세션 길이 상한
 const STUDY_QUIZ_MIN_WORDS = 2;      // 퀴즈를 진행하기 위한 최소 단어 수
+const STUDY_PAGE_SIZE = 1000;        // Supabase REST 기본 최대 반환 행 수 — 이보다 크면 나눠 받아야 함
+
+// 레벨 번호 -> 표시 라벨. 여기 없는 레벨(예: 나중에 추가될 Lv.3)은 그냥 "Lv.N"으로 표시된다.
+const STUDY_LEVEL_LABELS = {
+  0: 'Lv.0 BASIC',
+  1: 'Lv.1 실력',
+  2: 'Lv.2 고난도',
+  4: 'Lv.4 고등',
+  5: 'Lv.5 수능'
+};
 
 let studyAllWords = [];      // vocab_words 전체, study_day/sort_order 순
 let studyProgressMap = {};   // word_id -> vocab_progress row
 let studyCurrentUserId = null;
 
 let studyActiveMode = 'list';  // 'list' | 'flashcard' | 'quiz'
+let studyActiveLevel = null;   // integer (initStudyWidgets에서 데이터 로드 후 가장 낮은 레벨로 초기화)
 let studyActiveDay = 'all';    // 'all' | integer
 
 let studyFlashcardIndex = 0;
@@ -28,24 +39,52 @@ async function getStudyCurrentUserId() {
   return studyCurrentUserId;
 }
 
+// vocab_words가 6000개를 넘어 Supabase REST 기본 페이지 크기(1000)를 초과하므로 끝까지 나눠 받는다.
+async function fetchAllVocabWords() {
+  let all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await window.supabaseClient
+      .from('vocab_words')
+      .select('*')
+      .order('level', { ascending: true })
+      .order('study_day', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .range(from, from + STUDY_PAGE_SIZE - 1);
+    if (error) { console.error('[study] vocab_words', error); break; }
+    all = all.concat(data);
+    if (data.length < STUDY_PAGE_SIZE) break;
+    from += STUDY_PAGE_SIZE;
+  }
+  return all;
+}
+
 async function fetchStudyData(userId) {
-  const [wordsRes, progressRes] = await Promise.all([
-    window.supabaseClient.from('vocab_words').select('*').order('study_day', { ascending: true }).order('sort_order', { ascending: true }),
+  const [words, progressRes] = await Promise.all([
+    fetchAllVocabWords(),
     window.supabaseClient.from('vocab_progress').select('*').eq('user_id', userId)
   ]);
-  if (wordsRes.error) console.error('[study] vocab_words', wordsRes.error);
   if (progressRes.error) console.error('[study] vocab_progress', progressRes.error);
-  return { words: wordsRes.data || [], progress: progressRes.data || [] };
+  return { words, progress: progressRes.data || [] };
 }
 
 // --- 필터 헬퍼 ---
 
+function getStudyLevels() {
+  return [...new Set(studyAllWords.map((w) => w.level))].sort((a, b) => a - b);
+}
+
+function studyLevelLabel(level) {
+  return STUDY_LEVEL_LABELS[level] || `Lv.${level}`;
+}
+
 function getStudyDays() {
-  return [...new Set(studyAllWords.map((w) => w.study_day))].sort((a, b) => a - b);
+  return [...new Set(studyAllWords.filter((w) => w.level === studyActiveLevel).map((w) => w.study_day))].sort((a, b) => a - b);
 }
 
 function getActiveWordSet() {
-  return studyActiveDay === 'all' ? studyAllWords : studyAllWords.filter((w) => w.study_day === studyActiveDay);
+  const inLevel = studyAllWords.filter((w) => w.level === studyActiveLevel);
+  return studyActiveDay === 'all' ? inLevel : inLevel.filter((w) => w.study_day === studyActiveDay);
 }
 
 function isLearned(wordId) {
@@ -82,6 +121,35 @@ function exampleSentencesHTML(examples) {
       <p class="text-sm text-on-surface">${ex.en}</p>
       <p class="text-xs text-on-surface-variant">${ex.ko}</p>
     </div>`).join('');
+}
+
+// --- 레벨 셀렉터 ---
+
+function renderLevelSelector() {
+  const wrap = document.getElementById('study-level-selector');
+  if (!wrap) return;
+  const levels = getStudyLevels();
+  wrap.innerHTML = levels.map((lv) => {
+    const active = studyActiveLevel === lv;
+    return `<button type="button" data-level="${lv}" class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'nav-pill-active' : 'text-on-surface-variant'}">${studyLevelLabel(lv)}</button>`;
+  }).join('');
+}
+
+function wireLevelSelector() {
+  const wrap = document.getElementById('study-level-selector');
+  if (!wrap) return;
+  wrap.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-level]');
+    if (!btn) return;
+    studyActiveLevel = Number(btn.dataset.level);
+    studyActiveDay = 'all'; // 레벨이 바뀌면 Day 번호 범위가 달라지므로 전체로 초기화
+    studyFlashcardIndex = 0;
+    studyFlashcardFlipped = false;
+    studyQuizState = null;
+    renderLevelSelector();
+    renderDaySelector();
+    renderContent();
+  });
 }
 
 // --- Day 셀렉터 ---
@@ -434,6 +502,7 @@ function renderQuizResultsScreen(wordSet) {
 
 async function initStudyWidgets() {
   wireModeTabs();
+  wireLevelSelector();
   wireDaySelector();
 
   const userId = await getStudyCurrentUserId();
@@ -443,6 +512,10 @@ async function initStudyWidgets() {
   studyAllWords = words;
   studyProgressMap = Object.fromEntries(progress.map((p) => [p.word_id, p]));
 
+  const levels = getStudyLevels();
+  studyActiveLevel = levels.length > 0 ? levels[0] : null;
+
+  renderLevelSelector();
   renderDaySelector();
   renderContent();
 }
