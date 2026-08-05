@@ -12,21 +12,31 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <h1 class="text-3xl lg:text-4xl font-bold tracking-tight mb-8">Study</h1>
-  <div class="glass-panel rounded-[2rem] p-12 flex flex-col items-center justify-center text-center gap-3">
-    <div class="icon-glass w-14 h-14 rounded-full flex items-center justify-center text-on-surface-variant">
-      <i class="fa-regular fa-hourglass-half text-xl"></i>
+  <!-- Header + 모드 스위처 -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Study</h1>
+    <div class="glass-panel rounded-full p-1 flex text-sm font-semibold" id="study-mode-tabs">
+      <button type="button" id="study-mode-list" data-mode="list" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">목록</button>
+      <button type="button" id="study-mode-flashcard" data-mode="flashcard" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">암기카드</button>
+      <button type="button" id="study-mode-quiz" data-mode="quiz" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">퀴즈</button>
     </div>
-    <p class="font-medium text-on-surface">준비 중입니다</p>
-    <p class="text-sm text-on-surface-variant">Study 기능은 추후 추가될 예정입니다.</p>
   </div>
+
+  <!-- Day 셀렉터 (가로 스크롤 칩) -->
+  <div class="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
+    <div id="study-day-selector" class="flex gap-2 w-max pb-1"></div>
+  </div>
+
+  <!-- 모드별 콘텐츠가 여기로 스왑됨 -->
+  <div id="study-content" class="mb-16"></div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js"></script>
-<script src="assets/js/layout.js?v=2"></script>
+<script src="assets/js/layout.js?v=3"></script>
+<script src="assets/js/study.js?v=1"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'study' });

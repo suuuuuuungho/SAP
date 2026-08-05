@@ -144,6 +144,7 @@ function renderApp({ activePage }) {
 
   if (window.initAuthUI) window.initAuthUI();
   if (window.initHomeWidgets) window.initHomeWidgets();
+  if (window.initStudyWidgets) window.initStudyWidgets();
   if (window.initGalleryWidgets) window.initGalleryWidgets();
   if (window.initStatWidgets) window.initStatWidgets();
 }
