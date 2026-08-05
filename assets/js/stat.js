@@ -136,14 +136,16 @@ function buildDailySeries(history) {
 
 // --- 스트릭 (연속 기록) ---
 
+// 스트릭 = "연속적으로 300분(하루 목표)을 달성한 일 수" — 카테고리 전체 인증 여부(day.completed)와는
+// 별개 기준이다. day.completed는 Days Completed KPI/Heatmap "완료" 탭에서 계속 쓰인다.
 function currentStreak(days) {
   let i = days.length - 1;
   if (i < 0) return 0;
-  // 마지막 항목이 "오늘"이고 아직 미완료라면 건너뛰고 그 전 평일부터 카운트한다.
+  // 마지막 항목이 "오늘"이고 아직 300분 미달성이면 건너뛰고 그 전 평일부터 카운트한다.
   // (주말/운영기간 종료 후에는 마지막 항목이 지나간 평일이라 이 유예를 주면 안 됨)
-  if (days[i].key === todayKey() && !days[i].completed) i -= 1;
+  if (days[i].key === todayKey() && days[i].percent < 100) i -= 1;
   let streak = 0;
-  while (i >= 0 && days[i].completed) {
+  while (i >= 0 && days[i].percent >= 100) {
     streak += 1;
     i -= 1;
   }
@@ -154,7 +156,7 @@ function longestStreak(days) {
   let max = 0;
   let run = 0;
   days.forEach((day) => {
-    run = day.completed ? run + 1 : 0;
+    run = day.percent >= 100 ? run + 1 : 0;
     if (run > max) max = run;
   });
   return max;
@@ -328,7 +330,7 @@ function renderHeatmap(days) {
         if (!day) return '<div class="heatmap-cell bg-transparent"></div>';
         const { bg, text } = heatmapCellStyle(day, maxValue);
         const dayNum = Number(day.key.split('-')[2]);
-        return `<div class="heatmap-cell ${bg} ${text} flex items-center justify-center text-[9px] font-medium" title="${statHeatmapTooltip(day)}">${dayNum}</div>`;
+        return `<div class="heatmap-cell ${bg} ${text} flex items-center justify-center text-[9px] font-medium cursor-pointer" data-key="${day.key}">${dayNum}</div>`;
       }).join('')}
     </div>`).join('');
 }
@@ -488,7 +490,7 @@ function renderPersonalBestChips(fullDays) {
   const chips = [];
   const overall = fullDays.reduce((acc, d) => (!acc || d.totalMin > acc.totalMin ? d : acc), null);
   if (overall && overall.totalMin > 0) {
-    chips.push(statChipHTML('하루 최다 활동', `${formatStatMinutes(overall.totalMin)} · ${formatStatDateLabel(overall.key)}`, 'primary'));
+    chips.push(statChipHTML('하루 최대 시간', `${formatStatMinutes(overall.totalMin)} · ${formatStatDateLabel(overall.key)}`, 'primary'));
   }
 
   ['pray', 'word', 'study', 'worship'].forEach((cat) => {
@@ -550,12 +552,33 @@ function wireHeatmapMetricTabs() {
       b.classList.toggle('text-on-surface-variant', b !== btn);
     });
     renderHeatmap(getActiveRangeDays());
+    const detail = document.getElementById('stat-heatmap-detail');
+    if (detail) detail.textContent = '칸에 커서를 올리거나 눌러보세요';
   });
+}
+
+// Time Breakdown(Chart.js 툴팁)처럼 커서를 올리거나 탭하면 값이 뜨도록 — 다만 네이티브 title
+// 팝업 대신, 항상 같은 자리에 있는 텍스트 라벨을 갱신하는 방식으로 구현한다.
+function wireHeatmapHover() {
+  const container = document.getElementById('stat-heatmap');
+  const detail = document.getElementById('stat-heatmap-detail');
+  if (!container || !detail) return;
+
+  function showDetail(e) {
+    const cell = e.target.closest('[data-key]');
+    if (!cell) return;
+    const day = statFullDays.find((d) => d.key === cell.dataset.key);
+    if (day) detail.textContent = statHeatmapTooltip(day);
+  }
+
+  container.addEventListener('mouseover', showDetail);
+  container.addEventListener('click', showDetail);
 }
 
 async function initStatWidgets() {
   wireRangeTabs();
   wireHeatmapMetricTabs();
+  wireHeatmapHover();
 
   const userId = await getCurrentUserId();
   if (!userId) return;

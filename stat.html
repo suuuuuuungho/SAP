@@ -24,12 +24,14 @@
 
   <!-- 스트릭 + 범위 목표 링 -->
   <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-6">
-    <div class="glass-card rounded-[1.5rem] p-6 flex flex-col items-center justify-center text-center">
-      <h3 class="text-sm font-medium text-on-surface-variant self-start">Streak</h3>
-      <p class="text-[11px] text-on-surface-variant/70 self-start mb-4">활성 카테고리를 모두 완료한 연속 평일 수</p>
-      <i class="fa-solid fa-fire text-5xl text-tertiary streak-flame"></i>
-      <p id="stat-streak-current" class="text-3xl font-bold text-primary mt-3">0일</p>
-      <p id="stat-streak-longest" class="text-xs text-on-surface-variant mt-1">최장 0일</p>
+    <div class="glass-card rounded-[1.5rem] p-6 flex flex-col">
+      <h3 class="text-sm font-medium text-on-surface-variant">Streak</h3>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">연속적으로 300분을 달성한 일 수</p>
+      <div class="flex-1 flex flex-col items-center justify-center text-center">
+        <i class="fa-solid fa-fire text-7xl text-tertiary streak-flame"></i>
+        <p id="stat-streak-current" class="text-4xl font-bold text-primary mt-3">0일</p>
+        <p id="stat-streak-longest" class="text-sm text-on-surface-variant mt-1">최장 0일</p>
+      </div>
     </div>
 
     <div class="glass-card rounded-[1.5rem] p-6">
@@ -62,11 +64,13 @@
   <!-- KPI 타일 -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant mb-1">Total Time</p>
+      <p class="text-xs text-on-surface-variant">Total</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">누적 시간</p>
       <p id="stat-kpi-total" class="text-2xl font-bold text-primary">0분</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant mb-1">Avg. Completion</p>
+      <p class="text-xs text-on-surface-variant">Avg. Completion</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">하루 300분 목표 대비 평균 달성률</p>
       <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0%</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
@@ -102,6 +106,7 @@
       </div>
       <div id="stat-heatmap" class="flex flex-col gap-1"></div>
     </div>
+    <p id="stat-heatmap-detail" class="text-xs text-on-surface-variant mt-3 h-4">칸에 커서를 올리거나 눌러보세요</p>
   </section>
 
   <!-- 추세 라인 -->
@@ -116,14 +121,14 @@
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6">
       <h3 class="text-sm font-medium text-on-surface-variant">Balance</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 하루 평균 활동 시간</p>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 하루 평균 시간</p>
       <div class="relative h-64">
         <canvas id="stat-radar-chart"></canvas>
       </div>
     </div>
     <div class="glass-card rounded-[1.5rem] p-6">
       <h3 class="text-sm font-medium text-on-surface-variant">Time Breakdown</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 활동 시간 비중</p>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 시간 비중</p>
       <div class="relative h-64">
         <canvas id="stat-donut-chart"></canvas>
       </div>
@@ -145,7 +150,7 @@
 <script src="assets/js/layout.js?v=2"></script>
 <script src="assets/js/pray-word.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=8"></script>
+<script src="assets/js/stat.js?v=9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });
