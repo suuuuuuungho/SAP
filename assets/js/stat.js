@@ -10,6 +10,11 @@ const STAT_WORSHIP_ACTIVE_WEEKDAYS = [3, 5]; // 수(3), 금(5)
 const STAT_CATEGORY_TOKEN = { pray: 'primary', word: 'secondary', study: 'tertiary', worship: 'quaternary' };
 const STAT_CATEGORY_LABEL = { pray: '기도', word: '말씀', study: '공부', worship: '예배' };
 
+// 운영기간: 8/10~9/6, 평일(월~금)만. 주말과 이 기간 밖의 기록은 통계에서 아예 제외한다.
+const STAT_PROGRAM_START_KEY = '2026-08-10';
+const STAT_PROGRAM_END_KEY = '2026-09-06';
+const STAT_ACTIVE_WEEKDAYS = [1, 2, 3, 4, 5]; // 월~금
+
 const STAT_RING_RADIUS = 52;
 const STAT_RING_CIRCUMFERENCE = 2 * Math.PI * STAT_RING_RADIUS;
 
@@ -57,7 +62,8 @@ function statActiveCategories(key) {
   return cats;
 }
 
-// 발견된 가장 이른 날짜 ~ 오늘까지 하루 단위로 순회하며, 기록이 없는 날은 0분/미인증 기본값으로 채운다.
+// 운영기간(8/10~9/6) 중 평일만 순회하며, 기록이 없는 날은 0분/미인증 기본값으로 채운다.
+// 운영기간 밖의 기록(예: 테스트 데이터)과 주말은 통계에 아예 포함되지 않는다.
 function buildDailySeries(history) {
   const byDate = { pray: {}, word: {}, study: {}, worship: {} };
   history.pray.forEach((r) => { byDate.pray[r.record_date] = r; });
@@ -65,58 +71,50 @@ function buildDailySeries(history) {
   history.study.forEach((r) => { byDate.study[r.record_date] = r; });
   history.worship.forEach((r) => { byDate.worship[r.record_date] = r; });
 
-  const allDates = [
-    ...history.pray.map((r) => r.record_date),
-    ...history.word.map((r) => r.record_date),
-    ...history.study.map((r) => r.record_date),
-    ...history.worship.map((r) => r.record_date)
-  ];
-
-  const today = todayKey();
-  const cursor = allDates.length > 0
-    ? new Date(Math.min(...allDates.map((d) => new Date(`${d}T00:00:00`).getTime())))
-    : new Date(`${today}T00:00:00`);
-  // 모달에서 미래 날짜(시작/종료 일시)를 직접 입력할 수 있어 기록이 "오늘"보다 나중일 수 있다 —
-  // 그런 경우에도 루프가 최소 1회는 돌도록 종료일을 오늘과 최대 기록일 중 더 늦은 쪽으로 잡는다.
-  const end = allDates.length > 0
-    ? new Date(Math.max(new Date(`${today}T00:00:00`).getTime(), ...allDates.map((d) => new Date(`${d}T00:00:00`).getTime())))
-    : new Date(`${today}T00:00:00`);
+  const start = new Date(`${STAT_PROGRAM_START_KEY}T00:00:00`);
+  const programEnd = new Date(`${STAT_PROGRAM_END_KEY}T00:00:00`);
+  const today = new Date(`${todayKey()}T00:00:00`);
+  const end = today < programEnd ? today : programEnd;
 
   const days = [];
+  if (end < start) return days; // 아직 운영기간이 시작되지 않음
+
+  const cursor = new Date(start);
   while (cursor <= end) {
-    const key = dateKey(cursor);
-    const entries = byDate.pray[key] ? byDate.pray[key].entries : [];
-    const verses = byDate.word[key] ? byDate.word[key].verses : [];
-    const sessions = byDate.study[key] ? byDate.study[key].sessions : [];
-    const worshipRow = byDate.worship[key];
+    if (STAT_ACTIVE_WEEKDAYS.includes(cursor.getDay())) {
+      const key = dateKey(cursor);
+      const entries = byDate.pray[key] ? byDate.pray[key].entries : [];
+      const verses = byDate.word[key] ? byDate.word[key].verses : [];
+      const sessions = byDate.study[key] ? byDate.study[key].sessions : [];
+      const worshipRow = byDate.worship[key];
 
-    const prayMin = entries.reduce((s, e) => s + durationMinutes(e.start, e.end), 0);
-    const wordMin = verses.length > 0 ? STAT_WORD_VERIFIED_MINUTES : 0;
-    const studyMin = Math.round((statGetStudySeconds(sessions, 'record') + statGetStudySeconds(sessions, 'manual')) / 60);
-    const worshipMin = worshipRow ? (worshipRow.minutes || 0) : 0;
-    const totalMin = prayMin + wordMin + studyMin + worshipMin;
+      const prayMin = entries.reduce((s, e) => s + durationMinutes(e.start, e.end), 0);
+      const wordMin = verses.length > 0 ? STAT_WORD_VERIFIED_MINUTES : 0;
+      const studyMin = Math.round((statGetStudySeconds(sessions, 'record') + statGetStudySeconds(sessions, 'manual')) / 60);
+      const worshipMin = worshipRow ? (worshipRow.minutes || 0) : 0;
+      const totalMin = prayMin + wordMin + studyMin + worshipMin;
 
-    const verified = {
-      pray: entries.length > 0,
-      word: verses.length > 0,
-      study: sessions.length > 0,
-      worship: !!worshipRow && (worshipRow.status === 'attended' || worshipRow.status === 'home')
-    };
-    const activeCategories = statActiveCategories(key);
+      const verified = {
+        pray: entries.length > 0,
+        word: verses.length > 0,
+        study: sessions.length > 0,
+        worship: !!worshipRow && (worshipRow.status === 'attended' || worshipRow.status === 'home')
+      };
+      const activeCategories = statActiveCategories(key);
 
-    days.push({
-      key,
-      prayMin,
-      wordMin,
-      studyMin,
-      worshipMin,
-      totalMin,
-      percent: Math.round((totalMin / STAT_DAILY_GOAL_MINUTES) * 100),
-      verified,
-      activeCategories,
-      completed: activeCategories.every((cat) => verified[cat])
-    });
-
+      days.push({
+        key,
+        prayMin,
+        wordMin,
+        studyMin,
+        worshipMin,
+        totalMin,
+        percent: Math.round((totalMin / STAT_DAILY_GOAL_MINUTES) * 100),
+        verified,
+        activeCategories,
+        completed: activeCategories.every((cat) => verified[cat])
+      });
+    }
     cursor.setDate(cursor.getDate() + 1);
   }
   return days;
@@ -127,7 +125,9 @@ function buildDailySeries(history) {
 function currentStreak(days) {
   let i = days.length - 1;
   if (i < 0) return 0;
-  if (!days[i].completed) i -= 1; // 오늘이 아직 미완료면 오늘은 건너뛰고 어제부터 카운트
+  // 마지막 항목이 "오늘"이고 아직 미완료라면 건너뛰고 그 전 평일부터 카운트한다.
+  // (주말/운영기간 종료 후에는 마지막 항목이 지나간 평일이라 이 유예를 주면 안 됨)
+  if (days[i].key === todayKey() && !days[i].completed) i -= 1;
   let streak = 0;
   while (i >= 0 && days[i].completed) {
     streak += 1;
@@ -149,7 +149,7 @@ function longestStreak(days) {
 // --- 범위 슬라이싱 ---
 
 function sliceWeekly(days) {
-  return days.slice(-28);
+  return days.slice(-20); // 평일만 있는 시리즈라 4주 = 20일
 }
 
 function sliceMonthly(days) {
@@ -223,7 +223,7 @@ function renderRangeGoalRing(days) {
   ring.setAttribute('stroke', rate >= 50 ? 'url(#stat-goal-gradient-high)' : 'url(#stat-goal-gradient-low)');
 
   if (percentEl) percentEl.textContent = `${rate}%`;
-  if (subEl) subEl.textContent = `${days.filter((d) => d.percent >= 100).length}/${days.length}일 300분 달성`;
+  if (subEl) subEl.textContent = `${days.filter((d) => d.percent >= 100).length}/${days.length} days hit goal`;
 }
 
 function renderKpiTiles(days) {
@@ -339,7 +339,7 @@ function renderTrendChart(days) {
       labels,
       datasets: [
         {
-          label: '총 활동 시간(분)',
+          label: 'Total Minutes',
           data: values,
           borderColor: '#b9045e',
           backgroundColor: 'rgba(255,75,145,0.18)',
@@ -349,7 +349,7 @@ function renderTrendChart(days) {
           pointBackgroundColor: '#b9045e'
         },
         {
-          label: '목표 300분',
+          label: '300 Min Goal',
           data: values.map(() => STAT_DAILY_GOAL_MINUTES),
           borderColor: '#8d6f76',
           borderDash: [6, 6],
@@ -388,7 +388,7 @@ function renderRadarChart(days) {
     data: {
       labels: ['기도', '말씀', '공부', '예배'],
       datasets: [{
-        label: '일 평균(분)',
+        label: 'Daily Avg (min)',
         data: [totals.pray, totals.word, totals.study, totals.worship].map((v) => Math.round(v / dayCount)),
         backgroundColor: 'rgba(255,75,145,0.22)',
         borderColor: '#b9045e',
