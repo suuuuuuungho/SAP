@@ -25,14 +25,16 @@
   <!-- 스트릭 + 범위 목표 링 -->
   <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6 flex flex-col items-center justify-center text-center">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-4 self-start">Streak</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant self-start">Streak</h3>
+      <p class="text-[11px] text-on-surface-variant/70 self-start mb-4">활성 카테고리를 모두 완료한 연속 평일 수</p>
       <i class="fa-solid fa-fire text-5xl text-tertiary streak-flame"></i>
       <p id="stat-streak-current" class="text-3xl font-bold text-primary mt-3">0일</p>
       <p id="stat-streak-longest" class="text-xs text-on-surface-variant mt-1">최장 0일</p>
     </div>
 
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-6">Completion Rate</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant">Completion Rate</h3>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">하루 300분 목표를 달성한 날의 비율</p>
       <div class="relative w-36 h-36 mx-auto">
         <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
@@ -79,8 +81,8 @@
 
   <!-- 완료 히트맵 -->
   <section class="glass-card rounded-[1.5rem] p-6 mb-6">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-      <h3 class="text-sm font-medium text-on-surface-variant">Activity Heatmap</h3>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <h3 class="text-sm font-medium text-on-surface-variant">Heatmap</h3>
       <div id="stat-heatmap-metric-tabs" class="glass-panel rounded-full p-1 flex text-xs font-semibold">
         <button type="button" data-metric="completed" class="px-2.5 py-1 rounded-full nav-pill-active transition-colors">완료</button>
         <button type="button" data-metric="pray" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">기도</button>
@@ -89,12 +91,23 @@
         <button type="button" data-metric="worship" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">예배</button>
       </div>
     </div>
-    <div id="stat-heatmap" class="flex gap-1 overflow-x-auto scrollbar-hide pb-1"></div>
+    <p class="text-[11px] text-on-surface-variant/70 mb-5">요일·날짜별 활동을 색상 진하기로 한눈에</p>
+    <div class="max-w-xs">
+      <div class="grid grid-cols-5 gap-1 mb-1">
+        <span class="text-[9px] text-on-surface-variant text-center">Mon</span>
+        <span class="text-[9px] text-on-surface-variant text-center">Tue</span>
+        <span class="text-[9px] text-on-surface-variant text-center">Wed</span>
+        <span class="text-[9px] text-on-surface-variant text-center">Thu</span>
+        <span class="text-[9px] text-on-surface-variant text-center">Fri</span>
+      </div>
+      <div id="stat-heatmap" class="flex flex-col gap-1"></div>
+    </div>
   </section>
 
   <!-- 추세 라인 -->
   <section class="glass-card rounded-[1.5rem] p-6 mb-6">
-    <h3 class="text-sm font-medium text-on-surface-variant mb-4">Activity Trend</h3>
+    <h3 class="text-sm font-medium text-on-surface-variant">Activity Trend</h3>
+    <p class="text-[11px] text-on-surface-variant/70 mb-4">일별 총 활동 시간의 흐름과 300분 목표선</p>
     <div class="relative h-56 sm:h-64 lg:h-72">
       <canvas id="stat-trend-chart"></canvas>
     </div>
@@ -103,13 +116,15 @@
   <!-- 밸런스 레이더 + 시간 배분 도넛 -->
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-4">Category Balance</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant">Category Balance</h3>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 하루 평균 활동 시간</p>
       <div class="relative h-64">
         <canvas id="stat-radar-chart"></canvas>
       </div>
     </div>
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant mb-4">Time Breakdown</h3>
+      <h3 class="text-sm font-medium text-on-surface-variant">Time Breakdown</h3>
+      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 활동 시간 비중</p>
       <div class="relative h-64">
         <canvas id="stat-donut-chart"></canvas>
       </div>
@@ -118,7 +133,8 @@
 
   <!-- 퍼스널 베스트 -->
   <section class="mb-16">
-    <h3 class="text-sm font-medium text-on-surface-variant mb-3">Personal Bests</h3>
+    <h3 class="text-sm font-medium text-on-surface-variant">Personal Bests</h3>
+    <p class="text-[11px] text-on-surface-variant/70 mb-3">지금까지의 최고 기록들</p>
     <div id="stat-best-chips" class="flex flex-wrap gap-3"></div>
   </section>
 </template>
@@ -130,7 +146,7 @@
 <script src="assets/js/layout.js?v=2"></script>
 <script src="assets/js/pray-word.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=5"></script>
+<script src="assets/js/stat.js?v=6"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });

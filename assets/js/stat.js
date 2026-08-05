@@ -235,7 +235,9 @@ function renderKpiTiles(days) {
 
   if (totalEl) totalEl.textContent = formatStatMinutes(stats.totalMin);
   if (avgEl) avgEl.textContent = `${stats.avgPercent}%`;
-  if (completedEl) completedEl.textContent = `${stats.completedCount} / ${stats.totalCount}일`;
+  // Days Completed는 탭(주간/월간)과 무관하게 항상 전체 운영기간(평일) 기준 — "총 며칠 중 몇 일"인지
+  // 탭을 바꿔도 흔들리지 않게 하기 위함 (Streak/Personal Bests와 같은 이유).
+  if (completedEl) completedEl.textContent = `${statFullDays.filter((d) => d.completed).length} / ${statFullDays.length}일`;
   if (bestEl) bestEl.textContent = stats.best && stats.best.totalMin > 0
     ? `${formatStatMinutes(stats.best.totalMin)} · ${formatStatDateLabel(stats.best.key)}`
     : '-';
@@ -263,20 +265,24 @@ function groupByWeeks(days) {
   return weeks;
 }
 
-function heatmapIntensityClass(value, maxValue, token) {
-  if (value <= 0) return 'bg-surface-container';
-  const ratio = maxValue > 0 ? value / maxValue : 0;
-  if (ratio > 0.75) return `bg-${token}`;
-  if (ratio > 0.5) return `bg-${token}/70`;
-  if (ratio > 0.25) return `bg-${token}/45`;
-  return `bg-${token}/25`;
-}
+// 셀 배경색 + (배경 위에서 잘 보이는) 텍스트 색을 함께 정한다 — 진한/그라데이션 셀은 흰 글자,
+// 옅은/빈 셀은 어두운 글자.
+function heatmapCellStyle(day, maxValue) {
+  if (statHeatmapMetric === 'completed') {
+    if (day.activeCategories.length === 0) return { bg: 'bg-surface-container', text: 'text-on-surface-variant/40' };
+    if (day.completed) return { bg: 'bg-gradient-to-br from-primary-container to-tertiary-container', text: 'text-white' };
+    if (day.totalMin > 0) return { bg: 'bg-primary/25', text: 'text-on-surface-variant' };
+    return { bg: 'bg-surface-container', text: 'text-on-surface-variant/40' };
+  }
 
-function heatmapCompletedClass(day) {
-  if (day.activeCategories.length === 0) return 'bg-surface-container';
-  if (day.completed) return 'bg-gradient-to-br from-primary-container to-tertiary-container';
-  if (day.totalMin > 0) return 'bg-primary/25';
-  return 'bg-surface-container';
+  const token = STAT_CATEGORY_TOKEN[statHeatmapMetric];
+  const value = day[`${statHeatmapMetric}Min`] || 0;
+  if (value <= 0) return { bg: 'bg-surface-container', text: 'text-on-surface-variant/40' };
+  const ratio = maxValue > 0 ? value / maxValue : 0;
+  if (ratio > 0.75) return { bg: `bg-${token}`, text: 'text-white' };
+  if (ratio > 0.5) return { bg: `bg-${token}/70`, text: 'text-white' };
+  if (ratio > 0.25) return { bg: `bg-${token}/45`, text: 'text-on-surface-variant' };
+  return { bg: `bg-${token}/25`, text: 'text-on-surface-variant' };
 }
 
 function statHeatmapTooltip(day) {
@@ -285,12 +291,14 @@ function statHeatmapTooltip(day) {
   return `${formatStatDateLabel(day.key)} · ${label} ${day[`${statHeatmapMetric}Min`] || 0}분`;
 }
 
+// GitHub 잔디 그래프를 참고하되, 데이터가 4주 남짓으로 작아서 컬럼(주)이 아니라 행(주) 단위로
+// 쌓고 각 칸에 날짜 숫자를 직접 표시한다 — 위쪽 Mon~Fri 헤더(정적 마크업, stat.html)와 짝을 이룬다.
 function renderHeatmap(days) {
   const container = document.getElementById('stat-heatmap');
   if (!container) return;
 
   if (days.length === 0) {
-    container.innerHTML = '<p class="text-xs text-on-surface-variant py-6 text-center w-full">표시할 기록이 없어요.</p>';
+    container.innerHTML = '<p class="text-xs text-on-surface-variant py-6 text-center">표시할 기록이 없어요.</p>';
     return;
   }
 
@@ -300,13 +308,13 @@ function renderHeatmap(days) {
     : Math.max(1, ...days.map((d) => d[`${statHeatmapMetric}Min`] || 0));
 
   container.innerHTML = weeks.map((week) => `
-    <div class="flex flex-col gap-1 shrink-0 w-4">
-      ${week.map((day) => {
+    <div class="grid grid-cols-5 gap-1">
+      ${[1, 2, 3, 4, 5].map((dow) => {
+        const day = week[dow];
         if (!day) return '<div class="heatmap-cell bg-transparent"></div>';
-        const cls = statHeatmapMetric === 'completed'
-          ? heatmapCompletedClass(day)
-          : heatmapIntensityClass(day[`${statHeatmapMetric}Min`] || 0, maxValue, STAT_CATEGORY_TOKEN[statHeatmapMetric]);
-        return `<div class="heatmap-cell ${cls}" title="${statHeatmapTooltip(day)}"></div>`;
+        const { bg, text } = heatmapCellStyle(day, maxValue);
+        const dayNum = Number(day.key.split('-')[2]);
+        return `<div class="heatmap-cell ${bg} ${text} flex items-center justify-center text-[9px] font-medium" title="${statHeatmapTooltip(day)}">${dayNum}</div>`;
       }).join('')}
     </div>`).join('');
 }
@@ -403,6 +411,11 @@ function renderRadarChart(days) {
   });
 }
 
+// Time Breakdown 도넛 전용 팔레트 — 공용 브랜드 토큰(primary 핑크 #b9045e / secondary 퍼플 #6e4f9c)은
+// 작은 조각으로 나뉘면 채도/명도가 비슷해 기도·말씀이 잘 구분되지 않아서, 이 차트에서만 색상환을
+// 넓게 벌린 팔레트로 교체한다 (히트맵/칩 등 다른 곳의 카테고리 색상은 그대로 유지).
+const STAT_DONUT_COLORS = ['#ec4899', '#6366f1', '#f97316', '#10b981']; // 기도/말씀/공부/예배
+
 function renderDonutChart(days) {
   const canvas = document.getElementById('stat-donut-chart');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -423,7 +436,7 @@ function renderDonutChart(days) {
       labels: ['기도', '말씀', '공부', '예배'],
       datasets: [{
         data: [totals.pray, totals.word, totals.study, totals.worship],
-        backgroundColor: ['#b9045e', '#6e4f9c', '#aa3524', '#146b3a'],
+        backgroundColor: STAT_DONUT_COLORS,
         borderColor: '#ffffff',
         borderWidth: 2
       }]
