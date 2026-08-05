@@ -69,15 +69,12 @@ function feedItemTypeLabel(item) {
   return item.type === 'pray' ? '기도 인증' : '말씀 묵상';
 }
 
-function relativeTimeFromNow(isoString) {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return '방금';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  return `${days}일 전`;
+// 게시물에 적히는 날짜는 저장 시각(updated_at)이 아니라 실제 기도/말씀 인증 날짜(record_date) 기준.
+// 올해면 "8월 10일", 해가 다르면 "2025년 8월 10일"처럼 인스타그램의 절대 날짜 표기를 따른다.
+function formatPostDate(recordDateKey) {
+  const [y, m, d] = recordDateKey.split('-').map(Number);
+  const label = `${m}월 ${d}일`;
+  return y === new Date().getFullYear() ? label : `${y}년 ${label}`;
 }
 
 function avatarHTML(user, sizeClass) {
@@ -103,26 +100,27 @@ function feedCardHTML(item, index) {
   const username = item.user ? item.user.username : '?';
 
   return `
-    <article class="pb-6 border-b border-outline-variant">
-      <div class="flex items-center justify-between px-1 pb-3">
+    <article class="pt-4 pb-6 border-b border-outline-variant last:border-b-0">
+      <div class="flex items-center justify-between px-4 pb-3">
         <div class="flex items-center gap-3">
           ${avatarHTML(item.user, 'w-9 h-9')}
           <div class="flex flex-col leading-tight">
             <span class="text-sm font-semibold text-on-surface">${name} <span class="text-on-surface-variant font-normal">(${username})</span></span>
-            <span class="text-[11px] text-on-surface-variant">${feedItemTypeLabel(item)} · ${relativeTimeFromNow(item.sortKey)}</span>
+            <span class="text-[11px] text-on-surface-variant">${feedItemTypeLabel(item)}</span>
           </div>
         </div>
       </div>
-      <div class="relative w-full aspect-square bg-surface-container rounded-2xl overflow-hidden ${isOwn ? 'cursor-pointer sapians-own-media' : ''}" data-feed-index="${index}">
+      <div class="relative w-full aspect-square bg-surface-container overflow-hidden ${isOwn ? 'cursor-pointer sapians-own-media' : ''}" data-feed-index="${index}">
         <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full h-full">${mediaHTML}</div>
       </div>
       ${dotsHTML}
-      <div class="flex items-center gap-4 px-1 pt-3 text-on-surface-variant">
+      <div class="flex items-center gap-4 px-4 pt-3 text-on-surface-variant">
         <i class="fa-regular fa-heart text-xl"></i>
         <i class="fa-regular fa-comment text-xl"></i>
         <i class="fa-regular fa-paper-plane text-xl"></i>
       </div>
-      <p class="px-1 pt-2 text-sm text-on-surface"><span class="font-semibold mr-1">${name}</span>${feedItemSummary(item)}</p>
+      <p class="px-4 pt-2 text-sm text-on-surface"><span class="font-semibold mr-1">${name}</span>${feedItemSummary(item)}</p>
+      <p class="px-4 pt-1 text-[11px] text-on-surface-variant/70">${formatPostDate(item.row.record_date)}</p>
     </article>`;
 }
 
