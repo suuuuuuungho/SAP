@@ -29,6 +29,8 @@ let studyFlashcardFlipped = false;
 
 let studyQuizState = null; // { questions, index, score, missed } | null (null = 시작화면)
 
+let studyCompleteDayKeys = new Set(); // `${level}-${day}` — 그 세트의 모든 단어가 품사+예문 3개까지 채워짐
+
 // --- 데이터 조회 ---
 
 async function getStudyCurrentUserId() {
@@ -82,8 +84,36 @@ function getStudyDays() {
   return [...new Set(studyAllWords.filter((w) => w.level === studyActiveLevel).map((w) => w.study_day))].sort((a, b) => a - b);
 }
 
+// 품사 + 예문 3개까지 전부 채워진 단어인지 — 아직 안 채워진 단어는 학습 화면에 노출하지 않는다.
+function isWordFilled(word) {
+  return !!word.part_of_speech && Array.isArray(word.example_sentences) && word.example_sentences.length >= 3;
+}
+
+// (level, study_day) 세트 안의 단어가 전부 채워져 있어야 그 Day를 "완료"로 본다 — 절반만 채워진
+// Day를 보여주면 학생이 학습하다가 빈 카드를 만나게 되므로, 하나라도 미완성이면 그 Day 전체를 비활성화.
+function computeCompleteDayKeys() {
+  const groups = {};
+  studyAllWords.forEach((w) => {
+    const key = `${w.level}-${w.study_day}`;
+    (groups[key] = groups[key] || []).push(w);
+  });
+  const complete = new Set();
+  Object.entries(groups).forEach(([key, words]) => {
+    if (words.every(isWordFilled)) complete.add(key);
+  });
+  return complete;
+}
+
+function isDayComplete(level, day) {
+  return studyCompleteDayKeys.has(`${level}-${day}`);
+}
+
+function isLevelUsable(level) {
+  return studyAllWords.some((w) => w.level === level && isDayComplete(w.level, w.study_day));
+}
+
 function getActiveWordSet() {
-  const inLevel = studyAllWords.filter((w) => w.level === studyActiveLevel);
+  const inLevel = studyAllWords.filter((w) => w.level === studyActiveLevel && isDayComplete(w.level, w.study_day));
   return studyActiveDay === 'all' ? inLevel : inLevel.filter((w) => w.study_day === studyActiveDay);
 }
 
@@ -131,7 +161,11 @@ function renderLevelSelector() {
   const levels = getStudyLevels();
   wrap.innerHTML = levels.map((lv) => {
     const active = studyActiveLevel === lv;
-    return `<button type="button" data-level="${lv}" class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'nav-pill-active' : 'text-on-surface-variant'}">${studyLevelLabel(lv)}</button>`;
+    const usable = isLevelUsable(lv);
+    const stateClass = !usable
+      ? 'opacity-40 cursor-not-allowed text-on-surface-variant'
+      : (active ? 'nav-pill-active' : 'text-on-surface-variant');
+    return `<button type="button" data-level="${lv}" ${usable ? '' : 'disabled'} class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${stateClass}">${studyLevelLabel(lv)}${usable ? '' : ' <span class="text-[10px]">(준비중)</span>'}</button>`;
   }).join('');
 }
 
@@ -140,7 +174,7 @@ function wireLevelSelector() {
   if (!wrap) return;
   wrap.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-level]');
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     studyActiveLevel = Number(btn.dataset.level);
     studyActiveDay = 'all'; // 레벨이 바뀌면 Day 번호 범위가 달라지므로 전체로 초기화
     studyFlashcardIndex = 0;
@@ -152,30 +186,30 @@ function wireLevelSelector() {
   });
 }
 
-// --- Day 셀렉터 ---
+// --- Day 셀렉터 (드롭다운 — Day가 최대 50개까지 있어 칩으로 두면 버튼이 너무 많아짐) ---
 
 function renderDaySelector() {
-  const wrap = document.getElementById('study-day-selector');
-  if (!wrap) return;
+  const select = document.getElementById('study-day-selector');
+  if (!select) return;
   const days = getStudyDays();
-  const chips = [{ key: 'all', label: '전체' }, ...days.map((d) => ({ key: String(d), label: `Day ${d}` }))];
-  wrap.innerHTML = chips.map((c) => {
-    const active = String(studyActiveDay) === c.key;
-    return `<button type="button" data-day="${c.key}" class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${active ? 'nav-pill-active' : 'text-on-surface-variant'}">${c.label}</button>`;
-  }).join('');
+  const options = [{ value: 'all', label: '전체', disabled: !isLevelUsable(studyActiveLevel) }, ...days.map((d) => ({
+    value: String(d),
+    label: isDayComplete(studyActiveLevel, d) ? `Day ${d}` : `Day ${d} (준비중)`,
+    disabled: !isDayComplete(studyActiveLevel, d)
+  }))];
+  select.innerHTML = options.map((o) =>
+    `<option value="${o.value}" ${o.disabled ? 'disabled' : ''} ${String(studyActiveDay) === o.value ? 'selected' : ''}>${o.label}</option>`
+  ).join('');
 }
 
 function wireDaySelector() {
-  const wrap = document.getElementById('study-day-selector');
-  if (!wrap) return;
-  wrap.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-day]');
-    if (!btn) return;
-    studyActiveDay = btn.dataset.day === 'all' ? 'all' : Number(btn.dataset.day);
+  const select = document.getElementById('study-day-selector');
+  if (!select) return;
+  select.addEventListener('change', () => {
+    studyActiveDay = select.value === 'all' ? 'all' : Number(select.value);
     studyFlashcardIndex = 0;
     studyFlashcardFlipped = false;
     studyQuizState = null;
-    renderDaySelector();
     renderContent();
   });
 }
@@ -511,9 +545,10 @@ async function initStudyWidgets() {
   const { words, progress } = await fetchStudyData(userId);
   studyAllWords = words;
   studyProgressMap = Object.fromEntries(progress.map((p) => [p.word_id, p]));
+  studyCompleteDayKeys = computeCompleteDayKeys();
 
   const levels = getStudyLevels();
-  studyActiveLevel = levels.length > 0 ? levels[0] : null;
+  studyActiveLevel = levels.find((lv) => isLevelUsable(lv)) ?? (levels.length > 0 ? levels[0] : null);
 
   renderLevelSelector();
   renderDaySelector();
