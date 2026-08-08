@@ -239,7 +239,7 @@ as $$
     coalesce(jsonb_array_length(pr.entries)>0,false),
     coalesce((select sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60))::bigint
       from jsonb_array_elements(coalesce(pr.entries,'[]'::jsonb)) e
-      where e->>'start' ~ '^\\d{4}-' and e->>'end' ~ '^\\d{4}-'),0),
+      where e->>'start' ~ '^[0-9]{4}-' and e->>'end' ~ '^[0-9]{4}-'),0),
     coalesce(jsonb_array_length(wo.verses)>0,false),
     case when coalesce(jsonb_array_length(wo.verses),0)>0 then 60 + coalesce((select sum(coalesce(nullif(v->>'meditationMinutes','')::numeric,0))::bigint from jsonb_array_elements(wo.verses) with ordinality x(v,n) where n>1),0) else 0 end,
     coalesce(jsonb_array_length(st.sessions)>0,false),
@@ -262,7 +262,7 @@ language sql stable security definer set search_path = public
 as $$
 with days as (select d::date record_date from generate_series(date '2026-08-10',date '2026-09-06','1 day') d where extract(isodow from d) between 1 and 5)
 select d.record_date,
-  coalesce((select sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60))::bigint from public.pray_records r cross join lateral jsonb_array_elements(r.entries)e where r.user_id=target_user_id and r.record_date=d.record_date and e->>'start' ~ '^\\d{4}-' and e->>'end' ~ '^\\d{4}-'),0),
+  coalesce((select sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60))::bigint from public.pray_records r cross join lateral jsonb_array_elements(r.entries)e where r.user_id=target_user_id and r.record_date=d.record_date and e->>'start' ~ '^[0-9]{4}-' and e->>'end' ~ '^[0-9]{4}-'),0),
   case when exists(select 1 from public.word_records r where r.user_id=target_user_id and r.record_date=d.record_date and jsonb_array_length(r.verses)>0) then 60 else 0 end,
   coalesce((select round(sum(coalesce(nullif(s->>'seconds','')::numeric,0))/60)::bigint from public.study_records r cross join lateral jsonb_array_elements(r.sessions)s where r.user_id=target_user_id and r.record_date=d.record_date),0),
   coalesce((select r.minutes::bigint from public.worship_records r where r.user_id=target_user_id and r.record_date=d.record_date),0)

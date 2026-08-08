@@ -69,16 +69,18 @@
       <p id="stat-kpi-total" class="text-2xl font-bold text-primary">0분</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant">Avg. Completion</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">일별 (활동시간÷300분) 값의 평균</p>
-      <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0%</p>
+      <p class="text-xs text-on-surface-variant">Average</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">하루 평균</p>
+      <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0분</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant mb-1">Days Completed</p>
+      <p class="text-xs text-on-surface-variant">Days Completed</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">달성 일수</p>
       <p id="stat-kpi-completed" class="text-2xl font-bold text-primary">0 / 0일</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant mb-1">Best Day</p>
+      <p class="text-xs text-on-surface-variant">Best Day</p>
+      <p class="text-[10px] text-on-surface-variant/60 mb-1">최고기록</p>
       <p id="stat-kpi-best" class="text-2xl font-bold text-primary">-</p>
     </div>
   </section>
@@ -150,7 +152,7 @@
 <script src="assets/js/layout.js?v=13"></script>
 <script src="assets/js/pray-word.js?v=6"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=11"></script>
+<script src="assets/js/stat.js?v=12"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });

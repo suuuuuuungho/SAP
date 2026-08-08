@@ -180,12 +180,11 @@ function formatStatDateLabel(key) {
 
 // --- KPI / 목표 달성률 계산 ---
 
-// avgPercent = 일별 percent(활동시간 ÷ 300분 × 100)의 평균 — Avg. Completion KPI에 그대로 표시된다.
 function computeRangeStats(days) {
   const totalMin = days.reduce((s, d) => s + d.totalMin, 0);
-  const avgPercent = days.length > 0 ? Math.round(days.reduce((s, d) => s + d.percent, 0) / days.length) : 0;
+  const avgMinutes = days.length > 0 ? Math.round(totalMin / days.length) : 0;
   const best = days.reduce((acc, d) => (!acc || d.totalMin > acc.totalMin ? d : acc), null);
-  return { totalMin, avgPercent, totalCount: days.length, best };
+  return { totalMin, avgMinutes, totalCount: days.length, best };
 }
 
 function computeGoalHitRate(days) {
@@ -227,7 +226,7 @@ function renderKpiTiles(days) {
   const bestEl = document.getElementById('stat-kpi-best');
 
   if (totalEl) totalEl.textContent = formatStatMinutes(stats.totalMin);
-  if (avgEl) avgEl.textContent = `${stats.avgPercent}%`;
+  if (avgEl) avgEl.textContent = formatStatMinutes(stats.avgMinutes);
   // Days Completed는 탭(주간/월간)과도, 진행 중인 날짜와도 무관하게 항상 "달성일수 / 20일" 고정 —
   // 프로그램이 끝나기 전에도 분모가 계속 바뀌지 않게 하기 위함 (Streak/Personal Bests와 같은 이유).
   // "달성"의 기준은 Streak와 동일하게 하루 300분 목표(percent>=100) — 카테고리 전체 인증 여부(completed)와는 다르다.
@@ -375,12 +374,11 @@ function renderRadarChart(days) {
   const canvas = document.getElementById('stat-radar-chart');
   if (!canvas || typeof Chart === 'undefined') return;
 
-  const totals = { pray: 0, word: 0, study: 0, worship: 0 };
+  const totals = { pray: 0, word: 0, study: 0 };
   days.forEach((d) => {
     totals.pray += d.prayMin;
     totals.word += d.wordMin;
     totals.study += d.studyMin;
-    totals.worship += d.worshipMin;
   });
   const dayCount = Math.max(1, days.length);
 
@@ -388,10 +386,10 @@ function renderRadarChart(days) {
   statRadarChart = new Chart(canvas.getContext('2d'), {
     type: 'radar',
     data: {
-      labels: ['기도', '말씀', '공부', '예배'],
+      labels: ['기도', '말씀', '공부'],
       datasets: [{
         label: 'Daily Avg (min)',
-        data: [totals.pray, totals.word, totals.study, totals.worship].map((v) => Math.round(v / dayCount)),
+        data: [totals.pray, totals.word, totals.study].map((v) => Math.round(v / dayCount)),
         backgroundColor: 'rgba(255,75,145,0.22)',
         borderColor: '#b9045e',
         pointBackgroundColor: '#b9045e'
