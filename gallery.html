@@ -19,7 +19,7 @@
     <p class="text-xs text-on-surface-variant">2026.08.10 – 09.06 · Weekdays</p>
   </div>
 
-  <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6">
+  <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6 relative z-50 overflow-visible">
     <div class="flex items-center gap-3">
       <button id="gallery-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜">
         <i class="fa-solid fa-chevron-left"></i>
@@ -30,7 +30,7 @@
           <i class="fa-regular fa-calendar"></i><span id="gallery-date-display">2026-08-10</span>
         </button>
         <p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p>
-        <div id="gallery-calendar-popover" class="hidden absolute z-40 top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] glass-panel rounded-[1.5rem] p-4 text-left shadow-xl">
+        <div id="gallery-calendar-popover" class="hidden absolute z-[70] top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] glass-panel rounded-[1.5rem] p-4 text-left shadow-xl">
           <div id="gallery-calendar-months" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
           <p class="text-[10px] text-on-surface-variant text-center mt-3">운영기간의 평일만 선택할 수 있어요.</p>
         </div>
