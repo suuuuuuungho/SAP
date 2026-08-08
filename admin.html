@@ -12,14 +12,27 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="mb-8 lg:mb-10">
-    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin</h1>
-    <p class="text-sm text-on-surface-variant mt-1">Home 전광판 관리</p>
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-6 lg:mb-8">
+    <div><p class="text-xs font-bold tracking-[.2em] text-primary uppercase mb-2">SAP Operations</p><h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin Console</h1></div>
+    <div class="glass-card rounded-full px-4 py-2 text-xs text-on-surface-variant"><span class="inline-block w-2 h-2 rounded-full bg-quaternary mr-2"></span>Live workspace</div>
   </div>
   <p id="admin-status" class="hidden text-sm mb-4"></p>
   <div id="admin-access-denied" class="hidden glass-panel rounded-[2rem] p-12 text-center"><i class="fa-solid fa-lock text-3xl text-error mb-3"></i><p class="font-bold">관리자 권한이 필요합니다.</p></div>
-  <div id="admin-content" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-6 mb-16">
-    <section class="glass-panel rounded-[2rem] p-6">
+  <div id="admin-content" class="hidden mb-16">
+    <nav class="admin-tab-bar glass-panel rounded-[1.5rem] p-2 mb-3 flex gap-2 overflow-x-auto scrollbar-hide" id="admin-tabs-top">
+      <button data-admin-tab="board" class="admin-tab nav-pill-active"><i class="fa-solid fa-clipboard-list"></i>Board</button>
+      <button data-admin-tab="gallery" class="admin-tab"><i class="fa-regular fa-images"></i>Gallery</button>
+    </nav>
+    <div class="flex items-center gap-3 my-5"><span class="h-px bg-outline-variant/50 flex-1"></span><span class="text-[10px] font-bold tracking-[.2em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/50 flex-1"></span></div>
+    <nav class="admin-tab-bar glass-panel rounded-[1.5rem] p-2 mb-6 flex gap-2 overflow-x-auto scrollbar-hide" id="admin-tabs-management">
+      <button data-admin-tab="control" class="admin-tab"><i class="fa-solid fa-sliders"></i>Control Panel</button>
+      <button data-admin-tab="member" class="admin-tab"><i class="fa-solid fa-users"></i>Member</button>
+      <button data-admin-tab="dashboard" class="admin-tab"><i class="fa-solid fa-grid-2"></i>Dashboard</button>
+    </nav>
+
+    <section data-admin-panel="board" class="admin-panel grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)] gap-6">
+      <div class="glass-card rounded-[2rem] overflow-hidden min-h-[680px]"><div class="px-5 py-4 border-b border-outline-variant/30 flex justify-between"><div><h2 class="font-bold">Live Preview</h2><p class="text-xs text-on-surface-variant">이용자가 보는 Board 화면입니다.</p></div><a href="home.html" target="_blank" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a></div><iframe src="home.html" title="Board preview" class="w-full h-[620px] bg-surface"></iframe></div>
+      <div class="flex flex-col gap-6"><section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-1">Messages</h2><p class="text-xs text-on-surface-variant mb-5">전체 공지 또는 한 명에게만 보이는 메시지를 전송합니다.</p>
       <form id="admin-message-form" class="flex flex-col gap-3 mb-6">
         <select id="admin-message-recipient" class="glass-input rounded-2xl px-4 py-2 text-sm"></select>
@@ -31,8 +44,7 @@
         </div>
       </form>
       <div id="admin-message-list" class="flex flex-col gap-3"></div>
-    </section>
-    <section class="glass-panel rounded-[2rem] p-6">
+      </section><section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-1">Bible Verse</h2><p class="text-xs text-on-surface-variant mb-5">Home 상단 전광판에 표시할 대표 말씀입니다.</p>
       <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
         <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
@@ -51,16 +63,33 @@
         <button class="pill-btn-primary py-2.5 text-sm" type="submit">대표 말씀 등록</button>
       </form>
       <div id="admin-verse-list" class="flex flex-col gap-3"></div>
+      </section></div>
     </section>
+
+    <section data-admin-panel="gallery" class="admin-panel hidden grid grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,.75fr)] gap-6">
+      <div class="glass-card rounded-[2rem] overflow-hidden min-h-[760px]"><div class="px-5 py-4 border-b border-outline-variant/30 flex justify-between"><div><h2 class="font-bold">Live Preview</h2><p class="text-xs text-on-surface-variant">실제 Gallery 화면과 동일합니다.</p></div><a href="gallery.html" target="_blank" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center"><i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a></div><iframe src="gallery.html" title="Gallery preview" class="w-full h-[700px] bg-surface"></iframe></div>
+      <div class="glass-panel rounded-[2rem] p-6 h-fit"><h2 class="text-xl font-bold">Post Moderation</h2><p class="text-xs text-on-surface-variant mt-1 mb-4">게시물을 숨기거나 완전히 삭제합니다.</p><div class="grid grid-cols-2 gap-2 mb-4"><input id="admin-gallery-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm"><button id="admin-gallery-refresh" class="pill-btn-primary text-sm">불러오기</button></div><div id="admin-gallery-posts" class="flex flex-col gap-3 max-h-[620px] overflow-y-auto scrollbar-hide"></div></div>
+    </section>
+
+    <section data-admin-panel="control" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-5 sm:p-7"><div class="flex items-start justify-between gap-4 mb-6"><div><h2 class="text-2xl font-bold">Control Panel</h2><p class="text-sm text-on-surface-variant mt-1">프로젝트의 기능을 즉시 켜고 끕니다.</p></div><div class="icon-glass w-12 h-12 rounded-full flex items-center justify-center text-primary"><i class="fa-solid fa-power-off"></i></div></div><div id="admin-feature-groups" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div></div></section>
+
+    <section data-admin-panel="member" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-4 sm:p-6"><div class="flex flex-wrap gap-3 justify-between items-center mb-5"><div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div><div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div></div><div id="admin-member-list" class="flex flex-col gap-3"></div></div></section>
+
+    <section data-admin-panel="dashboard" class="admin-panel hidden"><div class="flex flex-wrap items-end justify-between gap-4 mb-5"><div><h2 class="text-2xl font-bold">Dashboard</h2><p class="text-sm text-on-surface-variant">학생별 인증 현황과 후속 조치를 한 화면에서 관리합니다.</p></div><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div><div id="admin-dashboard-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div><div class="glass-panel rounded-[2rem] p-4 sm:p-6 overflow-x-auto"><div id="admin-dashboard-list" class="min-w-[860px]"></div></div></section>
   </div>
+
+  <div id="admin-member-modal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4"><div class="absolute inset-0 bg-on-surface/35 backdrop-blur-sm" data-close-modal></div><form id="admin-member-form" class="glass-panel relative rounded-[2rem] p-6 w-full max-w-lg flex flex-col gap-3"><div class="flex justify-between items-center"><h2 class="text-xl font-bold">Edit Member</h2><button type="button" data-close-modal class="icon-glass w-9 h-9 rounded-full"><i class="fa-solid fa-xmark"></i></button></div><input id="admin-member-id" type="hidden"><div class="grid grid-cols-2 gap-3"><label class="text-xs">이름<input id="admin-member-name" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학년/반<input id="admin-member-grade" class="glass-input rounded-xl p-2 w-full mt-1"></label></div><label class="text-xs">본인 연락처<input id="admin-member-phone" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학부모 연락처<input id="admin-member-parent-phone" class="glass-input rounded-xl p-2 w-full mt-1" placeholder="나중에 SMS 발송에 사용"></label><label class="text-xs">권한<select id="admin-member-role" class="glass-input rounded-xl p-2 w-full mt-1"><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></select></label><div class="grid grid-cols-2 gap-3"><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Host <input id="admin-member-host" type="checkbox" class="rounded text-primary"></label><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Active <input id="admin-member-active" type="checkbox" class="rounded text-primary"></label></div><div class="flex gap-2 mt-2"><button class="pill-btn-primary flex-1 py-2.5">저장</button><button id="admin-member-delete" type="button" class="glass-card rounded-full px-5 text-error">강제 탈퇴</button></div></form></div>
+
+  <div id="admin-report-modal" class="hidden fixed inset-0 z-[85] items-center justify-center p-4"><div class="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" data-close-report></div><div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide"><div id="admin-report-card" class="bg-[#fcf9f8] rounded-[2rem] p-7 sm:p-10 text-on-surface"></div><div class="flex justify-center gap-3 mt-4"><button id="admin-report-copy" class="pill-btn-primary px-6 py-3 text-sm"><i class="fa-regular fa-copy mr-2"></i>이미지 복사</button><button data-close-report class="glass-card rounded-full px-6 py-3 text-sm">닫기</button></div></div></div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=5"></script>
-<script src="assets/js/layout.js?v=10"></script>
-<script src="assets/js/admin.js?v=3"></script>
+<script src="assets/js/auth.js?v=6"></script>
+<script src="assets/js/layout.js?v=11"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="assets/js/admin.js?v=4"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

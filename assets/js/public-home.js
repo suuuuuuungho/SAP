@@ -45,7 +45,8 @@ function publicHomeRankingRows(rows, category) {
   return categoryRows.map((row) => {
     const isMe = row.user_id === publicHomeCurrentUserId;
     const medal = row.rank_no <= 3 ? ['🥇', '🥈', '🥉'][row.rank_no - 1] : String(row.rank_no);
-    const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(publicHomeProfiles[row.user_id]?.badge_role) : '';
+    const badgeProfile = publicHomeProfiles[row.user_id];
+    const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(badgeProfile?.badge_role, badgeProfile?.is_host) : '';
     return `
       <div class="flex items-center gap-3 py-3 ${row.rank_no !== categoryRows.length ? 'border-b border-outline-variant/35' : ''} ${isMe ? 'bg-primary/5 -mx-3 px-3 rounded-xl' : ''}">
         <div class="w-7 text-center text-sm font-bold">${medal}</div>

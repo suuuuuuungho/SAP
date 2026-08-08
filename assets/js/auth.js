@@ -13,7 +13,7 @@ async function initAuthUI() {
     displayName = session.user.email || '';
     let result = await window.supabaseClient
       .from('profiles')
-      .select('name, username, grade_class, is_admin, avatar_path')
+      .select('name, username, grade_class, is_admin, avatar_path, app_role, is_host, is_active')
       .eq('id', session.user.id)
       .maybeSingle();
 
@@ -23,6 +23,12 @@ async function initAuthUI() {
     }
     profile = result.data;
     if (profile) displayName = `${profile.name} (${profile.username})`;
+
+    if (profile?.is_active === false) {
+      await window.supabaseClient.auth.signOut();
+      window.location.replace('login.html?inactive=1');
+      return;
+    }
 
     if (profile?.avatar_path) {
       const { data } = await window.supabaseClient.storage
@@ -56,8 +62,10 @@ async function initAuthUI() {
       }
       if (name) name.textContent = displayName;
       if (badge) {
-        const role = profile?.is_admin || profile?.grade_class === '관리자' ? '관리자' : profile?.grade_class === '교사' ? '교사' : '';
-        badge.innerHTML = role ? `<span class="inline-flex w-4 h-4 rounded-full bg-blue-500 text-white items-center justify-center align-middle ml-1" title="${role}" aria-label="${role}"><i class="fa-solid fa-check text-[8px]"></i></span>` : '';
+        const role = profile?.is_admin || profile?.app_role === 'admin' || profile?.grade_class === '관리자' ? '관리자' : profile?.app_role === 'teacher' || profile?.grade_class === '교사' ? '교사' : '';
+        const roleColor = role === '교사' ? 'bg-lime-500' : 'bg-blue-500';
+        const hostBadge = profile?.is_host ? '<span class="inline-flex w-4 h-4 rounded-full bg-amber-100 text-amber-600 items-center justify-center align-middle ml-1" title="Host"><i class="fa-solid fa-crown text-[8px]"></i></span>' : '';
+        badge.innerHTML = `${hostBadge}${role ? `<span class="inline-flex w-4 h-4 rounded-full ${roleColor} text-white items-center justify-center align-middle ml-1" title="${role}" aria-label="${role}"><i class="fa-solid fa-check text-[8px]"></i></span>` : ''}`;
       }
       if (subtext) subtext.textContent = '개인 프로필 보기';
       link.href = 'profile.html';

@@ -19,6 +19,15 @@ let galleryComments = [];
 let galleryCommentProfiles = {};
 let galleryEditingCommentId = null;
 
+function applyGalleryFeatureFlags(flags = window.APP_FEATURE_FLAGS || {}) {
+  if (flags.comments === false) {
+    document.querySelectorAll('[data-gallery-comment-user]').forEach((button) => button.classList.add('hidden'));
+    closeGalleryComments();
+  }
+}
+
+window.addEventListener('app-feature-flags', (event) => applyGalleryFeatureFlags(event.detail));
+
 function galleryDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -69,8 +78,8 @@ async function loadGalleryDateRecords(dateKey) {
     return;
   }
   const [prayResult, wordResult] = await Promise.all([
-    window.supabaseClient.from('pray_records').select('user_id, record_date, entries').eq('record_date', dateKey).in('user_id', ids),
-    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable').eq('record_date', dateKey).in('user_id', ids)
+    window.supabaseClient.from('pray_records').select('user_id, record_date, entries').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
+    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids)
   ]);
   if (prayResult.error) console.error('[gallery] pray records', prayResult.error);
   if (wordResult.error) console.error('[gallery] word records', wordResult.error);
@@ -212,7 +221,7 @@ function renderGalleryComments() {
   }
   list.innerHTML = galleryComments.map((comment) => {
     const profile = galleryCommentProfiles[comment.author_id];
-    const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(profile?.badge_role) : '';
+    const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(profile?.badge_role, profile?.is_host) : '';
     const controls = comment.author_id === galleryCurrentUserId
       ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-comment-edit="${comment.id}" class="hover:text-primary">수정</button><button type="button" data-comment-delete="${comment.id}" class="hover:text-error">삭제</button></span>`
       : '';
@@ -353,6 +362,7 @@ function renderGalleryGrid() {
   grid.innerHTML = pageUsers.length
     ? pageUsers.map((user) => galleryStudentCardHTML(user, galleryActiveType)).join('')
     : '<div class="glass-panel rounded-[2rem] p-12 text-center text-sm text-on-surface-variant col-span-full">표시할 학생이 없습니다.</div>';
+  applyGalleryFeatureFlags();
   renderGalleryPagination();
 }
 

@@ -26,6 +26,31 @@ body {
   border-radius: 9999px;
 }
 
+/* Admin Console */
+.admin-tab {
+  min-width: max-content;
+  border-radius: 9999px;
+  padding: .65rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  color: #594046;
+  font-size: .82rem;
+  font-weight: 650;
+  transition: all .2s ease;
+}
+.admin-tab:not(.nav-pill-active):hover { background: rgba(255,255,255,.55); color: #1c1b1b; }
+.admin-switch { position: relative; width: 46px; height: 27px; flex: 0 0 auto; }
+.admin-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.admin-switch-track { position: absolute; inset: 0; border-radius: 999px; background: #d9d2d3; transition: .22s ease; cursor: pointer; }
+.admin-switch-track::after { content: ''; position: absolute; width: 21px; height: 21px; left: 3px; top: 3px; border-radius: 50%; background: white; box-shadow: 0 2px 6px rgba(28,27,27,.18); transition: .22s ease; }
+.admin-switch input:checked + .admin-switch-track { background: linear-gradient(135deg,#ff4b91,#ee6650); }
+.admin-switch input:checked + .admin-switch-track::after { transform: translateX(19px); }
+.admin-status-dot { width: .55rem; height: .55rem; border-radius: 50%; display: inline-block; }
+.admin-member-row { transition: transform .18s ease, background .18s ease; }
+.admin-member-row:hover { transform: translateY(-1px); background: rgba(255,255,255,.98); }
+
 /* Hide scrollbar visuals while keeping scroll functionality */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

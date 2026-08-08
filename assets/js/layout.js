@@ -148,6 +148,32 @@ function wireMobileMenu() {
   sidebarOverlay.addEventListener('click', closeMenu);
 }
 
+async function applyFeatureFlags(activePage) {
+  if (!window.supabaseClient || activePage === 'admin') return;
+  const { data, error } = await window.supabaseClient.rpc('get_app_feature_flags');
+  if (error) return; // 관리자 스키마 적용 전에는 기존 기능을 그대로 유지합니다.
+  const flags = Object.fromEntries((data || []).map((item) => [item.feature_key, item.is_enabled]));
+  window.APP_FEATURE_FLAGS = flags;
+  const pageFeature = { 'public-home': 'board', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[activePage];
+  NAV_ITEMS.forEach((item) => {
+    const key = { 'public-home': 'board', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[item.id];
+    if (key && flags[key] === false) document.querySelectorAll(`a[href="${item.href}"]`).forEach((link) => { link.classList.add('hidden'); link.style.display = 'none'; });
+  });
+  const hideClosest = (selector, key) => { if (flags[key] === false) document.querySelector(selector)?.closest('section')?.classList.add('hidden'); };
+  hideClosest('#home-message-list', 'board_messages'); hideClosest('#home-ranking-grid', 'ranking'); hideClosest('#home-verse-text', 'board_verse');
+  if (flags.pray === false) document.getElementById('widget-pray')?.classList.add('hidden');
+  if (flags.word === false) document.getElementById('widget-word')?.classList.add('hidden');
+  if (flags.study_timer === false) document.getElementById('widget-study')?.classList.add('hidden');
+  if (flags.worship === false) document.getElementById('widget-worship')?.classList.add('hidden');
+  if (flags.gallery_pray === false) document.getElementById('gallery-type-pray')?.classList.add('hidden');
+  if (flags.gallery_word === false) document.getElementById('gallery-type-word')?.classList.add('hidden');
+  if (pageFeature && flags[pageFeature] === false) {
+    const main = document.querySelector('#page-main > div');
+    if (main) main.innerHTML = '<div class="glass-panel rounded-[2rem] p-12 text-center"><div class="icon-glass w-14 h-14 rounded-full mx-auto flex items-center justify-center text-on-surface-variant"><i class="fa-solid fa-power-off"></i></div><h1 class="text-xl font-bold mt-4">현재 사용할 수 없는 기능입니다</h1><p class="text-sm text-on-surface-variant mt-2">관리자가 기능을 잠시 꺼두었습니다.</p></div>';
+  }
+  window.dispatchEvent(new CustomEvent('app-feature-flags', { detail: flags }));
+}
+
 function renderApp({ activePage }) {
   const appRoot = document.getElementById('app');
   const template = document.getElementById('page-content');
@@ -165,4 +191,5 @@ function renderApp({ activePage }) {
   if (window.initStatWidgets) window.initStatWidgets();
   if (window.initAdminWidgets) window.initAdminWidgets();
   if (window.initProfileWidgets) window.initProfileWidgets();
+  applyFeatureFlags(activePage);
 }

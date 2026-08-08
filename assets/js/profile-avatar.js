@@ -41,10 +41,12 @@ async function getPublicProfileCards(userIds) {
   return Object.fromEntries(entries);
 }
 
-function publicProfileBadgeHTML(role) {
-  if (!role) return '';
+function publicProfileBadgeHTML(role, isHost = false) {
+  const host = isHost ? '<span class="inline-flex w-4 h-4 rounded-full bg-amber-100 text-amber-600 items-center justify-center align-middle ml-1" title="Host" aria-label="Host"><i class="fa-solid fa-crown text-[8px]"></i></span>' : '';
+  if (!role) return host;
   const label = role === 'admin' ? '관리자' : '교사';
-  return `<span class="inline-flex w-4 h-4 rounded-full bg-blue-500 text-white items-center justify-center align-middle ml-1" title="${label}" aria-label="${label}"><i class="fa-solid fa-check text-[8px]"></i></span>`;
+  const color = role === 'teacher' ? 'bg-lime-500' : 'bg-blue-500';
+  return `${host}<span class="inline-flex w-4 h-4 rounded-full ${color} text-white items-center justify-center align-middle ml-1" title="${label}" aria-label="${label}"><i class="fa-solid fa-check text-[8px]"></i></span>`;
 }
 
 window.getProfileAvatarUrls = getProfileAvatarUrls;
