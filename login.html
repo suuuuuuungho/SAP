@@ -78,6 +78,11 @@
     status.classList.add(isError ? 'text-error' : 'text-on-surface-variant');
   }
 
+  async function dashboardDestination(userId) {
+    const { data } = await window.supabaseClient.from('profiles').select('is_admin').eq('id', userId).maybeSingle();
+    return data && data.is_admin ? 'admin.html' : 'home.html';
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -102,7 +107,7 @@
       return;
     }
 
-    const { error } = await window.supabaseClient.auth.signInWithPassword({
+    const { data: loginData, error } = await window.supabaseClient.auth.signInWithPassword({
       email,
       password: normalizeAuthPassword(passwordInput.value)
     });
@@ -113,7 +118,7 @@
     if (error) {
       showStatus('아이디 또는 비밀번호가 올바르지 않습니다.', true);
     } else {
-      window.location.href = 'home.html';
+      window.location.href = await dashboardDestination(loginData.user.id);
     }
   });
 
@@ -121,7 +126,7 @@
   (async () => {
     if (!window.supabaseClient) return;
     const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (session) window.location.href = 'home.html';
+    if (session) window.location.href = await dashboardDestination(session.user.id);
   })();
 </script>
 </body>

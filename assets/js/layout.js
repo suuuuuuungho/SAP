@@ -17,10 +17,10 @@ const OFFCANVAS_HIDDEN = '-translate-x-[120%]';
 function navLinkFull(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40';
-  const adminAttr = item.adminOnly ? 'data-admin-only' : '';
+  const visibilityAttr = item.adminOnly ? 'data-admin-only' : 'data-member-nav';
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" ${adminAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
+    <a href="${item.href}" ${visibilityAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
       <i class="${item.icon} w-4 text-center"></i>
       ${item.label}
     </a>`;
@@ -29,10 +29,10 @@ function navLinkFull(item, activePage) {
 function navLinkIcon(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40';
-  const adminAttr = item.adminOnly ? 'data-admin-only' : '';
+  const visibilityAttr = item.adminOnly ? 'data-admin-only' : 'data-member-nav';
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" aria-label="${item.label}" ${adminAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
+    <a href="${item.href}" aria-label="${item.label}" ${visibilityAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i>
       <div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </a>`;

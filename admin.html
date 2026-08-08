@@ -12,9 +12,9 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="flex items-end justify-between gap-3 mb-8 lg:mb-10">
-    <div><h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin</h1><p class="text-sm text-on-surface-variant mt-1">Home 전광판 관리</p></div>
-    <a href="home.html" class="pill-btn-primary px-4 py-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i>Home</a>
+  <div class="mb-8 lg:mb-10">
+    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin</h1>
+    <p class="text-sm text-on-surface-variant mt-1">Home 전광판 관리</p>
   </div>
   <p id="admin-status" class="hidden text-sm mb-4"></p>
   <div id="admin-access-denied" class="hidden glass-panel rounded-[2rem] p-12 text-center"><i class="fa-solid fa-lock text-3xl text-error mb-3"></i><p class="font-bold">관리자 권한이 필요합니다.</p></div>
@@ -44,8 +44,8 @@
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=2"></script>
-<script src="assets/js/layout.js?v=4"></script>
+<script src="assets/js/auth.js?v=3"></script>
+<script src="assets/js/layout.js?v=5"></script>
 <script src="assets/js/admin.js?v=1"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>

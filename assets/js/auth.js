@@ -24,7 +24,15 @@ async function initAuthUI() {
       profile = fallback.data;
     }
     if (profile) displayName = `${profile.name} (${profile.username})`;
-    document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !profile || !profile.is_admin));
+    const isAdmin = !!(profile && profile.is_admin);
+    document.querySelectorAll('[data-admin-only]').forEach((el) => {
+      el.classList.toggle('hidden', !isAdmin);
+      el.style.display = isAdmin ? '' : 'none';
+    });
+    document.querySelectorAll('[data-member-nav]').forEach((el) => {
+      el.classList.toggle('hidden', isAdmin);
+      el.style.display = isAdmin ? 'none' : '';
+    });
   }
 
   profiles.forEach((el) => {
