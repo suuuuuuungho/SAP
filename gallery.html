@@ -31,7 +31,7 @@
         </button>
         <p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p>
         <div id="gallery-calendar-popover" style="background-color:#ffffff" class="hidden absolute z-[70] top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] rounded-[1.5rem] border border-outline-variant p-4 text-left shadow-xl">
-          <div id="gallery-calendar-months" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
+          <div id="gallery-calendar-months"></div>
           <p class="text-[10px] text-on-surface-variant text-center mt-3">운영기간의 평일만 선택할 수 있어요.</p>
         </div>
       </div>
@@ -60,7 +60,7 @@
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/layout.js?v=6"></script>
 <script src="assets/js/pray-word.js?v=4"></script>
-<script src="assets/js/gallery.js?v=8"></script>
+<script src="assets/js/gallery.js?v=9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });
