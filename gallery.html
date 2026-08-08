@@ -12,189 +12,44 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="max-w-[470px] mx-auto">
-    <!-- 인스타그램처럼 로고 헤더+스토리 바+피드를 하나의 흰 배경(카드) 위에 올려서, 뒤의 mesh 배경과 분리 -->
-    <div class="bg-surface-lowest rounded-[1.5rem] overflow-hidden shadow-sm">
-      <div class="flex items-center justify-between px-4 pt-4 pb-2">
-        <h1 class="sapians-wordmark text-2xl">SAPIANS</h1>
-        <button type="button" id="sapians-compose-btn" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="새 게시물">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      </div>
-
-      <!-- 스토리 바: 본인 원(+ 배지, 새 게시물 작성용) + 노출 대상 유저들 -->
-      <div id="sapians-stories" class="flex gap-4 overflow-x-auto p-4 border-b border-outline-variant scrollbar-hide"></div>
-
-      <!-- 기도/말씀 인증이 하나의 타임라인에 시간순으로 섞여서 나오는 피드 -->
-      <div id="sapians-feed" class="flex flex-col"></div>
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="sapians-wordmark text-3xl lg:text-4xl">SAPIANS</h1>
+      <p class="text-sm text-on-surface-variant mt-1">날짜별 인증 갤러리</p>
     </div>
+    <p class="text-xs text-on-surface-variant">2026.08.10 – 09.06 · Weekdays</p>
   </div>
 
-  <!-- 새 게시물 작성: 기도/말씀 중 선택 -> 기존 인증 모달 그대로 재사용 -->
-  <div id="sapians-compose-modal" class="hidden fixed inset-0 z-[65] items-center justify-center px-4">
-    <div id="sapians-compose-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
-    <div class="glass-panel relative rounded-[2rem] w-full max-w-xs p-6 flex flex-col gap-3">
-      <h2 class="text-lg font-bold text-center mb-1">새 게시물</h2>
-      <button id="sapians-compose-pray" type="button" class="pill-btn-primary py-3 text-sm">기도 인증</button>
-      <button id="sapians-compose-word" type="button" class="glass-card py-3 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">말씀 묵상</button>
-      <button id="sapians-compose-cancel" type="button" class="text-xs text-on-surface-variant text-center mt-2 hover:text-on-surface">취소</button>
-    </div>
-  </div>
-
-  <!-- 댓글: 인스타그램처럼 하단 시트로 목록 + 입력창 -->
-  <div id="sapians-comments-modal" class="hidden fixed inset-0 z-[65] items-end sm:items-center justify-center">
-    <div id="sapians-comments-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
-    <div class="glass-panel relative rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-[470px] max-h-[75vh] flex flex-col">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant flex-shrink-0">
-        <span class="text-sm font-semibold">댓글</span>
-        <button id="sapians-comments-close" type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="닫기">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div id="sapians-comments-list" class="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4"></div>
-      <form id="sapians-comments-form" class="flex items-center gap-2 px-4 py-3 border-t border-outline-variant flex-shrink-0">
-        <input id="sapians-comments-input" type="text" placeholder="댓글 달기..." class="glass-input flex-1 rounded-full px-4 py-2 text-sm" maxlength="300" autocomplete="off">
-        <button type="submit" id="sapians-comments-submit" class="text-primary font-semibold text-sm px-2 disabled:opacity-40">게시</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- 기도 인증 모달 (Home과 동일 마크업 — assets/js/pray-word.js가 두 페이지 공용으로 다룬다) -->
-  <div id="pray-modal" class="hidden fixed inset-0 z-[60] items-center justify-center px-4">
-    <div id="pray-modal-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
-    <div class="glass-panel relative rounded-[2rem] w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 sm:p-8">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold">기도 인증</h2>
-        <button id="pray-modal-close" type="button" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="닫기">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div id="pray-class-list" class="flex flex-col gap-4"></div>
-      <p id="pray-class-hint" class="text-xs text-error mt-2 hidden">사진 첨부, 기도 장소, 시작/종료 일시를 모두 입력해주세요.</p>
-
-      <button id="pray-add-class" type="button" aria-label="클래스 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
-        <i class="fa-solid fa-plus"></i>
+  <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6">
+    <div class="flex items-center gap-3">
+      <button id="gallery-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜">
+        <i class="fa-solid fa-chevron-left"></i>
       </button>
-
-      <div class="flex gap-3 mt-6">
-        <button id="pray-cancel" type="button" class="glass-card flex-1 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">취소</button>
-        <button id="pray-save" type="button" class="pill-btn-primary flex-1 py-2.5 text-sm">저장</button>
+      <div class="flex-1 min-w-0 text-center">
+        <p id="gallery-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p>
+        <label for="gallery-date-control" class="sr-only">갤러리 날짜</label>
+        <input id="gallery-date-control" type="date" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm font-semibold text-center w-full max-w-[220px]">
+        <p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p>
       </div>
-      <button id="pray-reset" type="button" class="block mx-auto mt-4 text-xs font-medium text-error hover:opacity-80">전체 초기화</button>
+      <button id="gallery-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+    <div id="gallery-day-chips" class="flex gap-2 overflow-x-auto scrollbar-hide mt-4 pb-1"></div>
+  </section>
+
+  <div class="flex items-center justify-between gap-3 mb-3 px-1">
+    <div>
+      <h2 id="gallery-grid-title" class="text-lg font-bold">Student Gallery</h2>
+      <p id="gallery-student-count" class="text-xs text-on-surface-variant mt-0.5"></p>
+    </div>
+    <div class="flex items-center gap-3 text-[11px] text-on-surface-variant">
+      <span><i class="fa-solid fa-hands-praying text-primary mr-1"></i>기도</span>
+      <span><i class="fa-solid fa-book-bible text-secondary mr-1"></i>말씀</span>
     </div>
   </div>
 
-  <!-- 기도 인증 클래스 입력 필드 템플릿 (사진첨부 / 기도장소 / 시작시간 / 종료시간) -->
-  <template id="pray-class-template">
-    <div class="pray-class-entry glass-card rounded-2xl p-4 relative">
-      <button type="button" class="pray-remove-class hidden absolute top-3 right-3 icon-glass w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant text-xs" aria-label="클래스 삭제">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="flex flex-col gap-3 pr-8">
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">사진 첨부 <span class="text-error">*</span></label>
-          <input type="file" accept="image/*" class="pray-photo-input w-full text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-on-surface">
-          <div class="pray-photo-preview-wrap hidden relative mt-2">
-            <img class="pray-photo-preview w-full h-40 object-contain bg-surface-container rounded-xl" alt="첨부한 사진 미리보기">
-            <button type="button" class="pray-photo-remove absolute top-2 right-2 icon-glass w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant text-xs" aria-label="사진 삭제">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <label class="flex items-center gap-2 text-xs text-on-surface-variant mt-2 select-none cursor-pointer">
-            <input type="checkbox" class="pray-photo-unavailable-input w-3.5 h-3.5 rounded accent-primary">
-            사진을 찍지 못했어요
-          </label>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">기도 장소 <span class="text-error">*</span></label>
-          <select class="pray-location-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-            <option value="대성전">대성전</option>
-            <option value="요한성전">요한성전</option>
-            <option value="중등부기도">중등부기도</option>
-            <option value="가정">가정</option>
-            <option value="기타">기타</option>
-          </select>
-          <input type="text" placeholder="기도 장소를 입력해주세요" class="pray-location-other-input hidden glass-input w-full px-3 py-2 rounded-xl text-sm mt-2">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 일시 <span class="text-error">*</span></label>
-          <input type="datetime-local" class="pray-start-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">종료 일시 <span class="text-error">*</span></label>
-          <input type="datetime-local" class="pray-end-input glass-input w-full px-3 py-2 rounded-xl text-sm">
-        </div>
-        <p class="text-[10px] text-on-surface-variant -mt-2">기록은 시작 일시의 날짜 기준으로 저장돼요 (예: 12/31 23시 시작 → 1/1 1시 종료는 12/31 기록).</p>
-        <p class="pray-entry-datetime text-[11px] text-on-surface-variant"></p>
-      </div>
-    </div>
-  </template>
-
-  <!-- 말씀 인증 모달 -->
-  <div id="word-modal" class="hidden fixed inset-0 z-[60] items-center justify-center px-4">
-    <div id="word-modal-overlay" class="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"></div>
-    <div class="glass-panel relative rounded-[2rem] w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 sm:p-8">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold">말씀 인증</h2>
-        <button id="word-modal-close" type="button" class="icon-glass w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant" aria-label="닫기">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div class="mb-5">
-        <label class="block text-xs font-medium text-on-surface-variant mb-1">사진 첨부 <span class="text-error">*</span></label>
-        <input type="file" accept="image/*" id="word-photo-input" class="w-full text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-on-surface">
-        <div id="word-photo-preview-wrap" class="hidden relative mt-2">
-          <img id="word-photo-preview" class="w-full h-40 object-contain bg-surface-container rounded-xl" alt="첨부한 사진 미리보기">
-          <button type="button" id="word-photo-remove" class="absolute top-2 right-2 icon-glass w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant text-xs" aria-label="사진 삭제">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-        <p id="word-photo-hint" class="text-xs text-error mt-1 hidden">사진을 첨부해주세요.</p>
-      </div>
-
-      <div id="word-verse-list" class="flex flex-col gap-4"></div>
-      <p id="word-verse-hint" class="text-xs text-error mt-2 hidden">읽은 말씀 구절(시작 ~ 끝)을 입력해주세요.</p>
-
-      <button id="word-add-verse" type="button" aria-label="구절 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
-        <i class="fa-solid fa-plus"></i>
-      </button>
-
-      <div class="flex gap-3 mt-6">
-        <button id="word-cancel" type="button" class="glass-card flex-1 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">취소</button>
-        <button id="word-save" type="button" class="pill-btn-primary flex-1 py-2.5 text-sm">저장</button>
-      </div>
-      <button id="word-reset" type="button" class="block mx-auto mt-4 text-xs font-medium text-error hover:opacity-80">전체 초기화</button>
-    </div>
-  </div>
-
-  <!-- 읽은 말씀 구절 입력 필드 템플릿 (시작 책/장/절 ~ 끝 책/장/절) -->
-  <template id="word-verse-template">
-    <div class="word-verse-entry glass-card rounded-2xl p-4 relative">
-      <button type="button" class="word-remove-verse hidden absolute top-3 right-3 icon-glass w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant text-xs" aria-label="구절 삭제">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="flex flex-col gap-3 pr-8">
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-start-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
-            <input type="number" min="1" placeholder="장" class="word-start-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절" class="word-start-verse glass-input px-2 py-2 rounded-xl text-xs">
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">끝 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-end-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
-            <input type="number" min="1" placeholder="장" class="word-end-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절" class="word-end-verse glass-input px-2 py-2 rounded-xl text-xs">
-          </div>
-        </div>
-      </div>
-    </div>
-  </template>
+  <div id="gallery-student-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-16"></div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
@@ -202,9 +57,8 @@
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/layout.js?v=5"></script>
-<script src="assets/js/bible-books.js"></script>
 <script src="assets/js/pray-word.js?v=4"></script>
-<script src="assets/js/gallery.js?v=5"></script>
+<script src="assets/js/gallery.js?v=6"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });
