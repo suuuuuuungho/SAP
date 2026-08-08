@@ -15,7 +15,6 @@
   <div class="flex flex-wrap items-end justify-between gap-3 mb-8 lg:mb-10">
     <div>
       <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Home</h1>
-      <p class="text-sm text-on-surface-variant mt-1">우리의 소식과 함께 쌓아가는 기록</p>
     </div>
     <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
       <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-quaternary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-quaternary"></span></span>
@@ -33,7 +32,7 @@
 
   <section class="mb-8">
     <div class="flex items-center gap-2 mb-3">
-      <h2 class="text-lg font-bold">Message Board</h2>
+      <h2 class="text-lg font-bold">Board</h2>
       <i class="fa-solid fa-bullhorn text-primary text-sm"></i>
     </div>
     <div id="home-message-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
@@ -41,7 +40,7 @@
 
   <section class="mb-16">
     <div class="mb-4">
-      <h2 class="text-lg font-bold">Live Ranking</h2>
+      <h2 class="text-lg font-bold">Ranking</h2>
       <p class="text-xs text-on-surface-variant mt-1">운영기간 평일 누적 · 30초마다 자동 갱신</p>
     </div>
     <div id="home-ranking-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
@@ -53,7 +52,7 @@
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/layout.js?v=6"></script>
-<script src="assets/js/public-home.js?v=1"></script>
+<script src="assets/js/public-home.js?v=2"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'public-home' });

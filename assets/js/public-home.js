@@ -6,7 +6,7 @@ const HOME_RANKING_META = {
   total: { title: 'Overall', description: '기도 · 공부 · 말씀 · 예배 합산', icon: 'fa-solid fa-trophy', accent: 'text-primary' },
   pray: { title: 'Prayer', description: '누적 기도 시간', icon: 'fa-solid fa-hands-praying', accent: 'text-primary' },
   study: { title: 'Study', description: '누적 공부 시간', icon: 'fa-solid fa-book-open', accent: 'text-tertiary' },
-  word: { title: 'Word', description: '말씀 인증일 × 60분', icon: 'fa-solid fa-book-bible', accent: 'text-secondary' }
+  word: { title: 'Word', description: '누적 말씀 묵상 시간', icon: 'fa-solid fa-book-bible', accent: 'text-secondary' }
 };
 
 let publicHomeCurrentUserId = null;
@@ -78,7 +78,11 @@ function renderPublicHomeMessages(messages) {
     wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-5">현재 전달된 메시지가 없습니다.</p>';
     return;
   }
-  wrap.innerHTML = messages.map((message) => `
+  const orderedMessages = [...messages].sort((a, b) => {
+    const audienceOrder = Number(!!a.recipient_user_id) - Number(!!b.recipient_user_id);
+    return audienceOrder || new Date(b.created_at) - new Date(a.created_at);
+  });
+  wrap.innerHTML = orderedMessages.map((message) => `
     <article class="glass-card rounded-2xl p-4 border-l-4 ${message.recipient_user_id ? 'border-secondary' : 'border-primary'}">
       <div class="flex items-center gap-2 mb-2">
         <span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary-container/40 text-secondary' : 'bg-primary-container/20 text-primary'}">${message.recipient_user_id ? 'FOR YOU' : 'NOTICE'}</span>
