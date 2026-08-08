@@ -371,10 +371,13 @@ async function adminLoadDashboard() {
 
 async function adminSendMissingSms(userId, missing) {
   const row = adminDashboardRows.find((item) => item.user_id === userId);
-  if (!row?.phone) { adminShowStatus(`${row?.name || '학생'}의 본인 연락처가 없습니다. Member에서 입력해주세요.`, true); return; }
-  if (!confirm(`${row.name} 학생에게 미인증 안내 문자를 보낼까요?\n현재 미인증: ${missing}`)) return;
+  const member = adminMembers.find((item) => item.id === userId);
+  const studentPhone = row?.phone || member?.phone || '';
+  if (!studentPhone) { adminShowStatus(`${row?.name || member?.name || '학생'}의 본인 연락처가 없습니다. Member에서 입력해주세요.`, true); return; }
+  const studentName = row?.name || member?.name || '학생';
+  if (!confirm(`${studentName} 학생에게 미인증 안내 문자를 보낼까요?\n현재 미인증: ${missing}`)) return;
   const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { userId, date: document.getElementById('admin-dashboard-date').value, missing: missing.split(', ') } });
-  if (error || !data?.ok) adminShowStatus(data?.message || '문자를 보내지 못했습니다.', true); else adminShowStatus(`${row.name} 학생에게 문자를 보냈습니다.`);
+  if (error || !data?.ok) adminShowStatus(data?.message || '문자를 보내지 못했습니다.', true); else adminShowStatus(`${studentName} 학생에게 문자를 보냈습니다.`);
 }
 
 async function adminOpenReport(userId) {
