@@ -298,15 +298,22 @@ function adminRoleBadge(member) {
 }
 
 function adminWireTabs() {
-  document.querySelectorAll('[data-admin-tab]').forEach((button) => button.addEventListener('click', () => {
-    adminActiveTab = button.dataset.adminTab;
-    document.querySelectorAll('[data-admin-tab]').forEach((item) => item.classList.toggle('nav-pill-active', item === button));
+  const validTabs = ['board', 'gallery', 'control', 'member', 'dashboard'];
+  const selectTab = (tab) => {
+    adminActiveTab = validTabs.includes(tab) ? tab : 'board';
+    window.history.replaceState(null, '', `#${adminActiveTab}`);
+    document.querySelectorAll('[data-admin-tab]').forEach((item) => item.classList.toggle('nav-pill-active', item.dataset.adminTab === adminActiveTab));
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== adminActiveTab));
     if (adminActiveTab === 'control') adminLoadFeatures();
     if (adminActiveTab === 'member') adminLoadMembers();
     if (adminActiveTab === 'dashboard') adminLoadDashboard();
     if (adminActiveTab === 'gallery') adminLoadGalleryPosts();
-  }));
+    document.getElementById('sidebar-menu')?.classList.add('-translate-x-[120%]');
+    document.getElementById('sidebar-overlay')?.classList.add('hidden', 'opacity-0');
+    document.body.style.overflow = '';
+  };
+  document.querySelectorAll('[data-admin-tab]').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.adminTab)));
+  selectTab(window.location.hash.replace('#', '') || 'board');
 }
 
 async function adminLoadFeatures() {
@@ -453,8 +460,8 @@ async function initAdminWidgets() {
   adminWireVerseForm();
   adminWireVerseList();
   adminWireBibleLookup();
-  adminWireConsole();
   await adminLoadUsers();
+  adminWireConsole();
   await Promise.all([adminLoadMessages(), adminLoadVerses(), adminLoadBibleVersions(), adminLoadMembers()]);
 }
 
