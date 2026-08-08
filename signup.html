@@ -11,7 +11,7 @@
 </head>
 <body class="text-on-surface min-h-screen flex items-center justify-center px-4 py-10">
 <div class="mesh-bg"></div>
-<div class="w-full max-w-md glass-panel rounded-[2rem] p-8">
+<div class="w-full max-w-3xl glass-panel rounded-[2rem] p-6 sm:p-8">
   <div class="text-center mb-8">
     <div class="w-10 h-10 bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary rounded-full text-sm flex items-center justify-center font-bold mx-auto mb-4">S</div>
     <h1 class="text-2xl font-bold tracking-tight">SAP 회원가입</h1>
@@ -57,6 +57,70 @@
         class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
     </div>
 
+    <section id="signup-pledge" class="glass-card rounded-[1.5rem] p-5 sm:p-6 mt-2">
+      <div class="text-center mb-5">
+        <h2 class="text-xl sm:text-2xl font-bold">SAP 1기 서약서</h2>
+        <p class="text-sm text-on-surface-variant mt-2">나는 「SAP」 프로그램에 참여하며 하나님 앞에서 다음과 같이 다짐합니다.</p>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="1" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">1.</strong>나는 교회에서뿐만 아니라 학교와 가정 등 어디서나 구원받은 은혜 감사하며 신앙생활하겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="2" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">2.</strong>나는 프로그램 기간 동안 기도, 말씀, 예배, 공부를 성실하게 실천하겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="3" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">3.</strong>나는 요한복음을 읽고 묵상하며 예수님의 마음을 배우겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="4" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">4.</strong>나는 맡겨진 학업에도 최선을 다하며 하나님께 영광 돌리는 삶을 살겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="5" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">5.</strong>나는 정직하게 활동 내용을 기록하고 스스로를 점검하겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="6" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">6.</strong>나는 끝까지 포기하지 않고 SAP를 완주하기 위해 노력하겠습니다.</span>
+        </label>
+        <label class="flex items-start gap-3 glass-panel rounded-2xl p-4 cursor-pointer">
+          <input type="checkbox" data-pledge-item="7" class="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0">
+          <span class="text-sm leading-6"><strong class="text-primary mr-1">7.</strong>나는 SAP의 규칙을 성실히 지키며, 지속적으로 참여하지 못할 경우 선생님의 결정에 따르겠습니다.</span>
+        </label>
+      </div>
+      <p id="pledge-agreement-hint" class="hidden text-xs text-error mt-2">7개 항목에 모두 동의해주세요.</p>
+
+      <div class="mt-6 rounded-2xl bg-secondary-container/15 p-5">
+        <h3 class="font-bold text-secondary mb-3">나의 결단</h3>
+        <div class="text-sm leading-7 text-on-surface-variant flex flex-col gap-3">
+          <p>나는 SAP를 통해 기도로 숨 쉬고, 말씀으로 채워지며, 예배로 하나님을 만나고, 공부로 하나님이 주신 사명을 준비하겠습니다.</p>
+          <p>나는 신앙이 교회 안에만 머무는 것이 아니라 학교와 가정, 그리고 일상 속에서도 살아 움직여야 함을 기억하며 하나님께서 기뻐하시는 삶을 살아가겠습니다.</p>
+          <p class="font-semibold text-on-surface">하나님 앞에서 이 모든 것을 진심으로 결단하며 서약합니다.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+        <div>
+          <label for="pledge-name-input" class="block text-sm font-medium mb-1">서약자 이름</label>
+          <input id="pledge-name-input" type="text" class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" placeholder="이름을 직접 입력해주세요">
+          <p id="pledge-name-hint" class="hidden text-xs text-error mt-1">서약자 이름을 입력해주세요.</p>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-sm font-medium">서명</label>
+            <button id="pledge-signature-clear" type="button" class="text-xs text-on-surface-variant hover:text-error">다시 쓰기</button>
+          </div>
+          <canvas id="pledge-signature-canvas" class="w-full h-32 rounded-2xl bg-white border border-outline-variant cursor-crosshair" style="touch-action:none" aria-label="직접 서명란"></canvas>
+          <p id="pledge-signature-hint" class="hidden text-xs text-error mt-1">서명란에 직접 서명해주세요.</p>
+        </div>
+      </div>
+    </section>
+
     <button type="submit" id="signup-submit"
       class="pill-btn-primary w-full text-sm px-4 py-2.5 mt-2">
       회원가입
@@ -75,6 +139,7 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/grade-class.js?v=2"></script>
 <script src="assets/js/auth-password.js?v=1"></script>
+<script src="assets/js/signup-pledge.js?v=1"></script>
 <script>
   const form = document.getElementById('signup-form');
   const usernameInput = document.getElementById('username-input');
@@ -89,6 +154,7 @@
   const status = document.getElementById('signup-status');
 
   renderGradeClassOptions(gradeClassInput);
+  initSignupPledge();
 
   function showStatus(message, isError) {
     status.textContent = message;
@@ -133,6 +199,12 @@
       return;
     }
 
+    if (!validateSignupPledge()) {
+      showStatus('서약서 동의, 이름, 서명을 모두 완료해주세요.', true);
+      document.getElementById('signup-pledge').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     if (!window.supabaseClient) {
       showStatus('Supabase 설정이 없습니다. assets/config.example.js를 assets/config.js로 복사하고 값을 채워주세요.', true);
       return;
@@ -149,7 +221,8 @@
           username: usernameInput.value.trim(),
           name: nameInput.value.trim(),
           grade_class: gradeClassInput.value,
-          phone: phoneInput.value.trim()
+          phone: phoneInput.value.trim(),
+          ...getSignupPledgeData()
         }
       }
     });
