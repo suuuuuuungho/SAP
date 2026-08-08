@@ -108,6 +108,35 @@ function galleryMediaHTML(userId, type) {
     </div>`).join('')}</div>`;
 }
 
+function galleryVerificationSummary(userId, type) {
+  if (type === 'pray') {
+    const row = galleryPrayMap[userId];
+    const entries = row && Array.isArray(row.entries) ? row.entries : [];
+    return {
+      text: formatPrayerSummary(entries) || '기도 인증',
+      minutes: entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0)
+    };
+  }
+  const row = galleryWordMap[userId];
+  const verses = row && Array.isArray(row.verses) ? row.verses : [];
+  return {
+    text: formatWordSummary(verses) || '말씀묵상 인증',
+    minutes: calculateWordMinutes(verses)
+  };
+}
+
+function galleryVerificationSummaryHTML(userId, type, compact = false) {
+  const data = galleryCategoryData(userId, type);
+  if (!data.verified) return '';
+  const summary = galleryVerificationSummary(userId, type);
+  return `<div class="${compact ? 'mt-2' : 'mt-3'} min-w-0">
+    <div class="flex items-start justify-between gap-3">
+      <p class="text-xs leading-5 text-on-surface-variant ${compact ? 'line-clamp-2' : ''}">${galleryEscape(summary.text)}</p>
+      <span class="text-xs font-bold text-primary whitespace-nowrap">${summary.minutes}분</span>
+    </div>
+  </div>`;
+}
+
 function galleryStudentCardHTML(user, type) {
   const data = galleryCategoryData(user.id, type);
   const accent = type === 'pray' ? 'text-primary bg-primary/10' : 'text-secondary bg-secondary/10';
@@ -121,9 +150,10 @@ function galleryStudentCardHTML(user, type) {
         <div class="min-w-0"><p class="font-bold text-sm truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant truncate">@${galleryEscape(user.username)}</p></div>
       </div>
       ${galleryMediaHTML(user.id, type)}
+      ${galleryVerificationSummaryHTML(user.id, type, true)}
       <div class="mt-3 flex items-center justify-between gap-2">
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${data.verified ? accent : 'text-on-surface-variant bg-surface-container'}">${data.verified ? '인증 완료' : '미인증'}</span>
-        ${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>댓글</button>` : ''}
+        ${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>comment</button>` : ''}
       </div>
     </article>`;
 }
@@ -188,7 +218,23 @@ async function openGalleryComments(userId, type) {
   galleryActiveCommentsPost = { ownerId: userId, date: galleryDays[gallerySelectedIndex], type };
   const modal = document.getElementById('gallery-comments-modal');
   const label = document.getElementById('gallery-comments-post-label');
+  const preview = document.getElementById('gallery-comments-post-preview');
   if (label) label.textContent = `${user?.name || ''} · ${type === 'pray' ? '기도' : '말씀묵상'} · ${galleryDateParts(galleryActiveCommentsPost.date).short}`;
+  if (preview && user) {
+    const avatar = galleryAvatarUrls[user.id]
+      ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
+      : (galleryEscape(user.name).charAt(0) || '?');
+    preview.innerHTML = `<article>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold overflow-hidden">${avatar}</div>
+        <div class="min-w-0"><p class="text-sm font-bold truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant">@${galleryEscape(user.username)}</p></div>
+      </div>
+      <div class="grid grid-cols-[96px_1fr] gap-3 items-start">
+        <div class="min-w-0">${galleryMediaHTML(user.id, type)}</div>
+        ${galleryVerificationSummaryHTML(user.id, type)}
+      </div>
+    </article>`;
+  }
   modal.classList.remove('hidden');
   modal.classList.add('flex');
   document.getElementById('gallery-comments-list').innerHTML = '<p class="text-sm text-on-surface-variant text-center py-10">불러오는 중...</p>';
