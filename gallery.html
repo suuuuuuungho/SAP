@@ -32,7 +32,6 @@
         <p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p>
         <div id="gallery-calendar-popover" style="background-color:#ffffff" class="hidden absolute z-[70] top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] rounded-[1.5rem] border border-outline-variant p-4 text-left shadow-xl">
           <div id="gallery-calendar-months"></div>
-          <p class="text-[10px] text-on-surface-variant text-center mt-3">운영기간의 평일만 선택할 수 있어요.</p>
         </div>
       </div>
       <button id="gallery-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜">
@@ -42,12 +41,11 @@
   </section>
 
   <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="gallery-type-tabs">
-    <button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>Prayer</button>
-    <button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>Word</button>
+    <button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>기도</button>
+    <button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>말씀묵상</button>
   </div>
 
   <section class="mb-7">
-    <h2 id="gallery-active-title" class="text-lg font-bold mb-3 px-1">Prayer Gallery</h2>
     <div id="gallery-active-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
   </section>
 
