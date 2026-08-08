@@ -54,7 +54,23 @@
 
     <section data-admin-panel="member" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-4 sm:p-6"><div class="flex flex-wrap gap-3 justify-between items-center mb-5"><div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div><div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div></div><div id="admin-member-list" class="flex flex-col gap-3"></div></div></section>
 
-    <section data-admin-panel="dashboard" class="admin-panel hidden"><div class="flex flex-wrap items-end justify-between gap-4 mb-5"><div><h2 class="text-2xl font-bold">Dashboard</h2><p class="text-sm text-on-surface-variant">학생별 인증 현황과 후속 조치를 한 화면에서 관리합니다.</p></div><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div><div id="admin-dashboard-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div><div class="glass-panel rounded-[2rem] p-4 sm:p-6 overflow-x-auto"><div id="admin-dashboard-list" class="min-w-[860px]"></div></div></section>
+    <section data-admin-panel="dashboard" class="admin-panel hidden">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-5"><div><h2 class="text-2xl font-bold">Dashboard</h2><p class="text-sm text-on-surface-variant">학생별 인증 현황과 후속 조치를 한 화면에서 관리합니다.</p></div><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div>
+      <div id="admin-dashboard-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div>
+      <div class="glass-panel rounded-[2rem] p-4 sm:p-6 mb-5">
+        <div class="flex flex-wrap items-end gap-3 mb-5">
+          <label class="text-xs text-on-surface-variant">학년<select id="admin-dashboard-grade" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1 min-w-32"><option value="all">전체 학년</option></select></label>
+          <label class="text-xs text-on-surface-variant">반<select id="admin-dashboard-class" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1 min-w-32"><option value="all">전체 반</option></select></label>
+          <button id="admin-dashboard-bulk-sms" type="button" class="ml-auto rounded-full bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 text-sm font-bold shadow-lg shadow-sky-200 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-paper-plane mr-2"></i>전체 미인증 문자 발송</button>
+        </div>
+        <div class="overflow-x-auto"><div id="admin-dashboard-list" class="min-w-[920px]"></div></div>
+        <div id="admin-dashboard-pagination" class="flex flex-wrap items-center justify-center gap-2 mt-5"></div>
+      </div>
+      <section class="glass-panel rounded-[2rem] p-4 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-4"><div><h3 class="text-lg font-bold">문자 발송 현황</h3><p class="text-xs text-on-surface-variant mt-1">최근 발송 결과를 확인합니다.</p></div><button id="admin-sms-log-refresh" type="button" class="icon-glass w-9 h-9 rounded-full text-sky-500" aria-label="발송 현황 새로고침"><i class="fa-solid fa-rotate"></i></button></div>
+        <div id="admin-sms-log-list" class="flex flex-col gap-2"></div>
+      </section>
+    </section>
   </div>
 
   <div id="admin-member-modal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4"><div class="absolute inset-0 bg-on-surface/35 backdrop-blur-sm" data-close-modal></div><form id="admin-member-form" class="glass-panel relative rounded-[2rem] p-6 w-full max-w-lg flex flex-col gap-3"><div class="flex justify-between items-center"><h2 class="text-xl font-bold">Edit Member</h2><button type="button" data-close-modal class="icon-glass w-9 h-9 rounded-full"><i class="fa-solid fa-xmark"></i></button></div><input id="admin-member-id" type="hidden"><div class="grid grid-cols-2 gap-3"><label class="text-xs">이름<input id="admin-member-name" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학년/반<input id="admin-member-grade" class="glass-input rounded-xl p-2 w-full mt-1"></label></div><label class="text-xs">본인 연락처<input id="admin-member-phone" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학부모 연락처<input id="admin-member-parent-phone" class="glass-input rounded-xl p-2 w-full mt-1" placeholder="나중에 SMS 발송에 사용"></label><label class="text-xs">권한<select id="admin-member-role" class="glass-input rounded-xl p-2 w-full mt-1"><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></select></label><div class="grid grid-cols-2 gap-3"><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Host <input id="admin-member-host" type="checkbox" class="rounded text-primary"></label><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Active <input id="admin-member-active" type="checkbox" class="rounded text-primary"></label></div><div class="flex gap-2 mt-2"><button class="pill-btn-primary flex-1 py-2.5">저장</button><button id="admin-member-delete" type="button" class="glass-card rounded-full px-5 text-error">강제 탈퇴</button></div></form></div>
@@ -74,7 +90,7 @@
 <script src="assets/js/profile-avatar.js?v=3"></script>
 <script>window.IS_ADMIN_CONSOLE = true;</script>
 <script src="assets/js/gallery.js?v=20"></script>
-<script src="assets/js/admin.js?v=12"></script>
+<script src="assets/js/admin.js?v=13"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

@@ -246,6 +246,10 @@ function adminWireVerseList() {
 let adminMembers = [];
 let adminDashboardRows = [];
 let adminActiveTab = 'board';
+const ADMIN_DASHBOARD_PAGE_SIZE = 20;
+let adminDashboardPage = 1;
+let adminDashboardGrade = 'all';
+let adminDashboardClass = 'all';
 
 function adminRoleBadge(member) {
   const role = member.app_role;
@@ -356,16 +360,79 @@ async function adminLoadDashboard() {
   const { data, error } = await window.supabaseClient.rpc('admin_get_dashboard', { target_date: date });
   if (error) { adminShowStatus('인증 현황을 불러오지 못했습니다. 관리자 스키마를 확인해주세요.', true); return; }
   adminDashboardRows = data || [];
+  adminDashboardPage = 1;
+  adminBuildDashboardFilters();
+  adminRenderDashboard();
+  await adminLoadSmsLogs();
+}
+
+function adminDashboardGroup(gradeClass) {
+  const value = String(gradeClass || '').trim();
+  let match = value.match(/^([1-3])-(\d+)반$/);
+  if (match) return { grade: `${match[1]}학년`, className: `${match[2]}반` };
+  match = value.match(/^신입(\d+)반$/);
+  if (match) return { grade: '신입반', className: `${match[1]}반` };
+  return { grade: value || '미지정', className: value || '미지정' };
+}
+
+function adminBuildDashboardFilters() {
+  const gradeSelect = document.getElementById('admin-dashboard-grade');
+  const classSelect = document.getElementById('admin-dashboard-class');
+  if (!gradeSelect || !classSelect) return;
+  const grades = [...new Set(adminDashboardRows.map((row) => adminDashboardGroup(row.grade_class).grade))].sort();
+  gradeSelect.innerHTML = '<option value="all">전체 학년</option>' + grades.map((grade) => `<option value="${adminEscape(grade)}">${adminEscape(grade)}</option>`).join('');
+  if (!grades.includes(adminDashboardGrade)) adminDashboardGrade = 'all';
+  gradeSelect.value = adminDashboardGrade;
+  const classes = [...new Set(adminDashboardRows.filter((row) => adminDashboardGrade === 'all' || adminDashboardGroup(row.grade_class).grade === adminDashboardGrade).map((row) => adminDashboardGroup(row.grade_class).className))].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
+  classSelect.innerHTML = '<option value="all">전체 반</option>' + classes.map((className) => `<option value="${adminEscape(className)}">${adminEscape(className)}</option>`).join('');
+  if (!classes.includes(adminDashboardClass)) adminDashboardClass = 'all';
+  classSelect.value = adminDashboardClass;
+}
+
+function adminDashboardMissing(row, worshipRequired) {
+  return [['기도', row.pray_done], ['말씀', row.word_done], ['공부', row.study_done], ...(worshipRequired ? [['예배', row.worship_done]] : [])]
+    .filter(([, done]) => !done).map(([name]) => name);
+}
+
+function adminFilteredDashboardRows() {
+  return adminDashboardRows.filter((row) => {
+    const group = adminDashboardGroup(row.grade_class);
+    return (adminDashboardGrade === 'all' || group.grade === adminDashboardGrade)
+      && (adminDashboardClass === 'all' || group.className === adminDashboardClass);
+  });
+}
+
+function adminRenderDashboard() {
+  const date = document.getElementById('admin-dashboard-date')?.value || '2026-08-10';
   const worshipRequired = [3, 5].includes(new Date(`${date}T12:00:00`).getDay());
   const cats = worshipRequired ? ['pray_done','word_done','study_done','worship_done'] : ['pray_done','word_done','study_done'];
   const completed = adminDashboardRows.filter((row) => cats.every((cat) => row[cat])).length;
   const pending = adminDashboardRows.length - completed;
   document.getElementById('admin-dashboard-summary').innerHTML = [
-    ['Students',adminDashboardRows.length,'전체 활성 학생'],['Complete',completed,worshipRequired ? '4개 인증 완료' : '3개 인증 완료'],['Needs Action',pending,'하나 이상 미인증'],['Completion',(adminDashboardRows.length ? `${Math.round(completed/adminDashboardRows.length*100)}%` : '0%'),'완료 학생 비율']
+    ['Students',adminDashboardRows.length,'전체 학생 수'],['Complete',completed,worshipRequired ? '4개 인증 완료' : '3개 인증 완료'],['Needs Action',pending,'하나 이상 미인증'],['Completion',(adminDashboardRows.length ? `${Math.round(completed/adminDashboardRows.length*100)}%` : '0%'),'완료 학생 비율']
   ].map(([title,value,desc]) => `<article class="glass-card rounded-2xl p-4"><p class="text-xs text-on-surface-variant">${title}</p><p class="text-2xl font-bold mt-1 ${title==='Needs Action'&&pending?'text-error':'text-primary'}">${value}</p><p class="text-[10px] text-on-surface-variant mt-1">${desc}</p></article>`).join('');
+  const filtered = adminFilteredDashboardRows();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ADMIN_DASHBOARD_PAGE_SIZE));
+  adminDashboardPage = Math.min(adminDashboardPage, totalPages);
+  const pageRows = filtered.slice((adminDashboardPage - 1) * ADMIN_DASHBOARD_PAGE_SIZE, adminDashboardPage * ADMIN_DASHBOARD_PAGE_SIZE);
   const wrap = document.getElementById('admin-dashboard-list');
-  wrap.innerHTML = `<div class="grid grid-cols-[minmax(180px,1.4fr)_repeat(4,minmax(110px,1fr))_170px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>문자 발송</span></div>${adminDashboardRows.map((row) => { const checks = [['기도',row.pray_done],['말씀',row.word_done],['공부',row.study_done],...(worshipRequired ? [['예배',row.worship_done]] : [])]; const missing = checks.filter(([,done])=>!done).map(([name])=>name); return `<article class="grid grid-cols-[minmax(180px,1.4fr)_repeat(4,minmax(110px,1fr))_170px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)} · ${adminEscape(row.grade_class)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">활성 학생이 없습니다.</p>'}`;
+  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_140px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생 / 학년반</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>문자 발송</span></div>${pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_140px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[11px] font-medium text-secondary mt-0.5">${adminEscape(row.grade_class || '학년반 미지정')}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 학생이 없습니다.</p>'}`;
   wrap.querySelectorAll('[data-sms]').forEach((button) => button.addEventListener('click', () => adminSendMissingSms(button.closest('[data-dashboard-user]').dataset.dashboardUser, button.dataset.missing)));
+  adminRenderDashboardPagination(filtered.length, totalPages);
+  const bulkButton = document.getElementById('admin-dashboard-bulk-sms');
+  if (bulkButton) bulkButton.disabled = pending === 0;
+}
+
+function adminRenderDashboardPagination(total, totalPages) {
+  const wrap = document.getElementById('admin-dashboard-pagination');
+  if (!wrap) return;
+  const start = total ? (adminDashboardPage - 1) * ADMIN_DASHBOARD_PAGE_SIZE + 1 : 0;
+  const end = Math.min(adminDashboardPage * ADMIN_DASHBOARD_PAGE_SIZE, total);
+  const pageButtons = Array.from({ length: totalPages }, (_, index) => index + 1)
+    .filter((page) => page === 1 || page === totalPages || Math.abs(page - adminDashboardPage) <= 2)
+    .map((page, index, pages) => `${index > 0 && page - pages[index - 1] > 1 ? '<span class="text-on-surface-variant">…</span>' : ''}<button type="button" data-dashboard-page="${page}" class="w-9 h-9 rounded-full text-xs font-bold ${page === adminDashboardPage ? 'nav-pill-active' : 'glass-card'}">${page}</button>`).join('');
+  wrap.innerHTML = `<span class="text-xs text-on-surface-variant mr-2">${start}-${end} / ${total}명</span><button type="button" data-dashboard-page="${adminDashboardPage - 1}" class="icon-glass w-9 h-9 rounded-full" ${adminDashboardPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>${pageButtons}<button type="button" data-dashboard-page="${adminDashboardPage + 1}" class="icon-glass w-9 h-9 rounded-full" ${adminDashboardPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+  wrap.querySelectorAll('[data-dashboard-page]').forEach((button) => button.addEventListener('click', () => { adminDashboardPage = Number(button.dataset.dashboardPage); adminRenderDashboard(); }));
 }
 
 async function adminSendMissingSms(userId, missing) {
@@ -377,11 +444,48 @@ async function adminSendMissingSms(userId, missing) {
   if (!confirm(`${studentName} 학생에게 미인증 안내 문자를 보낼까요?\n현재 미인증: ${missing}`)) return;
   const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { userId, date: document.getElementById('admin-dashboard-date').value, missing: missing.split(', ') } });
   if (error || !data?.ok) adminShowStatus(data?.message || '문자를 보내지 못했습니다.', true); else adminShowStatus(`${studentName} 학생에게 문자를 보냈습니다.`);
+  await adminLoadSmsLogs();
+}
+
+async function adminSendBulkMissingSms() {
+  const date = document.getElementById('admin-dashboard-date')?.value || '2026-08-10';
+  const worshipRequired = [3, 5].includes(new Date(`${date}T12:00:00`).getDay());
+  const targets = adminDashboardRows.map((row) => ({ row, missing: adminDashboardMissing(row, worshipRequired) })).filter((item) => item.missing.length > 0);
+  if (!targets.length) { adminShowStatus('미인증 학생이 없습니다.'); return; }
+  if (!confirm(`${date} 미인증 학생 ${targets.length}명에게 문자를 발송할까요?\n학생별 미인증 항목이 각각 포함됩니다.`)) return;
+  const button = document.getElementById('admin-dashboard-bulk-sms');
+  if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>발송 중 0/' + targets.length; }
+  let cursor = 0; let success = 0; let failed = 0;
+  const worker = async () => {
+    while (cursor < targets.length) {
+      const index = cursor++;
+      const target = targets[index];
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { userId: target.row.user_id, date, missing: target.missing } });
+      if (!error && data?.ok) success += 1; else failed += 1;
+      if (button) button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>발송 중 ${success + failed}/${targets.length}`;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(5, targets.length) }, worker));
+  if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>전체 미인증 문자 발송'; }
+  adminShowStatus(`일괄 발송 완료: 성공 ${success}명 · 실패 ${failed}명`, failed > 0);
+  await adminLoadSmsLogs();
+}
+
+async function adminLoadSmsLogs() {
+  const wrap = document.getElementById('admin-sms-log-list');
+  if (!wrap) return;
+  const { data, error } = await window.supabaseClient.from('admin_sms_logs').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) { wrap.innerHTML = '<p class="text-xs text-on-surface-variant py-4 text-center">문자 로그 스키마를 적용하면 발송 현황이 표시됩니다.</p>'; return; }
+  wrap.innerHTML = (data || []).map((log) => `<article class="glass-card rounded-2xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center gap-3"><span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${log.status === 'success' ? 'bg-sky-100 text-sky-500' : 'bg-error-container text-error'}"><i class="fa-solid ${log.status === 'success' ? 'fa-check' : 'fa-xmark'} text-xs"></i></span><div class="min-w-0 flex-1"><p class="text-sm font-bold">${adminEscape(log.target_name || '학생')} <span class="font-normal text-on-surface-variant">· ${adminEscape(log.grade_class || '-')}</span></p><p class="text-xs text-on-surface-variant truncate">${adminEscape(log.target_date || '')} · 미인증 ${adminEscape((log.missing_items || []).join(', '))}${log.error_message ? ` · ${adminEscape(log.error_message)}` : ''}</p></div><time class="text-[10px] text-on-surface-variant whitespace-nowrap">${new Date(log.created_at).toLocaleString('ko-KR')}</time></article>`).join('') || '<p class="text-xs text-on-surface-variant py-4 text-center">아직 문자 발송 기록이 없습니다.</p>';
 }
 
 function adminWireConsole() {
   adminWireTabs(); adminWireMember();
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
+  document.getElementById('admin-dashboard-grade')?.addEventListener('change', (event) => { adminDashboardGrade = event.target.value; adminDashboardClass = 'all'; adminDashboardPage = 1; adminBuildDashboardFilters(); adminRenderDashboard(); });
+  document.getElementById('admin-dashboard-class')?.addEventListener('change', (event) => { adminDashboardClass = event.target.value; adminDashboardPage = 1; adminRenderDashboard(); });
+  document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
+  document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);
 }
 
 async function initAdminWidgets() {
