@@ -151,8 +151,9 @@ function renderWordWidgetSummary() {
 
   const summary = formatWordSummary(getDailyStatus(selectedDateKey).word.verses);
   if (summary) {
+    const totalMinutes = calculateWordMinutes(getDailyStatus(selectedDateKey).word.verses);
     slot.innerHTML = `
-      <p class="text-3xl font-bold text-primary">${WORD_VERIFIED_MINUTES}<span class="text-base font-semibold ml-0.5">분</span></p>
+      <p class="text-3xl font-bold text-primary">${totalMinutes}<span class="text-base font-semibold ml-0.5">분</span></p>
       <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${summary}</p>
     `;
   } else {
@@ -318,12 +319,12 @@ function renderWorshipWidgetSummary() {
   }
 }
 
-// 기도 sums real logged time; 말씀 is a flat 60분 once verified; 공부 sums Record + manual entries;
+// 기도 sums real logged time; 말씀은 기본 60분 + 추가 구절별 묵상 시간; 공부 sums Record + manual entries;
 // 예배 is a flat 120분 when O/가정 was chosen (수/금만 활성화).
 function getCategoryMinutes(key) {
   const s = getDailyStatus(selectedDateKey);
   if (key === 'pray') return s.pray.entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0);
-  if (key === 'word') return s.word.verified ? WORD_VERIFIED_MINUTES : 0;
+  if (key === 'word') return calculateWordMinutes(s.word.verses);
   if (key === 'study') return Math.round((getStudySeconds(s.study.sessions, 'record') + getStudySeconds(s.study.sessions, 'manual')) / 60);
   if (key === 'worship') return s.worship.minutes || 0;
   return 0;

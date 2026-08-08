@@ -272,6 +272,11 @@
             <input type="number" min="1" placeholder="절" class="word-end-verse glass-input px-2 py-2 rounded-xl text-xs">
           </div>
         </div>
+        <div class="word-meditation-time-wrap hidden">
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">말씀 묵상 시간 (분)</label>
+          <input type="number" min="1" max="1440" step="1" inputmode="numeric" placeholder="예: 30" class="word-meditation-minutes glass-input w-full px-3 py-2 rounded-xl text-xs">
+          <p class="text-[10px] text-on-surface-variant mt-1">입력한 시간이 기본 60분에 추가됩니다.</p>
+        </div>
       </div>
     </div>
   </template>
@@ -373,8 +378,8 @@
 <script src="assets/js/auth.js?v=4"></script>
 <script src="assets/js/layout.js?v=9"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/pray-word.js?v=4"></script>
-<script src="assets/js/home.js?v=27"></script>
+<script src="assets/js/pray-word.js?v=5"></script>
+<script src="assets/js/home.js?v=28"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'mypage' });

@@ -91,7 +91,7 @@ function buildDailySeries(history) {
       const worshipRow = byDate.worship[key];
 
       const prayMin = entries.reduce((s, e) => s + durationMinutes(e.start, e.end), 0);
-      const wordMin = verses.length > 0 ? STAT_WORD_VERIFIED_MINUTES : 0;
+      const wordMin = calculateWordMinutes(verses);
       const studyMin = Math.round((statGetStudySeconds(sessions, 'record') + statGetStudySeconds(sessions, 'manual')) / 60);
       const worshipMin = worshipRow ? (worshipRow.minutes || 0) : 0;
       const totalMin = prayMin + wordMin + studyMin + worshipMin;

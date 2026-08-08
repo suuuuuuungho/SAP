@@ -136,10 +136,24 @@ with pray_minutes as (
   group by r.user_id
 ),
 word_minutes as (
-  select r.user_id, (count(*) filter (where jsonb_array_length(r.verses) > 0) * 60)::bigint as minutes
+  select r.user_id,
+         coalesce(sum(
+           60 + coalesce((
+             select sum(
+               case
+                 when verse.value->>'meditationMinutes' ~ '^[0-9]+([.][0-9]+)?$'
+                 then greatest(0, round((verse.value->>'meditationMinutes')::numeric))
+                 else 0
+               end
+             )
+             from jsonb_array_elements(r.verses) with ordinality verse(value, position)
+             where verse.position > 1
+           ), 0)
+         ), 0)::bigint as minutes
   from public.word_records r
   where r.record_date between date '2026-08-10' and date '2026-09-06'
     and extract(isodow from r.record_date) between 1 and 5
+    and jsonb_array_length(r.verses) > 0
   group by r.user_id
 ),
 study_minutes as (

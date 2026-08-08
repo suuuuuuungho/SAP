@@ -162,6 +162,18 @@ function formatWordSummary(entries) {
   return entries.map(formatVerseRange).filter(Boolean).join(', ');
 }
 
+// 첫 말씀 인증은 기본 60분, 두 번째 이후 추가 구절은 입력한 묵상 시간을 더합니다.
+// 기존 데이터에는 meditationMinutes가 없으므로 자동으로 0분으로 처리됩니다.
+function calculateWordMinutes(verses) {
+  if (!Array.isArray(verses) || verses.length === 0) return 0;
+  const extraMinutes = verses.slice(1).reduce((sum, verse) => {
+    const minutes = Number(verse && verse.meditationMinutes);
+    return sum + (Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : 0);
+  }, 0);
+  return 60 + extraMinutes;
+}
+window.calculateWordMinutes = calculateWordMinutes;
+
 // dateKey가 오늘이 아니면 "(M/D)" 접미사 — Home의 날짜 선택에서만 실제로 붙는다 (Gallery는 항상 오늘).
 function formatDateSuffix(dateKey) {
   if (dateKey === todayKey()) return '';
@@ -498,9 +510,11 @@ function wireWordPhotoPreview() {
 
 function updateWordRemoveButtons() {
   const entries = document.querySelectorAll('#word-verse-list .word-verse-entry');
-  entries.forEach((entry) => {
+  entries.forEach((entry, index) => {
     const removeBtn = entry.querySelector('.word-remove-verse');
+    const timeWrap = entry.querySelector('.word-meditation-time-wrap');
     if (removeBtn) removeBtn.classList.toggle('hidden', entries.length <= 1);
+    if (timeWrap) timeWrap.classList.toggle('hidden', index === 0);
   });
 }
 
@@ -511,6 +525,7 @@ function addWordVerseEntry(data) {
 
   list.appendChild(template.content.cloneNode(true));
   const entryEl = list.lastElementChild;
+  entryEl.dataset.meditationMinutes = String((data && data.meditationMinutes) || 0);
 
   renderBibleBookOptions(entryEl.querySelector('.word-start-book'));
   renderBibleBookOptions(entryEl.querySelector('.word-end-book'));
@@ -522,6 +537,8 @@ function addWordVerseEntry(data) {
     if (data.endBook) entryEl.querySelector('.word-end-book').value = data.endBook;
     if (data.endChapter) entryEl.querySelector('.word-end-chapter').value = data.endChapter;
     if (data.endVerse) entryEl.querySelector('.word-end-verse').value = data.endVerse;
+    const minutesInput = entryEl.querySelector('.word-meditation-minutes');
+    if (minutesInput && data.meditationMinutes) minutesInput.value = data.meditationMinutes;
   }
 
   updateWordRemoveButtons();
@@ -603,18 +620,35 @@ async function saveWordModal() {
     return;
   }
 
-  const verses = [...document.querySelectorAll('#word-verse-list .word-verse-entry')].map((entry) => ({
-    startBook: entry.querySelector('.word-start-book').value,
-    startChapter: entry.querySelector('.word-start-chapter').value,
-    startVerse: entry.querySelector('.word-start-verse').value,
-    endBook: entry.querySelector('.word-end-book').value,
-    endChapter: entry.querySelector('.word-end-chapter').value,
-    endVerse: entry.querySelector('.word-end-verse').value
-  }));
+  const verseElements = [...document.querySelectorAll('#word-verse-list .word-verse-entry')];
+  const verses = verseElements.map((entry, index) => {
+    const minutesInput = entry.querySelector('.word-meditation-minutes');
+    return {
+      startBook: entry.querySelector('.word-start-book').value,
+      startChapter: entry.querySelector('.word-start-chapter').value,
+      startVerse: entry.querySelector('.word-start-verse').value,
+      endBook: entry.querySelector('.word-end-book').value,
+      endChapter: entry.querySelector('.word-end-chapter').value,
+      endVerse: entry.querySelector('.word-end-verse').value,
+      meditationMinutes: index === 0
+        ? 0
+        : Number(minutesInput ? minutesInput.value : entry.dataset.meditationMinutes || 0)
+    };
+  });
 
-  const hasIncompleteEntry = verses.some((entry) => Object.values(entry).some((value) => !value));
-  if (hasIncompleteEntry) {
-    if (wordVerseHint) wordVerseHint.classList.remove('hidden');
+  const referenceFields = ['startBook', 'startChapter', 'startVerse', 'endBook', 'endChapter', 'endVerse'];
+  const hasIncompleteEntry = verses.some((entry) => referenceFields.some((field) => !entry[field]));
+  const hasInvalidExtraMinutes = verses.slice(1).some((entry, index) => {
+    const supportsTimeInput = !!verseElements[index + 1].querySelector('.word-meditation-minutes');
+    return supportsTimeInput && (!Number.isFinite(entry.meditationMinutes) || entry.meditationMinutes <= 0);
+  });
+  if (hasIncompleteEntry || hasInvalidExtraMinutes) {
+    if (wordVerseHint) {
+      wordVerseHint.textContent = hasInvalidExtraMinutes
+        ? '추가한 말씀 구절의 묵상 시간을 입력해주세요.'
+        : '읽은 말씀 구절(시작 ~ 끝)을 입력해주세요.';
+      wordVerseHint.classList.remove('hidden');
+    }
     return;
   }
   if (wordVerseHint) wordVerseHint.classList.add('hidden');
