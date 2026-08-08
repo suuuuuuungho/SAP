@@ -25,7 +25,10 @@
         <select id="admin-message-recipient" class="glass-input rounded-2xl px-4 py-2 text-sm"></select>
         <textarea id="admin-message-body" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="500" placeholder="전달할 메시지" required></textarea>
         <label class="text-xs text-on-surface-variant">종료 시각(선택)<input id="admin-message-expires" type="datetime-local" class="glass-input rounded-xl px-3 py-2 text-sm w-full mt-1"></label>
-        <button class="pill-btn-primary py-2.5 text-sm" type="submit">메시지 전송</button>
+        <div class="flex gap-2">
+          <button id="admin-message-submit" class="pill-btn-primary py-2.5 text-sm flex-1" type="submit">메시지 전송</button>
+          <button id="admin-message-edit-cancel" class="hidden glass-card rounded-full px-5 py-2.5 text-sm text-on-surface-variant" type="button">취소</button>
+        </div>
       </form>
       <div id="admin-message-list" class="flex flex-col gap-3"></div>
     </section>
@@ -46,7 +49,7 @@
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/layout.js?v=6"></script>
-<script src="assets/js/admin.js?v=1"></script>
+<script src="assets/js/admin.js?v=2"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

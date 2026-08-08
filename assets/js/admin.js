@@ -2,6 +2,8 @@
 
 let adminCurrentUserId = null;
 let adminUsers = [];
+let adminEditingMessageId = null;
+let adminMessages = [];
 
 function adminEscape(value) {
   return String(value == null ? '' : value)
@@ -45,9 +47,10 @@ function adminRecipientLabel(userId) {
 async function adminLoadMessages() {
   const { data, error } = await window.supabaseClient.from('home_messages').select('*').order('created_at', { ascending: false }).limit(50);
   if (error) { console.error('[admin] messages', error); return; }
+  adminMessages = data || [];
   const wrap = document.getElementById('admin-message-list');
   if (!wrap) return;
-  wrap.innerHTML = (data || []).length ? data.map((message) => `
+  wrap.innerHTML = adminMessages.length ? adminMessages.map((message) => `
     <article class="glass-card rounded-2xl p-4 ${message.is_active ? '' : 'opacity-50'}" data-message-id="${message.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
@@ -56,11 +59,42 @@ async function adminLoadMessages() {
           <p class="text-[10px] text-on-surface-variant mt-2">${new Date(message.created_at).toLocaleString('ko-KR')}${message.expires_at ? ` · ${new Date(message.expires_at).toLocaleString('ko-KR')}까지` : ''}</p>
         </div>
         <div class="flex gap-1 flex-shrink-0">
+          <button type="button" data-action="edit" class="icon-glass w-8 h-8 rounded-full" aria-label="수정"><i class="fa-solid fa-pen text-xs"></i></button>
           <button type="button" data-action="toggle" class="icon-glass w-8 h-8 rounded-full" aria-label="활성 전환"><i class="fa-solid ${message.is_active ? 'fa-eye' : 'fa-eye-slash'} text-xs"></i></button>
           <button type="button" data-action="delete" class="icon-glass w-8 h-8 rounded-full text-error" aria-label="삭제"><i class="fa-solid fa-trash text-xs"></i></button>
         </div>
       </div>
     </article>`).join('') : '<p class="text-sm text-on-surface-variant">등록된 메시지가 없습니다.</p>';
+}
+
+function adminDateTimeLocalValue(isoValue) {
+  if (!isoValue) return '';
+  const date = new Date(isoValue);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function adminResetMessageForm() {
+  const form = document.getElementById('admin-message-form');
+  if (form) form.reset();
+  adminEditingMessageId = null;
+  const submit = document.getElementById('admin-message-submit');
+  const cancel = document.getElementById('admin-message-edit-cancel');
+  if (submit) submit.textContent = '메시지 전송';
+  if (cancel) cancel.classList.add('hidden');
+}
+
+function adminStartMessageEdit(messageId) {
+  const message = adminMessages.find((item) => item.id === messageId);
+  if (!message) return;
+  adminEditingMessageId = message.id;
+  document.getElementById('admin-message-recipient').value = message.recipient_user_id || '';
+  document.getElementById('admin-message-body').value = message.body || '';
+  document.getElementById('admin-message-expires').value = adminDateTimeLocalValue(message.expires_at);
+  document.getElementById('admin-message-submit').textContent = '변경 저장';
+  document.getElementById('admin-message-edit-cancel').classList.remove('hidden');
+  document.getElementById('admin-message-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('admin-message-body').focus();
 }
 
 async function adminLoadVerses() {
@@ -88,17 +122,21 @@ function adminWireMessageForm() {
     const body = document.getElementById('admin-message-body').value.trim();
     const recipient = document.getElementById('admin-message-recipient').value || null;
     const expiresValue = document.getElementById('admin-message-expires').value;
-    const { error } = await window.supabaseClient.from('home_messages').insert({
+    const payload = {
       recipient_user_id: recipient,
       body,
-      expires_at: expiresValue ? new Date(expiresValue).toISOString() : null,
-      created_by: adminCurrentUserId
-    });
-    if (error) { adminShowStatus('메시지를 저장하지 못했습니다.', true); console.error('[admin] insert message', error); return; }
-    form.reset();
-    adminShowStatus('메시지를 전송했습니다.');
+      expires_at: expiresValue ? new Date(expiresValue).toISOString() : null
+    };
+    const result = adminEditingMessageId
+      ? await window.supabaseClient.from('home_messages').update(payload).eq('id', adminEditingMessageId)
+      : await window.supabaseClient.from('home_messages').insert({ ...payload, created_by: adminCurrentUserId });
+    if (result.error) { adminShowStatus('메시지를 저장하지 못했습니다.', true); console.error('[admin] save message', result.error); return; }
+    const wasEditing = !!adminEditingMessageId;
+    adminResetMessageForm();
+    adminShowStatus(wasEditing ? '메시지를 수정했습니다.' : '메시지를 전송했습니다.');
     await adminLoadMessages();
   });
+  document.getElementById('admin-message-edit-cancel')?.addEventListener('click', adminResetMessageForm);
 }
 
 function adminWireMessageList() {
@@ -109,8 +147,13 @@ function adminWireMessageList() {
     const article = event.target.closest('[data-message-id]');
     if (!button || !article) return;
     const id = article.dataset.messageId;
+    if (button.dataset.action === 'edit') {
+      adminStartMessageEdit(id);
+      return;
+    }
     if (button.dataset.action === 'delete') {
       await window.supabaseClient.from('home_messages').delete().eq('id', id);
+      if (adminEditingMessageId === id) adminResetMessageForm();
     } else {
       const currentlyActive = !article.classList.contains('opacity-50');
       await window.supabaseClient.from('home_messages').update({ is_active: !currentlyActive }).eq('id', id);
