@@ -117,6 +117,28 @@ begin
 end; $$;
 grant execute on function public.admin_set_gallery_post(uuid,date,text,text) to authenticated;
 
+create or replace function public.admin_update_gallery_post(
+  owner_id uuid, post_date date, post_type text, new_content jsonb
+)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  if jsonb_typeof(new_content) <> 'array' or jsonb_array_length(new_content) < 1 then
+    raise exception 'content must be a non-empty array';
+  end if;
+  if post_type = 'pray' then
+    update public.pray_records set entries = new_content, updated_at = now()
+      where user_id = owner_id and record_date = post_date;
+  elsif post_type = 'word' then
+    update public.word_records set verses = new_content, updated_at = now()
+      where user_id = owner_id and record_date = post_date;
+  else
+    raise exception 'invalid post type';
+  end if;
+end; $$;
+grant execute on function public.admin_update_gallery_post(uuid,date,text,jsonb) to authenticated;
+
 create or replace function public.admin_get_dashboard(target_date date)
 returns table (
   user_id uuid, username text, name text, grade_class text, parent_phone text,

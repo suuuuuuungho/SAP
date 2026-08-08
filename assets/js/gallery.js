@@ -18,6 +18,7 @@ let galleryActiveCommentsPost = null;
 let galleryComments = [];
 let galleryCommentProfiles = {};
 let galleryEditingCommentId = null;
+let galleryAdminEditingPost = null;
 
 function applyGalleryFeatureFlags(flags = window.APP_FEATURE_FLAGS || {}) {
   if (flags.comments === false) {
@@ -77,10 +78,13 @@ async function loadGalleryDateRecords(dateKey) {
     galleryWordMap = {};
     return;
   }
-  const [prayResult, wordResult] = await Promise.all([
-    window.supabaseClient.from('pray_records').select('user_id, record_date, entries').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
-    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids)
-  ]);
+  let prayQuery = window.supabaseClient.from('pray_records').select('user_id, record_date, entries, admin_hidden').eq('record_date', dateKey).in('user_id', ids);
+  let wordQuery = window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable, admin_hidden').eq('record_date', dateKey).in('user_id', ids);
+  if (!window.IS_ADMIN_CONSOLE) {
+    prayQuery = prayQuery.eq('admin_hidden', false);
+    wordQuery = wordQuery.eq('admin_hidden', false);
+  }
+  const [prayResult, wordResult] = await Promise.all([prayQuery, wordQuery]);
   if (prayResult.error) console.error('[gallery] pray records', prayResult.error);
   if (wordResult.error) console.error('[gallery] word records', wordResult.error);
   galleryPrayMap = Object.fromEntries((prayResult.data || []).map((row) => [row.user_id, row]));
@@ -145,6 +149,7 @@ function galleryVerificationSummaryHTML(userId, type, compact = false) {
 
 function galleryStudentCardHTML(user, type) {
   const data = galleryCategoryData(user.id, type);
+  const record = type === 'pray' ? galleryPrayMap[user.id] : galleryWordMap[user.id];
   const accent = type === 'pray' ? 'text-primary bg-primary/10' : 'text-secondary bg-secondary/10';
   const avatar = galleryAvatarUrls[user.id]
     ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
@@ -161,7 +166,61 @@ function galleryStudentCardHTML(user, type) {
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${data.verified ? accent : 'text-on-surface-variant bg-surface-container'}">${data.verified ? '인증 완료' : '미인증'}</span>
         ${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>comment</button>` : ''}
       </div>
+      ${window.IS_ADMIN_CONSOLE && data.verified ? `<div class="mt-3 pt-3 border-t border-outline-variant/40 flex items-center gap-2"><span class="text-[10px] font-bold ${record?.admin_hidden ? 'text-error' : 'text-quaternary'} mr-auto">${record?.admin_hidden ? '숨김 상태' : '공개 중'}</span><button type="button" data-admin-gallery-edit="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" data-admin-gallery-delete="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold text-error"><i class="fa-solid fa-trash mr-1"></i>삭제</button></div>` : ''}
     </article>`;
+}
+
+function closeAdminGalleryEdit() {
+  const modal = document.getElementById('admin-gallery-edit-modal');
+  modal?.classList.add('hidden'); modal?.classList.remove('flex');
+  galleryAdminEditingPost = null;
+}
+
+function adminGalleryPrayerFields(entries) {
+  return entries.map((entry, index) => `<div class="admin-gallery-edit-row glass-card rounded-2xl p-4" data-entry-index="${index}"><p class="text-xs font-bold text-primary mb-3">기도 ${index + 1}</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><label class="text-xs sm:col-span-2">장소<input data-field="location" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(entry.location || '')}"></label><label class="text-xs">시작 일시<input data-field="start" type="datetime-local" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(entry.start || '')}"></label><label class="text-xs">종료 일시<input data-field="end" type="datetime-local" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(entry.end || '')}"></label></div></div>`).join('');
+}
+
+function adminGalleryWordFields(verses) {
+  return verses.map((verse, index) => `<div class="admin-gallery-edit-row glass-card rounded-2xl p-4" data-entry-index="${index}"><p class="text-xs font-bold text-secondary mb-3">말씀 구절 ${index + 1}</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><label class="text-xs col-span-2">시작 성경책<input data-field="startBook" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.startBook || '')}"></label><label class="text-xs">장<input data-field="startChapter" type="number" min="1" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.startChapter || '')}"></label><label class="text-xs">절<input data-field="startVerse" type="number" min="1" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.startVerse || '')}"></label><label class="text-xs col-span-2">끝 성경책<input data-field="endBook" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.endBook || '')}"></label><label class="text-xs">장<input data-field="endChapter" type="number" min="1" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.endChapter || '')}"></label><label class="text-xs">절<input data-field="endVerse" type="number" min="1" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.endVerse || '')}"></label><label class="text-xs col-span-2 sm:col-span-4">추가 묵상 시간(분)<input data-field="meditationMinutes" type="number" min="0" class="glass-input rounded-xl px-3 py-2 w-full mt-1" value="${galleryEscape(verse.meditationMinutes || '')}"></label></div></div>`).join('');
+}
+
+function openAdminGalleryEdit(userId, type) {
+  const user = galleryUsers.find((item) => item.id === userId);
+  const row = type === 'pray' ? galleryPrayMap[userId] : galleryWordMap[userId];
+  if (!row) return;
+  galleryAdminEditingPost = { userId, type, row };
+  document.getElementById('admin-gallery-edit-title').textContent = `${type === 'pray' ? '기도' : '말씀묵상'} 게시물 수정`;
+  document.getElementById('admin-gallery-edit-subtitle').textContent = `${user?.name || ''} · ${row.record_date}`;
+  document.getElementById('admin-gallery-edit-fields').innerHTML = type === 'pray' ? adminGalleryPrayerFields(row.entries || []) : adminGalleryWordFields(row.verses || []);
+  const modal = document.getElementById('admin-gallery-edit-modal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+}
+
+async function saveAdminGalleryEdit() {
+  if (!galleryAdminEditingPost) return;
+  const rows = [...document.querySelectorAll('#admin-gallery-edit-fields .admin-gallery-edit-row')];
+  const original = galleryAdminEditingPost.type === 'pray' ? galleryAdminEditingPost.row.entries : galleryAdminEditingPost.row.verses;
+  const payload = rows.map((row, index) => {
+    const next = { ...(original[index] || {}) };
+    row.querySelectorAll('[data-field]').forEach((input) => {
+      const numeric = ['startChapter','startVerse','endChapter','endVerse','meditationMinutes'].includes(input.dataset.field);
+      next[input.dataset.field] = numeric && input.value !== '' ? Number(input.value) : input.value;
+    });
+    return next;
+  });
+  const invalid = galleryAdminEditingPost.type === 'pray' && payload.some((entry) => !entry.location || !entry.start || !entry.end || entry.end <= entry.start);
+  if (invalid) { alert('기도 장소와 시작/종료 일시를 확인해주세요. 종료는 시작보다 나중이어야 합니다.'); return; }
+  const { error } = await window.supabaseClient.rpc('admin_update_gallery_post', { owner_id: galleryAdminEditingPost.userId, post_date: galleryAdminEditingPost.row.record_date, post_type: galleryAdminEditingPost.type, new_content: payload });
+  if (error) { alert('게시물을 수정하지 못했습니다. 관리자 스키마를 확인해주세요.'); console.error('[gallery] admin edit', error); return; }
+  closeAdminGalleryEdit();
+  await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]); renderGalleryGrid();
+}
+
+async function deleteAdminGalleryPost(userId, type) {
+  const row = type === 'pray' ? galleryPrayMap[userId] : galleryWordMap[userId];
+  if (!row || !confirm('이 게시물과 인증 기록을 완전히 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+  const { error } = await window.supabaseClient.rpc('admin_set_gallery_post', { owner_id: userId, post_date: row.record_date, post_type: type, action: 'delete' });
+  if (error) { alert('게시물을 삭제하지 못했습니다.'); return; }
+  await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]); renderGalleryGrid();
 }
 
 function galleryRelativeTime(isoString) {
@@ -292,6 +351,10 @@ function wireGalleryComments() {
     }
   });
   document.getElementById('gallery-active-grid')?.addEventListener('click', (event) => {
+    const editButton = event.target.closest('[data-admin-gallery-edit]');
+    const deleteButton = event.target.closest('[data-admin-gallery-delete]');
+    if (editButton) { openAdminGalleryEdit(editButton.dataset.adminGalleryEdit, editButton.dataset.adminGalleryType); return; }
+    if (deleteButton) { deleteAdminGalleryPost(deleteButton.dataset.adminGalleryDelete, deleteButton.dataset.adminGalleryType); return; }
     const button = event.target.closest('[data-gallery-comment-user]');
     if (button) openGalleryComments(button.dataset.galleryCommentUser, button.dataset.galleryCommentType);
   });
@@ -497,6 +560,10 @@ async function initGalleryWidgets() {
     ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
     : {};
   await selectGalleryDay(0);
+  if (window.IS_ADMIN_CONSOLE) {
+    document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
+    document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);
+  }
 }
 
 window.initGalleryWidgets = initGalleryWidgets;

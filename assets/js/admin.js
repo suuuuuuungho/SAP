@@ -232,7 +232,6 @@ function adminWireTabs() {
     if (adminActiveTab === 'control') adminLoadFeatures();
     if (adminActiveTab === 'member') adminLoadMembers();
     if (adminActiveTab === 'dashboard') adminLoadDashboard();
-    if (adminActiveTab === 'gallery') adminLoadGalleryPosts();
     document.getElementById('sidebar-menu')?.classList.add('-translate-x-[120%]');
     document.getElementById('sidebar-overlay')?.classList.add('hidden', 'opacity-0');
     document.body.style.overflow = '';
@@ -353,20 +352,9 @@ function adminWireReport() {
   });
 }
 
-async function adminLoadGalleryPosts() {
-  const date=document.getElementById('admin-gallery-date')?.value || '2026-08-10';
-  const [pray,word]=await Promise.all([window.supabaseClient.from('pray_records').select('user_id,record_date,entries,admin_hidden').eq('record_date',date),window.supabaseClient.from('word_records').select('user_id,record_date,verses,admin_hidden').eq('record_date',date)]);
-  const profiles=Object.fromEntries(adminUsers.map(user=>[user.id,user]));
-  const posts=[...(pray.data||[]).filter(r=>r.entries?.length).map(r=>({...r,type:'pray'})),...(word.data||[]).filter(r=>r.verses?.length).map(r=>({...r,type:'word'}))];
-  const wrap=document.getElementById('admin-gallery-posts'); if(!wrap)return;
-  wrap.innerHTML=posts.map(post=>`<article class="glass-card rounded-2xl p-4 ${post.admin_hidden?'opacity-50':''}" data-owner="${post.user_id}" data-date="${post.record_date}" data-type="${post.type}"><div class="flex justify-between gap-3"><div><p class="text-sm font-bold">${adminEscape(profiles[post.user_id]?.name || '회원')}</p><p class="text-[11px] text-on-surface-variant">${post.type==='pray'?'기도':'말씀묵상'} · ${post.admin_hidden?'숨김':'공개'}</p></div><div class="flex gap-1"><button data-post-action="${post.admin_hidden?'show':'hide'}" class="icon-glass w-9 h-9 rounded-full"><i class="fa-solid ${post.admin_hidden?'fa-eye':'fa-eye-slash'} text-xs"></i></button><button data-post-action="delete" class="icon-glass w-9 h-9 rounded-full text-error"><i class="fa-solid fa-trash text-xs"></i></button></div></div></article>`).join('')||'<p class="text-sm text-on-surface-variant py-8 text-center">이 날짜에는 게시물이 없습니다.</p>';
-  wrap.querySelectorAll('[data-post-action]').forEach(button=>button.addEventListener('click',async()=>{const card=button.closest('[data-owner]');const action=button.dataset.postAction;if(action==='delete'&&!confirm('게시물과 인증 기록을 완전히 삭제할까요?'))return;const {error}=await window.supabaseClient.rpc('admin_set_gallery_post',{owner_id:card.dataset.owner,post_date:card.dataset.date,post_type:card.dataset.type,action});if(error)adminShowStatus('게시물을 변경하지 못했습니다.',true);else{adminShowStatus(action==='delete'?'게시물을 삭제했습니다.':action==='hide'?'게시물을 숨겼습니다.':'게시물을 다시 공개했습니다.');adminLoadGalleryPosts();}}));
-}
-
 function adminWireConsole() {
   adminWireTabs(); adminWireMember(); adminWireReport();
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
-  document.getElementById('admin-gallery-refresh')?.addEventListener('click',adminLoadGalleryPosts);
 }
 
 async function initAdminWidgets() {
