@@ -4,7 +4,7 @@
 // Visual language: "Luminous Glass" — glassmorphic panels floating over a vibrant mesh background.
 
 const NAV_ITEMS = [
-  { id: 'public-home', label: 'Home', href: 'home.html', icon: 'fa-solid fa-house' },
+  { id: 'public-home', label: 'Board', href: 'home.html', icon: 'fa-solid fa-clipboard-list' },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
