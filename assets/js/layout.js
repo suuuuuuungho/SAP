@@ -196,6 +196,17 @@ async function applyFeatureFlags(activePage) {
   if (flags.worship === false) document.getElementById('widget-worship')?.classList.add('hidden');
   if (flags.gallery_pray === false) document.getElementById('gallery-type-pray')?.classList.add('hidden');
   if (flags.gallery_word === false) document.getElementById('gallery-type-word')?.classList.add('hidden');
+  if (flags.study_vocab === false) {
+    const studyContent = document.getElementById('study-content');
+    if (studyContent) studyContent.innerHTML = '<div class="glass-panel rounded-[2rem] p-10 text-center text-sm text-on-surface-variant">영단어 학습 기능이 현재 꺼져 있습니다.</div>';
+  }
+  if (flags.stat_summary === false) { document.getElementById('stat-streak-current')?.closest('section')?.classList.add('hidden'); document.getElementById('stat-kpi-total')?.closest('section')?.classList.add('hidden'); }
+  hideClosest('#stat-heatmap', 'stat_heatmap');
+  hideClosest('#stat-trend-chart', 'stat_trend');
+  if (flags.stat_balance === false) document.getElementById('stat-radar-chart')?.closest('.glass-card')?.classList.add('hidden');
+  if (flags.stat_breakdown === false) document.getElementById('stat-donut-chart')?.closest('.glass-card')?.classList.add('hidden');
+  hideClosest('#stat-best-chips', 'stat_bests');
+  if (flags.profile_photo === false) document.getElementById('profile-avatar-preview')?.closest('section')?.classList.add('hidden');
   if (pageFeature && flags[pageFeature] === false) {
     const main = document.querySelector('#page-main > div');
     if (main) main.innerHTML = '<div class="glass-panel rounded-[2rem] p-12 text-center"><div class="icon-glass w-14 h-14 rounded-full mx-auto flex items-center justify-center text-on-surface-variant"><i class="fa-solid fa-power-off"></i></div><h1 class="text-xl font-bold mt-4">현재 사용할 수 없는 기능입니다</h1><p class="text-sm text-on-surface-variant mt-2">관리자가 기능을 잠시 꺼두었습니다.</p></div>';

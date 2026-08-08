@@ -35,10 +35,14 @@ insert into public.app_feature_flags (feature_key, label, section) values
   ('gallery_word', 'Word Gallery', 'Public'), ('comments', 'Comments', 'Public'),
   ('mypage', 'MyPage', 'Private'), ('pray', 'Prayer Verification', 'Private'),
   ('word', 'Word Verification', 'Private'), ('study_timer', 'Study Timer', 'Private'),
-  ('worship', 'Worship Verification', 'Private'), ('study', 'Vocabulary Study', 'Private'),
+  ('worship', 'Worship Verification', 'Private'), ('study', 'Study', 'Private'),
+  ('study_vocab', 'Vocabulary Learning', 'Private'),
   ('stat', 'Stat', 'Private'), ('profile_photo', 'Profile Photo', 'Account'),
+  ('stat_summary', 'Summary', 'Private'), ('stat_heatmap', 'Heatmap', 'Private'),
+  ('stat_trend', 'Trend', 'Private'), ('stat_balance', 'Balance', 'Private'),
+  ('stat_breakdown', 'Time Breakdown', 'Private'), ('stat_bests', 'Personal Bests', 'Private'),
   ('signup', 'Sign Up', 'Account'), ('password_reset', 'Password Reset', 'Account')
-on conflict (feature_key) do nothing;
+on conflict (feature_key) do update set label = excluded.label, section = excluded.section;
 
 alter table public.app_feature_flags enable row level security;
 drop policy if exists "feature_flags_read" on public.app_feature_flags;
@@ -54,7 +58,7 @@ create or replace function public.get_app_feature_flags()
 returns table (feature_key text, is_enabled boolean)
 language sql stable security definer set search_path = public
 as $$ select f.feature_key, f.is_enabled from public.app_feature_flags f order by f.feature_key; $$;
-grant execute on function public.get_app_feature_flags() to authenticated;
+grant execute on function public.get_app_feature_flags() to anon, authenticated;
 
 create or replace function public.admin_get_members()
 returns table (
@@ -180,6 +184,24 @@ begin
   delete from public.post_comments c where c.id = comment_id;
 end; $$;
 grant execute on function public.admin_delete_post_comment(uuid) to authenticated;
+
+create or replace function public.admin_add_post_comment(
+  target_owner_id uuid, target_post_date date, target_post_type text, comment_body text
+)
+returns uuid language plpgsql security definer set search_path = public
+as $$
+declare new_id uuid;
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  if target_post_type not in ('pray','word') or char_length(trim(comment_body)) not between 1 and 300 then
+    raise exception 'invalid comment';
+  end if;
+  insert into public.post_comments (post_owner_id, post_date, post_type, author_id, body)
+  values (target_owner_id, target_post_date, target_post_type, auth.uid(), trim(comment_body))
+  returning id into new_id;
+  return new_id;
+end; $$;
+grant execute on function public.admin_add_post_comment(uuid,date,text,text) to authenticated;
 
 create or replace function public.admin_delete_gallery_photo(
   owner_id uuid, post_date date, post_type text, target_photo_path text

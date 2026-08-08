@@ -21,7 +21,7 @@ let galleryEditingCommentId = null;
 let galleryAdminEditingPost = null;
 
 function applyGalleryFeatureFlags(flags = window.APP_FEATURE_FLAGS || {}) {
-  if (flags.comments === false) {
+  if (flags.comments === false && !window.IS_ADMIN_CONSOLE) {
     document.querySelectorAll('[data-gallery-comment-user]').forEach((button) => button.classList.add('hidden'));
     closeGalleryComments();
   }
@@ -451,16 +451,18 @@ function wireGalleryComments() {
     const body = input.value.trim();
     if (!body || !galleryActiveCommentsPost) return;
     submit.disabled = true;
-    const request = galleryEditingCommentId
-      ? window.supabaseClient.from('post_comments').update({ body }).eq('id', galleryEditingCommentId).eq('author_id', galleryCurrentUserId)
-      : window.supabaseClient.from('post_comments').insert({
-          post_owner_id: galleryActiveCommentsPost.ownerId,
-          post_date: galleryActiveCommentsPost.date,
-          post_type: galleryActiveCommentsPost.type,
-          author_id: galleryCurrentUserId,
-          body
-        });
-    const { error } = await request;
+    let result;
+    if (galleryEditingCommentId) {
+      result = await window.supabaseClient.from('post_comments').update({ body }).eq('id', galleryEditingCommentId).eq('author_id', galleryCurrentUserId);
+    } else if (window.IS_ADMIN_CONSOLE) {
+      result = await window.supabaseClient.rpc('admin_add_post_comment', { target_owner_id: galleryActiveCommentsPost.ownerId, target_post_date: galleryActiveCommentsPost.date, target_post_type: galleryActiveCommentsPost.type, comment_body: body });
+      if (result.error) {
+        result = await window.supabaseClient.from('post_comments').insert({ post_owner_id: galleryActiveCommentsPost.ownerId, post_date: galleryActiveCommentsPost.date, post_type: galleryActiveCommentsPost.type, author_id: galleryCurrentUserId, body });
+      }
+    } else {
+      result = await window.supabaseClient.from('post_comments').insert({ post_owner_id: galleryActiveCommentsPost.ownerId, post_date: galleryActiveCommentsPost.date, post_type: galleryActiveCommentsPost.type, author_id: galleryCurrentUserId, body });
+    }
+    const { error } = result;
     submit.disabled = false;
     if (error) {
       console.error('[gallery] submit comment', error);
