@@ -80,7 +80,7 @@ function adminResetMessageForm() {
   adminEditingMessageId = null;
   const submit = document.getElementById('admin-message-submit');
   const cancel = document.getElementById('admin-message-edit-cancel');
-  if (submit) submit.textContent = '메시지 전송';
+  if (submit) submit.textContent = 'Board Message 전송';
   if (cancel) cancel.classList.add('hidden');
 }
 

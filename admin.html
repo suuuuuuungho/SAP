@@ -21,13 +21,13 @@
   <div id="admin-content" class="hidden mb-16">
     <section data-admin-panel="board" class="admin-panel grid grid-cols-1 xl:grid-cols-2 gap-6">
       <section class="glass-panel rounded-[2rem] p-6">
-      <h2 class="text-xl font-bold mb-1">Messages</h2><p class="text-xs text-on-surface-variant mb-5">전체 공지 또는 한 명에게만 보이는 메시지를 전송합니다.</p>
+      <h2 class="text-xl font-bold mb-1">Board Message</h2><p class="text-xs text-on-surface-variant mb-5">전체 또는 한 명에게만 보이는 Board Message를 전송합니다.</p>
       <form id="admin-message-form" class="flex flex-col gap-3 mb-6">
         <select id="admin-message-recipient" class="glass-input rounded-2xl px-4 py-2 text-sm"></select>
         <textarea id="admin-message-body" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="500" placeholder="전달할 메시지" required></textarea>
         <label class="text-xs text-on-surface-variant">종료 시각(선택)<input id="admin-message-expires" type="datetime-local" class="glass-input rounded-xl px-3 py-2 text-sm w-full mt-1"></label>
         <div class="flex gap-2">
-          <button id="admin-message-submit" class="pill-btn-primary py-2.5 text-sm flex-1" type="submit">메시지 전송</button>
+          <button id="admin-message-submit" class="pill-btn-primary py-2.5 text-sm flex-1" type="submit">Board Message 전송</button>
           <button id="admin-message-edit-cancel" class="hidden glass-card rounded-full px-5 py-2.5 text-sm text-on-surface-variant" type="button">취소</button>
         </div>
       </form>
@@ -65,7 +65,7 @@
 <script src="assets/js/auth.js?v=6"></script>
 <script src="assets/js/layout.js?v=12"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="assets/js/admin.js?v=6"></script>
+<script src="assets/js/admin.js?v=7"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
