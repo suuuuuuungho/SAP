@@ -24,11 +24,16 @@
       <button id="gallery-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
-      <div class="flex-1 min-w-0 text-center">
+      <div class="flex-1 min-w-0 text-center relative">
         <p id="gallery-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p>
-        <label for="gallery-date-control" class="sr-only">갤러리 날짜</label>
-        <select id="gallery-date-control" style="text-align:center;text-align-last:center" class="glass-input rounded-xl px-3 py-2 text-sm font-semibold w-full max-w-[220px] mx-auto"></select>
+        <button id="gallery-calendar-toggle" type="button" class="glass-input rounded-xl px-4 py-2 text-sm font-semibold w-full max-w-[220px] mx-auto flex items-center justify-center gap-2" aria-haspopup="dialog" aria-expanded="false">
+          <i class="fa-regular fa-calendar"></i><span id="gallery-date-display">2026-08-10</span>
+        </button>
         <p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p>
+        <div id="gallery-calendar-popover" class="hidden absolute z-40 top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] glass-panel rounded-[1.5rem] p-4 text-left shadow-xl">
+          <div id="gallery-calendar-months" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
+          <p class="text-[10px] text-on-surface-variant text-center mt-3">운영기간의 평일만 선택할 수 있어요.</p>
+        </div>
       </div>
       <button id="gallery-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜">
         <i class="fa-solid fa-chevron-right"></i>
@@ -36,14 +41,14 @@
     </div>
   </section>
 
-  <section class="mb-8">
-    <h2 class="text-lg font-bold mb-3 px-1"><i class="fa-solid fa-hands-praying text-primary mr-2"></i>Prayer Gallery</h2>
-    <div id="gallery-pray-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
-  </section>
+  <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="gallery-type-tabs">
+    <button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>Prayer</button>
+    <button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>Word</button>
+  </div>
 
   <section class="mb-7">
-    <h2 class="text-lg font-bold mb-3 px-1"><i class="fa-solid fa-book-bible text-secondary mr-2"></i>Word Gallery</h2>
-    <div id="gallery-word-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+    <h2 id="gallery-active-title" class="text-lg font-bold mb-3 px-1">Prayer Gallery</h2>
+    <div id="gallery-active-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
   </section>
 
   <nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
@@ -55,7 +60,7 @@
 <script src="assets/js/auth.js?v=3"></script>
 <script src="assets/js/layout.js?v=6"></script>
 <script src="assets/js/pray-word.js?v=4"></script>
-<script src="assets/js/gallery.js?v=7"></script>
+<script src="assets/js/gallery.js?v=8"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });

@@ -7,6 +7,7 @@ const GALLERY_PAGE_SIZE = 8;
 let galleryDays = [];
 let gallerySelectedIndex = 0;
 let gallerySelectedPage = 0;
+let galleryActiveType = 'pray';
 let galleryUsers = [];
 let galleryPrayMap = {};
 let galleryWordMap = {};
@@ -118,13 +119,13 @@ function galleryStudentCardHTML(user, type) {
 function renderGalleryGrid() {
   const start = gallerySelectedPage * GALLERY_PAGE_SIZE;
   const pageUsers = galleryUsers.slice(start, start + GALLERY_PAGE_SIZE);
-  ['pray', 'word'].forEach((type) => {
-    const grid = document.getElementById(`gallery-${type}-grid`);
-    if (!grid) return;
-    grid.innerHTML = pageUsers.length
-      ? pageUsers.map((user) => galleryStudentCardHTML(user, type)).join('')
-      : '<div class="glass-panel rounded-[2rem] p-12 text-center text-sm text-on-surface-variant col-span-full">표시할 학생이 없습니다.</div>';
-  });
+  const grid = document.getElementById('gallery-active-grid');
+  const title = document.getElementById('gallery-active-title');
+  if (!grid) return;
+  if (title) title.textContent = galleryActiveType === 'pray' ? 'Prayer Gallery' : 'Word Gallery';
+  grid.innerHTML = pageUsers.length
+    ? pageUsers.map((user) => galleryStudentCardHTML(user, galleryActiveType)).join('')
+    : '<div class="glass-panel rounded-[2rem] p-12 text-center text-sm text-on-surface-variant col-span-full">표시할 학생이 없습니다.</div>';
   renderGalleryPagination();
 }
 
@@ -138,22 +139,55 @@ function renderGalleryPagination() {
 function renderGalleryCalendar() {
   const key = galleryDays[gallerySelectedIndex];
   const parts = galleryDateParts(key);
-  const input = document.getElementById('gallery-date-control');
+  const display = document.getElementById('gallery-date-display');
   const count = document.getElementById('gallery-day-count');
   const label = document.getElementById('gallery-date-label');
   const prev = document.getElementById('gallery-prev-day');
   const next = document.getElementById('gallery-next-day');
-  if (input) {
-    if (!input.options.length) {
-      input.innerHTML = galleryDays.map((day) => `<option value="${day}">${galleryDateParts(day).short}</option>`).join('');
-    }
-    input.value = key;
-  }
+  if (display) display.textContent = key;
   if (count) count.textContent = `DAY ${gallerySelectedIndex + 1} / ${galleryDays.length}`;
   if (label) label.textContent = parts.full;
   if (prev) prev.disabled = gallerySelectedIndex === 0;
   if (next) next.disabled = gallerySelectedIndex === galleryDays.length - 1;
+  renderGalleryCalendarMonths();
+}
 
+function galleryMonthHTML(year, monthIndex) {
+  const monthStart = new Date(year, monthIndex, 1, 12);
+  const daysInMonth = new Date(year, monthIndex + 1, 0, 12).getDate();
+  const mondayOffset = (monthStart.getDay() + 6) % 7;
+  const blanks = Array.from({ length: mondayOffset }, () => '<span></span>').join('');
+  const days = Array.from({ length: daysInMonth }, (_, offset) => {
+    const dayNumber = offset + 1;
+    const key = galleryDateKey(new Date(year, monthIndex, dayNumber, 12));
+    const validIndex = galleryDays.indexOf(key);
+    const selected = key === galleryDays[gallerySelectedIndex];
+    const enabledClass = selected ? 'nav-pill-active' : 'hover:bg-white/70 text-on-surface';
+    return `<button type="button" data-calendar-date="${key}" ${validIndex < 0 ? 'disabled' : ''} class="aspect-square rounded-full text-xs font-semibold ${validIndex < 0 ? 'text-outline-variant/45 cursor-not-allowed' : enabledClass}" aria-label="${monthIndex + 1}월 ${dayNumber}일">${dayNumber}</button>`;
+  }).join('');
+  return `<div><p class="text-sm font-bold text-center mb-3">${year}. ${String(monthIndex + 1).padStart(2, '0')}</p><div class="grid grid-cols-7 gap-1 text-center mb-1">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => `<span class="text-[9px] text-on-surface-variant">${day}</span>`).join('')}</div><div class="grid grid-cols-7 gap-1">${blanks}${days}</div></div>`;
+}
+
+function renderGalleryCalendarMonths() {
+  const months = document.getElementById('gallery-calendar-months');
+  if (!months || !galleryDays.length) return;
+  months.innerHTML = galleryMonthHTML(2026, 7) + galleryMonthHTML(2026, 8);
+}
+
+function setGalleryCalendarOpen(open) {
+  const popover = document.getElementById('gallery-calendar-popover');
+  const toggle = document.getElementById('gallery-calendar-toggle');
+  if (!popover || !toggle) return;
+  popover.classList.toggle('hidden', !open);
+  toggle.setAttribute('aria-expanded', String(open));
+}
+
+function renderGalleryTypeTabs() {
+  document.querySelectorAll('[data-gallery-type-tab]').forEach((button) => {
+    const active = button.dataset.galleryTypeTab === galleryActiveType;
+    button.classList.toggle('nav-pill-active', active);
+    button.classList.toggle('text-on-surface-variant', !active);
+  });
 }
 
 async function selectGalleryDay(index) {
@@ -161,10 +195,8 @@ async function selectGalleryDay(index) {
   gallerySelectedIndex = nextIndex;
   gallerySelectedPage = 0;
   renderGalleryCalendar();
-  ['pray', 'word'].forEach((type) => {
-    const grid = document.getElementById(`gallery-${type}-grid`);
-    if (grid) grid.innerHTML = '<div class="col-span-full py-16 text-center text-sm text-on-surface-variant"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>불러오는 중</div>';
-  });
+  const grid = document.getElementById('gallery-active-grid');
+  if (grid) grid.innerHTML = '<div class="col-span-full py-16 text-center text-sm text-on-surface-variant"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>불러오는 중</div>';
   await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]);
   renderGalleryGrid();
 }
@@ -172,19 +204,40 @@ async function selectGalleryDay(index) {
 function wireGalleryCalendar() {
   document.getElementById('gallery-prev-day')?.addEventListener('click', () => selectGalleryDay(gallerySelectedIndex - 1));
   document.getElementById('gallery-next-day')?.addEventListener('click', () => selectGalleryDay(gallerySelectedIndex + 1));
-  document.getElementById('gallery-date-control')?.addEventListener('change', (event) => selectGalleryDay(galleryDays.indexOf(event.target.value)));
+  document.getElementById('gallery-calendar-toggle')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = document.getElementById('gallery-calendar-popover')?.classList.contains('hidden');
+    setGalleryCalendarOpen(open);
+  });
+  document.getElementById('gallery-calendar-popover')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const button = event.target.closest('[data-calendar-date]');
+    if (!button || button.disabled) return;
+    setGalleryCalendarOpen(false);
+    selectGalleryDay(galleryDays.indexOf(button.dataset.calendarDate));
+  });
+  document.addEventListener('click', () => setGalleryCalendarOpen(false));
+  document.getElementById('gallery-type-tabs')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-gallery-type-tab]');
+    if (!button) return;
+    galleryActiveType = button.dataset.galleryTypeTab;
+    gallerySelectedPage = 0;
+    renderGalleryTypeTabs();
+    renderGalleryGrid();
+  });
   document.getElementById('gallery-pagination')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-gallery-page]');
     if (!button) return;
     gallerySelectedPage = Number(button.dataset.galleryPage);
     renderGalleryGrid();
-    document.getElementById('gallery-pray-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('gallery-active-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
 async function initGalleryWidgets() {
   galleryDays = buildGalleryDays();
   wireGalleryCalendar();
+  renderGalleryTypeTabs();
   renderGalleryCalendar();
   galleryUsers = await loadGalleryUsers();
   await selectGalleryDay(0);
