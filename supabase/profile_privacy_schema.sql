@@ -25,6 +25,23 @@ $$;
 
 grant execute on function public.set_my_avatar_path(text) to authenticated;
 
+-- Home/Gallery에서 가입자 프로필 사진만 표시하기 위한 제한된 조회 함수입니다.
+-- 이름, 전화번호 등 다른 개인정보는 반환하지 않습니다.
+create or replace function public.get_profile_avatar_paths(requested_user_ids uuid[])
+returns table (user_id uuid, avatar_path text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.avatar_path
+  from public.profiles p
+  where p.id = any(coalesce(requested_user_ids, array[]::uuid[]));
+$$;
+
+revoke all on function public.get_profile_avatar_paths(uuid[]) from public;
+grant execute on function public.get_profile_avatar_paths(uuid[]) to authenticated;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'profile-avatars',
@@ -54,3 +71,10 @@ create policy "profile_avatars_own"
     bucket_id = 'profile-avatars'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- Home/Gallery는 가입자만 볼 수 있으므로 인증된 가입자에게 사진 읽기만 허용합니다.
+-- 업로드·수정·삭제는 위 profile_avatars_own 정책에 따라 계속 본인만 가능합니다.
+drop policy if exists "profile_avatars_authenticated_read" on storage.objects;
+create policy "profile_avatars_authenticated_read"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'profile-avatars');

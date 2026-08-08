@@ -12,6 +12,7 @@ let galleryCalendarPage = 0;
 let galleryUsers = [];
 let galleryPrayMap = {};
 let galleryWordMap = {};
+let galleryAvatarUrls = {};
 
 function galleryDateKey(date) {
   const year = date.getFullYear();
@@ -106,10 +107,13 @@ function galleryMediaHTML(userId, type) {
 function galleryStudentCardHTML(user, type) {
   const data = galleryCategoryData(user.id, type);
   const accent = type === 'pray' ? 'text-primary bg-primary/10' : 'text-secondary bg-secondary/10';
+  const avatar = galleryAvatarUrls[user.id]
+    ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
+    : (galleryEscape(user.name).charAt(0) || '?');
   return `
     <article class="glass-card rounded-[1.5rem] p-4 min-w-0" data-gallery-user="${user.id}" data-gallery-type="${type}">
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary flex items-center justify-center font-bold flex-shrink-0">${galleryEscape(user.name).charAt(0) || '?'}</div>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary flex items-center justify-center font-bold flex-shrink-0 overflow-hidden">${avatar}</div>
         <div class="min-w-0"><p class="font-bold text-sm truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant truncate">@${galleryEscape(user.username)}</p></div>
       </div>
       ${galleryMediaHTML(user.id, type)}
@@ -255,6 +259,9 @@ async function initGalleryWidgets() {
   renderGalleryTypeTabs();
   renderGalleryCalendar();
   galleryUsers = await loadGalleryUsers();
+  galleryAvatarUrls = window.getProfileAvatarUrls
+    ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
+    : {};
   await selectGalleryDay(0);
 }
 
