@@ -36,7 +36,8 @@ const ADMIN_FEATURE_STRUCTURE = [
   { key: null, title: '계정', description: '가입과 개인 계정 기능', icon: 'fa-solid fa-shield-halved', children: [
     { key: 'profile_photo', title: '프로필 사진', description: '프로필 사진 등록·수정·삭제를 허용합니다.' },
     { key: 'signup', title: '회원가입', description: '새로운 이용자의 회원가입을 허용합니다.' },
-    { key: 'password_reset', title: '비밀번호 찾기', description: '문자 인증을 통한 비밀번호 변경을 허용합니다.' }
+    { key: 'password_reset', title: '비밀번호 찾기', description: '문자 인증을 통한 비밀번호 변경을 허용합니다.' },
+    { key: 'account_delete', title: '회원탈퇴', description: '이용자가 직접 계정과 모든 기록을 영구 삭제하도록 허용합니다.' }
   ] }
 ];
 
@@ -244,6 +245,7 @@ function adminWireVerseList() {
 }
 
 let adminMembers = [];
+let adminMemberAvatarUrls = {};
 let adminDashboardRows = [];
 let adminActiveTab = 'board';
 const ADMIN_DASHBOARD_PAGE_SIZE = 20;
@@ -301,6 +303,9 @@ async function adminLoadMembers() {
   const { data, error } = await window.supabaseClient.rpc('admin_get_members');
   if (error) { adminShowStatus('회원 정보를 불러오지 못했습니다. 관리자 스키마를 확인해주세요.', true); return; }
   adminMembers = data || [];
+  adminMemberAvatarUrls = window.getProfileAvatarUrls
+    ? await window.getProfileAvatarUrls(adminMembers.map((member) => member.id))
+    : {};
   adminRenderMembers();
 }
 
@@ -309,7 +314,7 @@ function adminRenderMembers() {
   const query = (document.getElementById('admin-member-search')?.value || '').trim().toLowerCase();
   if (!wrap) return;
   const filtered = adminMembers.filter((member) => !query || `${member.name} ${member.username} ${member.grade_class}`.toLowerCase().includes(query));
-  wrap.innerHTML = filtered.map((member) => `<article class="admin-member-row glass-card rounded-2xl p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 ${member.is_active ? '' : 'opacity-50'}" data-member-id="${member.id}"><div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center font-bold">${adminEscape((member.name || '?')[0])}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><p class="font-bold truncate">${adminEscape(member.name)}</p>${adminRoleBadge(member)}</div><p class="text-xs text-on-surface-variant truncate">@${adminEscape(member.username)} · ${adminEscape(member.grade_class || '-')}</p></div><div class="text-right hidden md:block"><p class="text-xs font-semibold">${adminEscape(member.parent_phone || '학부모 번호 미입력')}</p><p class="text-[10px] text-on-surface-variant">${member.is_active ? 'Active' : 'Inactive'} · ${adminEscape(member.app_role)}</p></div><button type="button" data-edit-member class="icon-glass w-10 h-10 rounded-full"><i class="fa-solid fa-ellipsis"></i></button></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">검색 결과가 없습니다.</p>';
+  wrap.innerHTML = filtered.map((member) => `<article class="admin-member-row glass-card rounded-2xl p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 ${member.is_active ? '' : 'opacity-50'}" data-member-id="${member.id}"><div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center font-bold overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape((member.name || '?')[0])}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><p class="font-bold truncate">${adminEscape(member.name)}</p>${adminRoleBadge(member)}</div><p class="text-xs text-on-surface-variant truncate">@${adminEscape(member.username)} · ${adminEscape(member.grade_class || '-')}</p></div><div class="text-right hidden md:block"><p class="text-xs font-semibold">${adminEscape(member.parent_phone || '학부모 번호 미입력')}</p><p class="text-[10px] text-on-surface-variant">${member.is_active ? 'Active' : 'Inactive'} · ${adminEscape(member.app_role)}</p></div><button type="button" data-edit-member class="icon-glass w-10 h-10 rounded-full"><i class="fa-solid fa-ellipsis"></i></button></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">검색 결과가 없습니다.</p>';
   wrap.querySelectorAll('[data-edit-member]').forEach((button) => button.addEventListener('click', () => adminOpenMember(button.closest('[data-member-id]').dataset.memberId)));
 }
 

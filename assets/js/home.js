@@ -7,6 +7,7 @@ const DAILY_GOAL_MINUTES = 300;
 const WORD_VERIFIED_MINUTES = 60; // 말씀 has no natural duration input, so a verified 말씀 is a flat 60분.
 
 let selectedDateKey = todayKey();
+let galleryReturnType = null;
 
 async function fetchStudyRecord(userId, dateKey) {
   const { data, error } = await window.supabaseClient
@@ -787,7 +788,17 @@ async function onPrayWordSaved() {
   renderDailyGoals();
 }
 
+async function onGalleryPrayWordSaved() {
+  await onPrayWordSaved();
+  if (galleryReturnType) window.location.href = `gallery.html?date=${encodeURIComponent(selectedDateKey)}&type=${encodeURIComponent(galleryReturnType)}`;
+}
+
 async function initHomeWidgets() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedDate = params.get('date');
+  const requestedVerification = params.get('verify');
+  if (/^2026-(08|09)-\d{2}$/.test(requestedDate || '')) selectedDateKey = requestedDate;
+  if (params.get('return') === 'gallery' && (requestedVerification === 'pray' || requestedVerification === 'word')) galleryReturnType = requestedVerification;
   wireCalendarTabs();
   wireCalendarSelection();
   wirePrayModalStatic();
@@ -898,6 +909,8 @@ async function initHomeWidgets() {
   // 버튼 wiring은 전부 즉시 끝내고, 4개 카테고리 최초 데이터만 비동기로 불러온 뒤 첫 렌더를 한다.
   await refreshDailyStatus(selectedDateKey);
   renderAllForSelectedDate();
+  if (galleryReturnType === 'pray') openPrayModal(selectedDateKey, onGalleryPrayWordSaved);
+  if (galleryReturnType === 'word') openWordModal(selectedDateKey, onGalleryPrayWordSaved);
 }
 
 window.initHomeWidgets = initHomeWidgets;

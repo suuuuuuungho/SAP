@@ -9,9 +9,9 @@ set search_path = public
 as $$
   select p.id, p.username, p.name
   from public.profiles p
-  where p.gallery_enabled = true
-    and p.grade_class not in ('교사', '관리자')
-  order by p.username;
+  where p.app_role = 'student'
+    and p.is_active = true
+  order by p.grade_class, p.name, p.username;
 $$;
 
 grant execute on function public.get_gallery_users() to authenticated;

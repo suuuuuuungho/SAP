@@ -41,7 +41,8 @@ insert into public.app_feature_flags (feature_key, label, section) values
   ('stat_summary', 'Summary', 'Private'), ('stat_heatmap', 'Heatmap', 'Private'),
   ('stat_trend', 'Trend', 'Private'), ('stat_balance', 'Balance', 'Private'),
   ('stat_breakdown', 'Time Breakdown', 'Private'), ('stat_bests', 'Personal Bests', 'Private'),
-  ('signup', 'Sign Up', 'Account'), ('password_reset', 'Password Reset', 'Account')
+  ('signup', 'Sign Up', 'Account'), ('password_reset', 'Password Reset', 'Account'),
+  ('account_delete', 'Account Delete', 'Account')
 on conflict (feature_key) do update set label = excluded.label, section = excluded.section;
 
 alter table public.app_feature_flags enable row level security;
@@ -273,6 +274,29 @@ as $$
   order by p.name, p.username;
 $$;
 grant execute on function public.admin_get_dashboard(date) to authenticated;
+
+-- Gallery는 모든 활성 학생의 고정 칸을 먼저 만들고 MyPage와 같은 인증 원본을 읽습니다.
+create or replace function public.get_gallery_users()
+returns table (id uuid, username text, name text)
+language sql stable security definer set search_path = public
+as $$
+  select p.id, p.username, p.name
+  from public.profiles p
+  where p.app_role = 'student' and p.is_active = true
+  order by p.grade_class, p.name, p.username;
+$$;
+grant execute on function public.get_gallery_users() to authenticated;
+
+drop policy if exists "pray_records_select" on public.pray_records;
+create policy "pray_records_select" on public.pray_records for select to authenticated
+using (user_id = auth.uid() or exists (
+  select 1 from public.profiles p where p.id = pray_records.user_id and p.app_role = 'student' and p.is_active = true
+));
+drop policy if exists "word_records_select" on public.word_records;
+create policy "word_records_select" on public.word_records for select to authenticated
+using (user_id = auth.uid() or exists (
+  select 1 from public.profiles p where p.id = word_records.user_id and p.app_role = 'student' and p.is_active = true
+));
 
 create or replace function public.admin_get_member_report(target_user_id uuid)
 returns table (record_date date, pray_minutes bigint, word_minutes bigint, study_minutes bigint, worship_minutes bigint)

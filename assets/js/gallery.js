@@ -62,6 +62,10 @@ function galleryDateParts(key) {
   };
 }
 
+function galleryReadingLabel(index) {
+  return index === galleryDays.length - 1 ? '요한복음 20장·21장' : `요한복음 ${index + 1}장`;
+}
+
 async function loadGalleryUsers() {
   const { data, error } = await window.supabaseClient.rpc('get_gallery_users');
   if (error) {
@@ -179,7 +183,7 @@ function galleryStudentCardHTML(user, type) {
       ${galleryVerificationSummaryHTML(user.id, type, true)}
       <div class="mt-3 flex items-center justify-between gap-2">
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${data.verified ? accent : 'text-on-surface-variant bg-surface-container'}">${data.verified ? '인증 완료' : '미인증'}</span>
-        ${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>comment</button>` : ''}
+        <div class="flex items-center gap-3">${user.id === galleryCurrentUserId && !window.IS_ADMIN_CONSOLE ? `<button type="button" data-gallery-verify="${type}" class="text-xs font-bold text-primary"><i class="fa-solid fa-plus mr-1"></i>${data.verified ? '수정' : '인증'}</button>` : ''}${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>comment</button>` : ''}</div>
       </div>
       ${window.IS_ADMIN_CONSOLE && data.verified ? `<div class="mt-3 pt-3 border-t border-outline-variant/40 flex flex-wrap items-center gap-2"><button type="button" data-admin-gallery-visibility="${user.id}" data-admin-gallery-type="${type}" data-admin-gallery-action="${record?.admin_hidden ? 'show' : 'hide'}" class="rounded-full px-3 py-1.5 text-[11px] font-bold ${record?.admin_hidden ? 'bg-error/10 text-error' : 'bg-quaternary/10 text-quaternary'}"><i class="fa-solid ${record?.admin_hidden ? 'fa-eye-slash' : 'fa-earth-americas'} mr-1"></i>${record?.admin_hidden ? '비공개' : '공개'}</button><span class="flex-1"></span><button type="button" data-admin-gallery-edit="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" data-admin-gallery-delete="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold text-error"><i class="fa-solid fa-trash mr-1"></i>삭제</button></div>` : ''}
     </article>`;
@@ -398,6 +402,12 @@ function wireGalleryComments() {
     }
   });
   document.getElementById('gallery-active-grid')?.addEventListener('click', (event) => {
+    const verifyButton = event.target.closest('[data-gallery-verify]');
+    if (verifyButton) {
+      const date = galleryDays[gallerySelectedIndex];
+      window.location.href = `index.html?date=${encodeURIComponent(date)}&verify=${encodeURIComponent(verifyButton.dataset.galleryVerify)}&return=gallery`;
+      return;
+    }
     const visibilityButton = event.target.closest('[data-admin-gallery-visibility]');
     if (visibilityButton) { toggleAdminGalleryVisibility(visibilityButton.dataset.adminGalleryVisibility, visibilityButton.dataset.adminGalleryType, visibilityButton.dataset.adminGalleryAction); return; }
     const editButton = event.target.closest('[data-admin-gallery-edit]');
@@ -501,11 +511,21 @@ function renderGalleryCalendar() {
   const display = document.getElementById('gallery-date-display');
   const count = document.getElementById('gallery-day-count');
   const label = document.getElementById('gallery-date-label');
+  let reading = document.getElementById('gallery-reading-label');
   const prev = document.getElementById('gallery-prev-day');
   const next = document.getElementById('gallery-next-day');
-  if (display) display.textContent = key;
+  const readingText = galleryReadingLabel(gallerySelectedIndex);
+  if (display) display.textContent = `${key}(${readingText})`;
   if (count) count.textContent = `DAY ${gallerySelectedIndex + 1} / ${galleryDays.length}`;
   if (label) label.textContent = parts.full;
+  if (!reading && label) {
+    reading = document.createElement('p');
+    reading.id = 'gallery-reading-label';
+    reading.className = 'text-xl sm:text-2xl font-black text-on-surface mt-2';
+    label.insertAdjacentElement('afterend', reading);
+  }
+  if (reading) reading.textContent = readingText;
+  document.getElementById('gallery-calendar-toggle')?.classList.replace('max-w-[220px]', 'max-w-[340px]');
   if (prev) prev.disabled = gallerySelectedIndex === 0;
   if (next) next.disabled = gallerySelectedIndex === galleryDays.length - 1;
   renderGalleryCalendarMonths();
@@ -522,7 +542,8 @@ function galleryMonthHTML(year, monthIndex) {
     const validIndex = galleryDays.indexOf(key);
     const selected = key === galleryDays[gallerySelectedIndex];
     const enabledClass = selected ? 'nav-pill-active' : 'hover:bg-white/70 text-on-surface';
-    return `<button type="button" data-calendar-date="${key}" ${validIndex < 0 ? 'disabled' : ''} class="aspect-square rounded-full text-xs font-semibold ${validIndex < 0 ? 'text-outline-variant/45 cursor-not-allowed' : enabledClass}" aria-label="${monthIndex + 1}월 ${dayNumber}일">${dayNumber}</button>`;
+    const readingText = validIndex >= 0 ? galleryReadingLabel(validIndex) : '';
+    return `<button type="button" data-calendar-date="${key}" ${validIndex < 0 ? 'disabled' : ''} class="aspect-square rounded-full text-xs font-semibold ${validIndex < 0 ? 'text-outline-variant/45 cursor-not-allowed' : enabledClass}" aria-label="${monthIndex + 1}월 ${dayNumber}일${readingText ? `, ${readingText}` : ''}" title="${validIndex >= 0 ? `${key}(${readingText})` : ''}">${dayNumber}</button>`;
   }).join('');
   return `<div><div class="grid grid-cols-7 gap-1 text-center mb-1">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => `<span class="text-[9px] text-on-surface-variant">${day}</span>`).join('')}</div><div class="grid grid-cols-7 gap-1">${blanks}${days}</div></div>`;
 }
@@ -613,6 +634,12 @@ function wireGalleryCalendar() {
 
 async function initGalleryWidgets() {
   galleryDays = buildGalleryDays();
+  const params = new URLSearchParams(window.location.search);
+  const requestedDate = params.get('date');
+  const requestedType = params.get('type');
+  if (requestedDate && galleryDays.includes(requestedDate)) gallerySelectedIndex = galleryDays.indexOf(requestedDate);
+  if (requestedType === 'pray' || requestedType === 'word') galleryActiveType = requestedType;
+  galleryCalendarPage = galleryDays[gallerySelectedIndex]?.startsWith('2026-09') ? 1 : 0;
   wireGalleryCalendar();
   wireGalleryComments();
   renderGalleryTypeTabs();
@@ -622,7 +649,7 @@ async function initGalleryWidgets() {
   galleryAvatarUrls = window.getProfileAvatarUrls
     ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
     : {};
-  await selectGalleryDay(0);
+  await selectGalleryDay(gallerySelectedIndex);
   if (window.IS_ADMIN_CONSOLE) {
     document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
     document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);
