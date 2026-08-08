@@ -466,7 +466,7 @@ async function adminSendBulkMissingSms() {
     }
   };
   await Promise.all(Array.from({ length: Math.min(5, targets.length) }, worker));
-  if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>전체 미인증 문자 발송'; }
+  if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>미인증 내역 알림 문자 발송'; }
   adminShowStatus(`일괄 발송 완료: 성공 ${success}명 · 실패 ${failed}명`, failed > 0);
   await adminLoadSmsLogs();
 }
