@@ -57,13 +57,6 @@
         class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
     </div>
 
-    <div>
-      <label for="email-input" class="block text-sm font-medium mb-1">이메일</label>
-      <input type="email" id="email-input" required autocomplete="email" placeholder="you@example.com"
-        class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
-      <p class="text-xs text-on-surface-variant mt-1">로그인에는 사용되지 않으며, 비밀번호 재설정 용도로만 사용됩니다.</p>
-    </div>
-
     <button type="submit" id="signup-submit"
       class="pill-btn-primary w-full text-sm px-4 py-2.5 mt-2">
       회원가입
@@ -91,7 +84,6 @@
   const nameInput = document.getElementById('name-input');
   const gradeClassInput = document.getElementById('grade-class-input');
   const phoneInput = document.getElementById('phone-input');
-  const emailInput = document.getElementById('email-input');
   const submitBtn = document.getElementById('signup-submit');
   const status = document.getElementById('signup-status');
 
@@ -101,6 +93,14 @@
     status.textContent = message;
     status.classList.remove('hidden', 'text-error', 'text-on-surface-variant');
     status.classList.add(isError ? 'text-error' : 'text-on-surface-variant');
+  }
+
+  // Supabase Auth는 이메일 형식의 식별자를 요구한다. 사용자가 이메일을 입력하지 않아도
+  // 아이디를 UTF-8 16진수로 변환한 내부 전용 주소를 만들어 기존 아이디 로그인 구조를 유지한다.
+  function internalAuthEmail(username) {
+    const bytes = new TextEncoder().encode(username.trim().toLowerCase());
+    const encoded = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `u${encoded}@sap.local`;
   }
 
   usernameInput.addEventListener('blur', async () => {
@@ -141,7 +141,7 @@
     submitBtn.textContent = '가입 중...';
 
     const { data, error } = await window.supabaseClient.auth.signUp({
-      email: emailInput.value.trim(),
+      email: internalAuthEmail(usernameInput.value),
       password: passwordInput.value,
       options: {
         data: {
