@@ -132,7 +132,7 @@ function galleryMediaHTML(userId, type, view = 'card') {
     return `<div class="${aspectClass} rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
   return `<div class="relative ${aspectClass} rounded-2xl overflow-hidden bg-surface-container" data-gallery-carousel data-carousel-index="0">
-    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" class="w-full h-full object-contain bg-surface-container" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}"></div>`).join('')}
+    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" class="w-full h-full object-contain bg-surface-container" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}">${window.IS_ADMIN_CONSOLE ? `<button type="button" data-admin-gallery-photo-delete data-admin-gallery-owner="${userId}" data-admin-gallery-type="${type}" data-admin-gallery-photo-path="${galleryEscape(photo)}" class="absolute left-2 top-2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error" aria-label="사진 삭제"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}</div>`).join('')}
     ${photos.length > 1 ? `
       <button type="button" data-carousel-direction="-1" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="이전 사진"><i class="fa-solid fa-chevron-left text-xs"></i></button>
       <button type="button" data-carousel-direction="1" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="다음 사진"><i class="fa-solid fa-chevron-right text-xs"></i></button>
@@ -181,7 +181,7 @@ function galleryStudentCardHTML(user, type) {
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${data.verified ? accent : 'text-on-surface-variant bg-surface-container'}">${data.verified ? '인증 완료' : '미인증'}</span>
         ${data.verified ? `<button type="button" data-gallery-comment-user="${user.id}" data-gallery-comment-type="${type}" class="text-xs font-semibold text-on-surface-variant hover:text-primary"><i class="fa-regular fa-comment mr-1"></i>comment</button>` : ''}
       </div>
-      ${window.IS_ADMIN_CONSOLE && data.verified ? `<div class="mt-3 pt-3 border-t border-outline-variant/40 flex items-center gap-2"><span class="text-[10px] font-bold ${record?.admin_hidden ? 'text-error' : 'text-quaternary'} mr-auto">${record?.admin_hidden ? '숨김 상태' : '공개 중'}</span><button type="button" data-admin-gallery-edit="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" data-admin-gallery-delete="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold text-error"><i class="fa-solid fa-trash mr-1"></i>삭제</button></div>` : ''}
+      ${window.IS_ADMIN_CONSOLE && data.verified ? `<div class="mt-3 pt-3 border-t border-outline-variant/40 flex flex-wrap items-center gap-2"><button type="button" data-admin-gallery-visibility="${user.id}" data-admin-gallery-type="${type}" data-admin-gallery-action="${record?.admin_hidden ? 'show' : 'hide'}" class="rounded-full px-3 py-1.5 text-[11px] font-bold ${record?.admin_hidden ? 'bg-error/10 text-error' : 'bg-quaternary/10 text-quaternary'}"><i class="fa-solid ${record?.admin_hidden ? 'fa-eye-slash' : 'fa-earth-americas'} mr-1"></i>${record?.admin_hidden ? '비공개' : '공개'}</button><span class="flex-1"></span><button type="button" data-admin-gallery-edit="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" data-admin-gallery-delete="${user.id}" data-admin-gallery-type="${type}" class="glass-card rounded-full px-3 py-1.5 text-xs font-semibold text-error"><i class="fa-solid fa-trash mr-1"></i>삭제</button></div>` : ''}
     </article>`;
 }
 
@@ -238,6 +238,25 @@ async function deleteAdminGalleryPost(userId, type) {
   await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]); renderGalleryGrid();
 }
 
+async function toggleAdminGalleryVisibility(userId, type, action) {
+  const row = type === 'pray' ? galleryPrayMap[userId] : galleryWordMap[userId];
+  if (!row) return;
+  const { error } = await window.supabaseClient.rpc('admin_set_gallery_post', { owner_id: userId, post_date: row.record_date, post_type: type, action });
+  if (error) { alert('공개 상태를 변경하지 못했습니다.'); return; }
+  await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]); renderGalleryGrid();
+}
+
+async function deleteAdminGalleryPhoto(userId, type, photoPath) {
+  const row = type === 'pray' ? galleryPrayMap[userId] : galleryWordMap[userId];
+  if (!row || !photoPath || !confirm('이 사진 한 장을 게시물에서 완전히 삭제할까요?')) return;
+  let request = await window.supabaseClient.functions.invoke('admin-gallery-media', { body: { ownerId: userId, date: row.record_date, type, photoPath } });
+  if (request.error || !request.data?.ok) {
+    request = await window.supabaseClient.rpc('admin_delete_gallery_photo', { owner_id: userId, post_date: row.record_date, post_type: type, target_photo_path: photoPath });
+  }
+  if (request.error) { alert('사진을 삭제하지 못했습니다. 관리자 서버 함수를 확인해주세요.'); return; }
+  await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]); renderGalleryGrid();
+}
+
 function galleryRelativeTime(isoString) {
   const minutes = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
   if (minutes < 1) return '방금';
@@ -269,11 +288,18 @@ function galleryCommentAvatar(profile) {
 
 async function loadGalleryComments() {
   if (!galleryActiveCommentsPost) return;
-  const { data, error } = await window.supabaseClient.from('post_comments').select('*')
-    .eq('post_owner_id', galleryActiveCommentsPost.ownerId)
-    .eq('post_date', galleryActiveCommentsPost.date)
-    .eq('post_type', galleryActiveCommentsPost.type)
-    .order('created_at', { ascending: true });
+  let data;
+  let error;
+  if (window.IS_ADMIN_CONSOLE) {
+    let result = await window.supabaseClient.rpc('admin_get_post_comments', { target_owner_id: galleryActiveCommentsPost.ownerId, target_post_date: galleryActiveCommentsPost.date, target_post_type: galleryActiveCommentsPost.type });
+    if (result.error) {
+      result = await window.supabaseClient.from('post_comments').select('*').eq('post_owner_id', galleryActiveCommentsPost.ownerId).eq('post_date', galleryActiveCommentsPost.date).eq('post_type', galleryActiveCommentsPost.type).order('created_at', { ascending: true });
+    }
+    data = result.data; error = result.error;
+  } else {
+    const result = await window.supabaseClient.from('post_comments').select('*').eq('post_owner_id', galleryActiveCommentsPost.ownerId).eq('post_date', galleryActiveCommentsPost.date).eq('post_type', galleryActiveCommentsPost.type).order('created_at', { ascending: true });
+    data = result.data; error = result.error;
+  }
   if (error) {
     console.error('[gallery] comments', error);
     galleryComments = [];
@@ -298,7 +324,7 @@ function renderGalleryComments() {
     const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(profile?.badge_role, profile?.is_host) : '';
     const controls = comment.author_id === galleryCurrentUserId
       ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-comment-edit="${comment.id}" class="hover:text-primary">수정</button><button type="button" data-comment-delete="${comment.id}" class="hover:text-error">삭제</button></span>`
-      : '';
+      : window.IS_ADMIN_CONSOLE ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-admin-comment-delete="${comment.id}" class="text-error hover:underline">관리자 삭제</button></span>` : '';
     return `<article class="flex items-start gap-3">
       ${galleryCommentAvatar(profile)}
       <div class="flex-1 min-w-0">
@@ -358,6 +384,12 @@ function resetGalleryCommentEditor() {
 
 function wireGalleryComments() {
   document.getElementById('page-main')?.addEventListener('click', (event) => {
+    const adminPhotoButton = event.target.closest('[data-admin-gallery-photo-delete]');
+    if (adminPhotoButton) {
+      event.preventDefault(); event.stopPropagation();
+      deleteAdminGalleryPhoto(adminPhotoButton.dataset.adminGalleryOwner, adminPhotoButton.dataset.adminGalleryType, adminPhotoButton.dataset.adminGalleryPhotoPath);
+      return;
+    }
     const carouselButton = event.target.closest('[data-carousel-direction]');
     if (carouselButton) {
       event.preventDefault();
@@ -366,6 +398,8 @@ function wireGalleryComments() {
     }
   });
   document.getElementById('gallery-active-grid')?.addEventListener('click', (event) => {
+    const visibilityButton = event.target.closest('[data-admin-gallery-visibility]');
+    if (visibilityButton) { toggleAdminGalleryVisibility(visibilityButton.dataset.adminGalleryVisibility, visibilityButton.dataset.adminGalleryType, visibilityButton.dataset.adminGalleryAction); return; }
     const editButton = event.target.closest('[data-admin-gallery-edit]');
     const deleteButton = event.target.closest('[data-admin-gallery-delete]');
     if (editButton) { openAdminGalleryEdit(editButton.dataset.adminGalleryEdit, editButton.dataset.adminGalleryType); return; }
@@ -379,6 +413,14 @@ function wireGalleryComments() {
   document.getElementById('gallery-comments-list')?.addEventListener('click', async (event) => {
     const editButton = event.target.closest('[data-comment-edit]');
     const deleteButton = event.target.closest('[data-comment-delete]');
+    const adminDeleteButton = event.target.closest('[data-admin-comment-delete]');
+    if (adminDeleteButton) {
+      if (!confirm('이 댓글을 관리자로서 삭제할까요?')) return;
+      const { error } = await window.supabaseClient.rpc('admin_delete_post_comment', { comment_id: adminDeleteButton.dataset.adminCommentDelete });
+      if (error) console.error('[gallery] admin delete comment', error);
+      else { await loadGalleryComments(); renderGalleryComments(); }
+      return;
+    }
     if (editButton) {
       const comment = galleryComments.find((item) => item.id === editButton.dataset.commentEdit);
       if (!comment || comment.author_id !== galleryCurrentUserId) return;

@@ -159,6 +159,51 @@ begin
 end; $$;
 grant execute on function public.admin_get_gallery_records(date) to authenticated;
 
+create or replace function public.admin_get_post_comments(target_owner_id uuid, target_post_date date, target_post_type text)
+returns table (id uuid, post_owner_id uuid, post_date date, post_type text, author_id uuid, body text, created_at timestamptz)
+language plpgsql stable security definer set search_path = public
+as $$
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  return query select c.id, c.post_owner_id, c.post_date, c.post_type, c.author_id, c.body, c.created_at
+  from public.post_comments c
+  where c.post_owner_id = target_owner_id and c.post_date = target_post_date and c.post_type = target_post_type
+  order by c.created_at;
+end; $$;
+grant execute on function public.admin_get_post_comments(uuid,date,text) to authenticated;
+
+create or replace function public.admin_delete_post_comment(comment_id uuid)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  delete from public.post_comments c where c.id = comment_id;
+end; $$;
+grant execute on function public.admin_delete_post_comment(uuid) to authenticated;
+
+create or replace function public.admin_delete_gallery_photo(
+  owner_id uuid, post_date date, post_type text, target_photo_path text
+)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  if post_type = 'pray' then
+    update public.pray_records r set entries = (
+      select coalesce(jsonb_agg(
+        case when item->>'photoPath' = target_photo_path
+          then jsonb_set(jsonb_set(item, '{photoPath}', 'null'::jsonb), '{photoUnavailable}', 'true'::jsonb)
+          else item end
+      ), '[]'::jsonb) from jsonb_array_elements(r.entries) item
+    ), updated_at = now()
+    where r.user_id = owner_id and r.record_date = post_date;
+  elsif post_type = 'word' then
+    update public.word_records r set photo_path = null, photo_unavailable = true, updated_at = now()
+    where r.user_id = owner_id and r.record_date = post_date and r.photo_path = target_photo_path;
+  else raise exception 'invalid post type'; end if;
+end; $$;
+grant execute on function public.admin_delete_gallery_photo(uuid,date,text,text) to authenticated;
+
 create or replace function public.admin_get_dashboard(target_date date)
 returns table (
   user_id uuid, username text, name text, grade_class text, parent_phone text,
