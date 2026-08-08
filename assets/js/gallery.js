@@ -115,7 +115,7 @@ function galleryMediaHTML(userId, type, view = 'card') {
 
 function galleryVerificationSummary(userId, type) {
   if (type === 'pray') {
-    return { text: '기도 인증' };
+    return { text: '' };
   }
   const row = galleryWordMap[userId];
   const verses = row && Array.isArray(row.verses) ? row.verses : [];
@@ -128,6 +128,7 @@ function galleryVerificationSummaryHTML(userId, type, compact = false) {
   const data = galleryCategoryData(userId, type);
   if (!data.verified) return '';
   const summary = galleryVerificationSummary(userId, type);
+  if (!summary.text) return '';
   return `<div class="${compact ? 'mt-2' : 'mt-3'} min-w-0">
     <p class="text-xs leading-5 text-on-surface-variant ${compact ? 'line-clamp-2' : ''}">${galleryEscape(summary.text)}</p>
   </div>`;
