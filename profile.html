@@ -15,33 +15,28 @@
   <div class="flex items-center justify-between gap-3 mb-6">
     <div>
       <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Profile</h1>
-      <p class="text-sm text-on-surface-variant mt-1">내 정보와 계정 보안을 관리합니다.</p>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-[0.85fr_1.15fr] gap-5 lg:gap-6">
     <section class="glass-card rounded-[1.5rem] p-6">
-      <h2 class="text-lg font-bold">Profile Photo</h2>
-      <p class="text-sm text-on-surface-variant mt-1">나를 나타내는 프로필 사진입니다.</p>
-      <div class="flex flex-col items-center text-center mt-7">
+      <div class="flex flex-col items-center text-center mt-2">
         <div id="profile-avatar-preview" class="w-32 h-32 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center text-4xl font-bold overflow-hidden shadow-lg">?</div>
         <p id="profile-display-name" class="font-bold text-xl mt-4">불러오는 중...</p>
         <p id="profile-meta" class="text-sm text-on-surface-variant mt-1"></p>
         <input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
-        <button id="profile-photo-select" type="button" class="pill-btn-primary px-6 py-2.5 text-sm mt-5"><i class="fa-solid fa-camera mr-2"></i>사진 변경</button>
+        <div class="flex items-center justify-center gap-2 mt-5">
+          <button id="profile-photo-select" type="button" class="pill-btn-primary px-5 py-2.5 text-sm"><i class="fa-solid fa-camera mr-2"></i>사진 변경</button>
+          <button id="profile-photo-delete" type="button" class="hidden glass-card rounded-full px-5 py-2.5 text-sm text-error hover:bg-error/10"><i class="fa-regular fa-trash-can mr-2"></i>사진 삭제</button>
+        </div>
         <p class="text-xs text-on-surface-variant mt-3">JPG, PNG, WebP · 최대 5MB</p>
         <p id="profile-photo-status" class="hidden text-sm mt-3" aria-live="polite"></p>
       </div>
     </section>
 
     <section class="glass-card rounded-[1.5rem] p-6">
-      <h2 class="text-lg font-bold">Change Password</h2>
-      <p class="text-sm text-on-surface-variant mt-1">현재 비밀번호 확인 후 새 비밀번호로 변경합니다.</p>
+      <h2 class="text-lg font-bold">비밀번호 변경</h2>
       <form id="profile-password-form" class="flex flex-col gap-4 mt-6">
-        <div>
-          <label for="current-password-input" class="block text-sm font-medium mb-1.5">현재 비밀번호</label>
-          <input id="current-password-input" type="password" required autocomplete="current-password" class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
-        </div>
         <div>
           <label for="profile-new-password-input" class="block text-sm font-medium mb-1.5">새 비밀번호</label>
           <input id="profile-new-password-input" type="password" required autocomplete="new-password" class="glass-input w-full px-4 py-2.5 rounded-2xl text-sm">
@@ -62,9 +57,9 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=4"></script>
-<script src="assets/js/layout.js?v=7"></script>
+<script src="assets/js/layout.js?v=8"></script>
 <script src="assets/js/auth-password.js?v=1"></script>
-<script src="assets/js/profile.js?v=1"></script>
+<script src="assets/js/profile.js?v=2"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'profile' });

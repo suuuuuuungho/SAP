@@ -10,8 +10,11 @@ function setProfileStatus(element, message, isError = false) {
 
 async function renderProfileAvatar(path) {
   const preview = document.getElementById('profile-avatar-preview');
+  const deleteButton = document.getElementById('profile-photo-delete');
   if (!preview) return;
+  deleteButton?.classList.toggle('hidden', !path);
   if (!path) {
+    preview.innerHTML = '';
     preview.textContent = (profileData?.name || profileData?.username || '?').charAt(0).toUpperCase();
     return;
   }
@@ -36,7 +39,7 @@ async function loadProfile() {
   if (result.error) {
     result = await window.supabaseClient
       .from('profiles')
-      .select('username, name, grade_class, phone, email')
+      .select('username, name, grade_class, phone')
       .eq('id', profileUser.id)
       .maybeSingle();
   }
@@ -51,6 +54,7 @@ async function loadProfile() {
 function wireProfilePhoto() {
   const input = document.getElementById('profile-photo-input');
   const button = document.getElementById('profile-photo-select');
+  const deleteButton = document.getElementById('profile-photo-delete');
   const status = document.getElementById('profile-photo-status');
   if (!input || !button) return;
 
@@ -91,12 +95,38 @@ function wireProfilePhoto() {
     button.innerHTML = '<i class="fa-solid fa-camera mr-2"></i>사진 변경';
     input.value = '';
   });
+
+  deleteButton.addEventListener('click', async () => {
+    if (!profileData?.avatar_path) return;
+    deleteButton.disabled = true;
+    button.disabled = true;
+    deleteButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>삭제 중...';
+    const path = profileData.avatar_path;
+    const { error: removeError } = await window.supabaseClient.storage
+      .from(PROFILE_AVATAR_BUCKET)
+      .remove([path]);
+    if (removeError) {
+      setProfileStatus(status, '프로필 사진을 삭제하지 못했습니다.', true);
+    } else {
+      const { error: rpcError } = await window.supabaseClient.rpc('set_my_avatar_path', { new_path: null });
+      if (rpcError) {
+        setProfileStatus(status, '프로필 정보를 갱신하지 못했습니다.', true);
+      } else {
+        profileData.avatar_path = null;
+        await renderProfileAvatar(null);
+        setProfileStatus(status, '프로필 사진이 삭제되었습니다.');
+        initAuthUI();
+      }
+    }
+    deleteButton.disabled = false;
+    button.disabled = false;
+    deleteButton.innerHTML = '<i class="fa-regular fa-trash-can mr-2"></i>사진 삭제';
+  });
 }
 
 function wireProfilePassword() {
   const form = document.getElementById('profile-password-form');
   if (!form) return;
-  const currentInput = document.getElementById('current-password-input');
   const newInput = document.getElementById('profile-new-password-input');
   const confirmInput = document.getElementById('profile-new-password-confirm-input');
   const matchHint = document.getElementById('profile-password-match');
@@ -113,18 +143,6 @@ function wireProfilePassword() {
     }
 
     submit.disabled = true;
-    submit.textContent = '확인 중...';
-    const { error: verifyError } = await window.supabaseClient.auth.signInWithPassword({
-      email: profileData.email,
-      password: normalizeAuthPassword(currentInput.value)
-    });
-    if (verifyError) {
-      setProfileStatus(status, '현재 비밀번호가 올바르지 않습니다.', true);
-      submit.disabled = false;
-      submit.textContent = '비밀번호 변경';
-      return;
-    }
-
     submit.textContent = '변경 중...';
     const { error } = await window.supabaseClient.auth.updateUser({ password: normalizeAuthPassword(newInput.value) });
     if (error) {

@@ -15,8 +15,8 @@ begin
   if auth.uid() is null then
     raise exception 'authentication required';
   end if;
-  -- 아래 경로 규칙({user_id}/avatar)과 정확히 일치하는 값만 허용합니다.
-  if new_path is null or new_path <> (auth.uid()::text || '/avatar') then
+  -- null은 사진 삭제, 문자열은 아래 경로 규칙({user_id}/avatar)만 허용합니다.
+  if new_path is not null and new_path <> (auth.uid()::text || '/avatar') then
     raise exception 'invalid avatar path';
   end if;
   update public.profiles set avatar_path = new_path where id = auth.uid();
