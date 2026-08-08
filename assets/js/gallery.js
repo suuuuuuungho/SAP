@@ -17,6 +17,7 @@ let galleryCurrentUserId = null;
 let galleryActiveCommentsPost = null;
 let galleryComments = [];
 let galleryCommentProfiles = {};
+let galleryEditingCommentId = null;
 
 function galleryDateKey(date) {
   const year = date.getFullYear();
@@ -94,34 +95,32 @@ function galleryCategoryData(userId, type) {
   };
 }
 
-function galleryMediaHTML(userId, type) {
+function galleryMediaHTML(userId, type, view = 'card') {
   const data = galleryCategoryData(userId, type);
   const photos = data.photos;
+  const aspectClass = view === 'detail' ? 'aspect-square' : 'aspect-[4/3]';
   if (!photos.length) {
     const message = data.verified ? '사진 없이 인증했어요' : '아직 인증 사진이 없어요';
-    return `<div class="aspect-[4/3] rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
+    return `<div class="${aspectClass} rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
-  const columns = photos.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
-  return `<div class="grid ${columns} gap-1 aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container">${photos.slice(0, 4).map((photo, index) => `
-    <div class="relative min-h-0 ${photos.length === 3 && index === 0 ? 'row-span-2' : ''}">
-      <img src="${getPhotoUrl(photo)}" class="w-full h-full object-contain bg-surface-container" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진">
-    </div>`).join('')}</div>`;
+  return `<div class="relative ${aspectClass} rounded-2xl overflow-hidden bg-surface-container" data-gallery-carousel data-carousel-index="0">
+    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" class="w-full h-full object-contain bg-surface-container" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}"></div>`).join('')}
+    ${photos.length > 1 ? `
+      <button type="button" data-carousel-direction="-1" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="이전 사진"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+      <button type="button" data-carousel-direction="1" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="다음 사진"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+      <span class="absolute top-2 right-2 rounded-full bg-black/55 text-white text-[10px] px-2 py-1" data-carousel-counter>1/${photos.length}</span>
+    ` : ''}
+  </div>`;
 }
 
 function galleryVerificationSummary(userId, type) {
   if (type === 'pray') {
-    const row = galleryPrayMap[userId];
-    const entries = row && Array.isArray(row.entries) ? row.entries : [];
-    return {
-      text: formatPrayerSummary(entries) || '기도 인증',
-      minutes: entries.reduce((sum, entry) => sum + durationMinutes(entry.start, entry.end), 0)
-    };
+    return { text: '기도 인증' };
   }
   const row = galleryWordMap[userId];
   const verses = row && Array.isArray(row.verses) ? row.verses : [];
   return {
-    text: formatWordSummary(verses) || '말씀묵상 인증',
-    minutes: calculateWordMinutes(verses)
+    text: formatWordSummary(verses) || '말씀묵상 인증'
   };
 }
 
@@ -130,10 +129,7 @@ function galleryVerificationSummaryHTML(userId, type, compact = false) {
   if (!data.verified) return '';
   const summary = galleryVerificationSummary(userId, type);
   return `<div class="${compact ? 'mt-2' : 'mt-3'} min-w-0">
-    <div class="flex items-start justify-between gap-3">
-      <p class="text-xs leading-5 text-on-surface-variant ${compact ? 'line-clamp-2' : ''}">${galleryEscape(summary.text)}</p>
-      <span class="text-xs font-bold text-primary whitespace-nowrap">${summary.minutes}분</span>
-    </div>
+    <p class="text-xs leading-5 text-on-surface-variant ${compact ? 'line-clamp-2' : ''}">${galleryEscape(summary.text)}</p>
   </div>`;
 }
 
@@ -165,6 +161,20 @@ function galleryRelativeTime(isoString) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}시간 전`;
   return `${Math.floor(hours / 24)}일 전`;
+}
+
+function moveGalleryCarousel(button) {
+  const carousel = button.closest('[data-gallery-carousel]');
+  if (!carousel) return;
+  const slides = [...carousel.querySelectorAll('[data-carousel-slide]')];
+  if (slides.length < 2) return;
+  const direction = Number(button.dataset.carouselDirection || 0);
+  const current = Number(carousel.dataset.carouselIndex || 0);
+  const next = (current + direction + slides.length) % slides.length;
+  carousel.dataset.carouselIndex = String(next);
+  slides.forEach((slide, index) => slide.classList.toggle('hidden', index !== next));
+  const counter = carousel.querySelector('[data-carousel-counter]');
+  if (counter) counter.textContent = `${next + 1}/${slides.length}`;
 }
 
 function galleryCommentAvatar(profile) {
@@ -202,11 +212,14 @@ function renderGalleryComments() {
   list.innerHTML = galleryComments.map((comment) => {
     const profile = galleryCommentProfiles[comment.author_id];
     const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(profile?.badge_role) : '';
+    const controls = comment.author_id === galleryCurrentUserId
+      ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-comment-edit="${comment.id}" class="hover:text-primary">수정</button><button type="button" data-comment-delete="${comment.id}" class="hover:text-error">삭제</button></span>`
+      : '';
     return `<article class="flex items-start gap-3">
       ${galleryCommentAvatar(profile)}
       <div class="flex-1 min-w-0">
         <p class="text-sm break-words"><span class="font-bold mr-1">${galleryEscape(profile?.username || '?')}${badge}</span>${galleryEscape(comment.body)}</p>
-        <span class="text-[11px] text-on-surface-variant">${galleryRelativeTime(comment.created_at)}</span>
+        <span class="text-[11px] text-on-surface-variant">${galleryRelativeTime(comment.created_at)}${controls}</span>
       </div>
     </article>`;
   }).join('');
@@ -229,15 +242,14 @@ async function openGalleryComments(userId, type) {
         <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold overflow-hidden">${avatar}</div>
         <div class="min-w-0"><p class="text-sm font-bold truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant">@${galleryEscape(user.username)}</p></div>
       </div>
-      <div class="grid grid-cols-[96px_1fr] gap-3 items-start">
-        <div class="min-w-0">${galleryMediaHTML(user.id, type)}</div>
-        ${galleryVerificationSummaryHTML(user.id, type)}
-      </div>
+      ${galleryMediaHTML(user.id, type, 'detail')}
+      ${galleryVerificationSummaryHTML(user.id, type)}
     </article>`;
   }
   modal.classList.remove('hidden');
   modal.classList.add('flex');
   document.getElementById('gallery-comments-list').innerHTML = '<p class="text-sm text-on-surface-variant text-center py-10">불러오는 중...</p>';
+  resetGalleryCommentEditor();
   await loadGalleryComments();
   renderGalleryComments();
 }
@@ -247,15 +259,61 @@ function closeGalleryComments() {
   modal?.classList.add('hidden');
   modal?.classList.remove('flex');
   galleryActiveCommentsPost = null;
+  resetGalleryCommentEditor();
+}
+
+function resetGalleryCommentEditor() {
+  galleryEditingCommentId = null;
+  const input = document.getElementById('gallery-comments-input');
+  const submit = document.getElementById('gallery-comments-submit');
+  const cancel = document.getElementById('gallery-comments-edit-cancel');
+  if (input) input.value = '';
+  if (submit) submit.textContent = '게시';
+  cancel?.classList.add('hidden');
 }
 
 function wireGalleryComments() {
+  document.getElementById('page-main')?.addEventListener('click', (event) => {
+    const carouselButton = event.target.closest('[data-carousel-direction]');
+    if (carouselButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      moveGalleryCarousel(carouselButton);
+    }
+  });
   document.getElementById('gallery-active-grid')?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-gallery-comment-user]');
     if (button) openGalleryComments(button.dataset.galleryCommentUser, button.dataset.galleryCommentType);
   });
   document.getElementById('gallery-comments-overlay')?.addEventListener('click', closeGalleryComments);
   document.getElementById('gallery-comments-close')?.addEventListener('click', closeGalleryComments);
+  document.getElementById('gallery-comments-edit-cancel')?.addEventListener('click', resetGalleryCommentEditor);
+  document.getElementById('gallery-comments-list')?.addEventListener('click', async (event) => {
+    const editButton = event.target.closest('[data-comment-edit]');
+    const deleteButton = event.target.closest('[data-comment-delete]');
+    if (editButton) {
+      const comment = galleryComments.find((item) => item.id === editButton.dataset.commentEdit);
+      if (!comment || comment.author_id !== galleryCurrentUserId) return;
+      galleryEditingCommentId = comment.id;
+      const input = document.getElementById('gallery-comments-input');
+      input.value = comment.body;
+      input.focus();
+      document.getElementById('gallery-comments-submit').textContent = '수정';
+      document.getElementById('gallery-comments-edit-cancel').classList.remove('hidden');
+      return;
+    }
+    if (deleteButton) {
+      const comment = galleryComments.find((item) => item.id === deleteButton.dataset.commentDelete);
+      if (!comment || comment.author_id !== galleryCurrentUserId || !confirm('댓글을 삭제할까요?')) return;
+      const { error } = await window.supabaseClient.from('post_comments').delete().eq('id', comment.id).eq('author_id', galleryCurrentUserId);
+      if (error) console.error('[gallery] delete comment', error);
+      else {
+        if (galleryEditingCommentId === comment.id) resetGalleryCommentEditor();
+        await loadGalleryComments();
+        renderGalleryComments();
+      }
+    }
+  });
   document.getElementById('gallery-comments-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const input = document.getElementById('gallery-comments-input');
@@ -263,19 +321,22 @@ function wireGalleryComments() {
     const body = input.value.trim();
     if (!body || !galleryActiveCommentsPost) return;
     submit.disabled = true;
-    const { error } = await window.supabaseClient.from('post_comments').insert({
-      post_owner_id: galleryActiveCommentsPost.ownerId,
-      post_date: galleryActiveCommentsPost.date,
-      post_type: galleryActiveCommentsPost.type,
-      author_id: galleryCurrentUserId,
-      body
-    });
+    const request = galleryEditingCommentId
+      ? window.supabaseClient.from('post_comments').update({ body }).eq('id', galleryEditingCommentId).eq('author_id', galleryCurrentUserId)
+      : window.supabaseClient.from('post_comments').insert({
+          post_owner_id: galleryActiveCommentsPost.ownerId,
+          post_date: galleryActiveCommentsPost.date,
+          post_type: galleryActiveCommentsPost.type,
+          author_id: galleryCurrentUserId,
+          body
+        });
+    const { error } = await request;
     submit.disabled = false;
     if (error) {
       console.error('[gallery] submit comment', error);
       return;
     }
-    input.value = '';
+    resetGalleryCommentEditor();
     await loadGalleryComments();
     renderGalleryComments();
   });

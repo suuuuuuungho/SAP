@@ -37,6 +37,17 @@ create policy "post_comments_insert"
     and exists (select 1 from public.profiles p where p.id = post_comments.post_owner_id and p.gallery_enabled = true)
   );
 
+-- 본인이 쓴 댓글만 수정 가능
+drop policy if exists "post_comments_update" on public.post_comments;
+create policy "post_comments_update"
+  on public.post_comments for update
+  using (author_id = auth.uid())
+  with check (
+    author_id = auth.uid()
+    and char_length(trim(body)) > 0
+    and char_length(body) <= 300
+  );
+
 -- 본인이 쓴 댓글만 삭제 가능
 drop policy if exists "post_comments_delete" on public.post_comments;
 create policy "post_comments_delete"
