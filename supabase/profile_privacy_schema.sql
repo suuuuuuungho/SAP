@@ -42,6 +42,37 @@ $$;
 revoke all on function public.get_profile_avatar_paths(uuid[]) from public;
 grant execute on function public.get_profile_avatar_paths(uuid[]) to authenticated;
 
+-- 댓글 작성자와 공용 화면의 프로필 표시용 정보입니다.
+-- 역할은 학생/교사/관리자 구분 뱃지에 필요한 값만 반환합니다.
+create or replace function public.get_public_profile_cards(requested_user_ids uuid[])
+returns table (
+  user_id uuid,
+  username text,
+  name text,
+  avatar_path text,
+  badge_role text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id,
+         p.username,
+         p.name,
+         p.avatar_path,
+         case
+           when p.is_admin = true or p.grade_class = '관리자' then 'admin'
+           when p.grade_class = '교사' then 'teacher'
+           else null
+         end
+  from public.profiles p
+  where p.id = any(coalesce(requested_user_ids, array[]::uuid[]));
+$$;
+
+revoke all on function public.get_public_profile_cards(uuid[]) from public;
+grant execute on function public.get_public_profile_cards(uuid[]) to authenticated;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'profile-avatars',

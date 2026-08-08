@@ -44,7 +44,7 @@ function profileBlock(idSuffix) {
       <a href="login.html" id="sidebar-profile-${idSuffix}" class="flex-1 min-w-0 flex items-center gap-3 cursor-pointer hover:bg-white/40 p-2 rounded-full transition-colors">
         <div class="icon-glass w-9 h-9 rounded-full text-on-surface flex items-center justify-center font-semibold text-sm flex-shrink-0 overflow-hidden" data-role="avatar">?</div>
         <div class="flex flex-col overflow-hidden">
-          <span class="text-sm font-medium truncate text-on-surface" data-role="name">로그인</span>
+          <span class="text-sm font-medium truncate text-on-surface"><span data-role="name">로그인</span><span data-role="profile-badge"></span></span>
           <span class="text-xs text-on-surface-variant truncate" data-role="subtext">로그인이 필요합니다</span>
         </div>
       </a>
@@ -83,7 +83,10 @@ function renderShell(activePage) {
         </button>
         <nav class="flex-1 w-full flex flex-col gap-2 px-2">${iconNav}</nav>
         <div class="mt-auto flex flex-col gap-2 items-center pb-2 w-full px-2">
-          <a href="login.html" aria-label="개인 프로필" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-on-surface text-sm font-bold mt-2 overflow-hidden" id="sidebar-profile-tablet" data-role="avatar">?</a>
+          <a href="login.html" aria-label="개인 프로필" class="relative w-10 h-10 mt-2" id="sidebar-profile-tablet">
+            <span class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-on-surface text-sm font-bold overflow-hidden" data-role="avatar">?</span>
+            <span class="absolute -right-1 -bottom-1" data-role="profile-badge"></span>
+          </a>
           <button type="button" data-action="logout" class="hidden icon-glass w-10 h-10 rounded-full items-center justify-center text-on-surface-variant hover:text-error" aria-label="Logout" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket text-xs"></i></button>
         </div>
       </aside>

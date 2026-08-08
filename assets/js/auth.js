@@ -13,7 +13,7 @@ async function initAuthUI() {
     displayName = session.user.email || '';
     let result = await window.supabaseClient
       .from('profiles')
-      .select('name, username, is_admin, avatar_path')
+      .select('name, username, grade_class, is_admin, avatar_path')
       .eq('id', session.user.id)
       .maybeSingle();
 
@@ -46,6 +46,7 @@ async function initAuthUI() {
     const avatar = link.matches('[data-role="avatar"]') ? link : link.querySelector('[data-role="avatar"]');
     const name = link.querySelector('[data-role="name"]');
     const subtext = link.querySelector('[data-role="subtext"]');
+    const badge = link.querySelector('[data-role="profile-badge"]');
 
     if (session?.user) {
       if (avatarUrl) {
@@ -54,12 +55,17 @@ async function initAuthUI() {
         avatar.textContent = displayName.charAt(0).toUpperCase() || 'U';
       }
       if (name) name.textContent = displayName;
+      if (badge) {
+        const role = profile?.is_admin || profile?.grade_class === '관리자' ? '관리자' : profile?.grade_class === '교사' ? '교사' : '';
+        badge.innerHTML = role ? `<span class="inline-flex w-4 h-4 rounded-full bg-blue-500 text-white items-center justify-center align-middle ml-1" title="${role}" aria-label="${role}"><i class="fa-solid fa-check text-[8px]"></i></span>` : '';
+      }
       if (subtext) subtext.textContent = '개인 프로필 보기';
       link.href = 'profile.html';
       link.onclick = null;
     } else {
       avatar.textContent = '?';
       if (name) name.textContent = '로그인';
+      if (badge) badge.innerHTML = '';
       if (subtext) subtext.textContent = '로그인이 필요합니다';
       link.href = 'login.html';
       link.onclick = null;

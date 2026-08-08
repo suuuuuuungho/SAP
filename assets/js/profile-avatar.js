@@ -19,4 +19,34 @@ async function getProfileAvatarUrls(userIds) {
   return Object.fromEntries(entries.filter(([, url]) => url));
 }
 
+async function getPublicProfileCards(userIds) {
+  const ids = [...new Set((userIds || []).filter(Boolean))];
+  if (!ids.length || !window.supabaseClient) return {};
+  const { data: profiles, error } = await window.supabaseClient
+    .rpc('get_public_profile_cards', { requested_user_ids: ids });
+  if (error) {
+    console.error('[profile-avatar] public cards', error);
+    return {};
+  }
+  const entries = await Promise.all((profiles || []).map(async (profile) => {
+    let avatarUrl = '';
+    if (profile.avatar_path) {
+      const { data } = await window.supabaseClient.storage
+        .from('profile-avatars')
+        .createSignedUrl(profile.avatar_path, 3600);
+      avatarUrl = data?.signedUrl || '';
+    }
+    return [profile.user_id, { ...profile, avatarUrl }];
+  }));
+  return Object.fromEntries(entries);
+}
+
+function publicProfileBadgeHTML(role) {
+  if (!role) return '';
+  const label = role === 'admin' ? '관리자' : '교사';
+  return `<span class="inline-flex w-4 h-4 rounded-full bg-blue-500 text-white items-center justify-center align-middle ml-1" title="${label}" aria-label="${label}"><i class="fa-solid fa-check text-[8px]"></i></span>`;
+}
+
 window.getProfileAvatarUrls = getProfileAvatarUrls;
+window.getPublicProfileCards = getPublicProfileCards;
+window.publicProfileBadgeHTML = publicProfileBadgeHTML;

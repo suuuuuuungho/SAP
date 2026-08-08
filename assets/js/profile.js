@@ -33,7 +33,7 @@ async function loadProfile() {
 
   let result = await window.supabaseClient
     .from('profiles')
-    .select('username, name, grade_class, phone, email, avatar_path')
+    .select('username, name, grade_class, phone, email, is_admin, avatar_path')
     .eq('id', profileUser.id)
     .maybeSingle();
   if (result.error) {
@@ -47,6 +47,9 @@ async function loadProfile() {
   if (!profileData) return;
 
   document.getElementById('profile-display-name').textContent = `${profileData.name} (${profileData.username})`;
+  const badge = document.getElementById('profile-role-badge');
+  const role = profileData.is_admin || profileData.grade_class === '관리자' ? '관리자' : profileData.grade_class === '교사' ? '교사' : '';
+  if (badge) badge.innerHTML = role ? `<span class="inline-flex w-5 h-5 rounded-full bg-blue-500 text-white items-center justify-center align-middle ml-1" title="${role}" aria-label="${role}"><i class="fa-solid fa-check text-[9px]"></i></span>` : '';
   document.getElementById('profile-meta').textContent = `${profileData.grade_class} · ${profileData.phone}`;
   await renderProfileAvatar(profileData.avatar_path);
 }
@@ -156,11 +159,50 @@ function wireProfilePassword() {
   });
 }
 
+function wireDeleteAccount() {
+  const openButton = document.getElementById('profile-delete-open');
+  const wrap = document.getElementById('profile-delete-confirm-wrap');
+  const input = document.getElementById('profile-delete-confirm-input');
+  const cancel = document.getElementById('profile-delete-cancel');
+  const submit = document.getElementById('profile-delete-submit');
+  const status = document.getElementById('profile-delete-status');
+  if (!openButton || !wrap) return;
+
+  openButton.addEventListener('click', () => {
+    wrap.classList.remove('hidden');
+    openButton.classList.add('hidden');
+    input.focus();
+  });
+  cancel.addEventListener('click', () => {
+    wrap.classList.add('hidden');
+    openButton.classList.remove('hidden');
+    input.value = '';
+    submit.disabled = true;
+    status.classList.add('hidden');
+  });
+  input.addEventListener('input', () => { submit.disabled = input.value.trim() !== '탈퇴'; });
+  submit.addEventListener('click', async () => {
+    if (input.value.trim() !== '탈퇴') return;
+    submit.disabled = true;
+    submit.textContent = '삭제 중...';
+    const { data, error } = await window.supabaseClient.functions.invoke('delete-account');
+    if (error || !data?.ok) {
+      setProfileStatus(status, data?.message || '회원탈퇴를 완료하지 못했습니다.', true);
+      submit.disabled = false;
+      submit.textContent = '모든 기록 삭제 및 탈퇴';
+      return;
+    }
+    await window.supabaseClient.auth.signOut();
+    window.location.href = 'login.html';
+  });
+}
+
 async function initProfileWidgets() {
   if (!document.getElementById('profile-avatar-preview') || !window.supabaseClient) return;
   await loadProfile();
   wireProfilePhoto();
   wireProfilePassword();
+  wireDeleteAccount();
 }
 
 window.initProfileWidgets = initProfileWidgets;

@@ -12,6 +12,7 @@ const HOME_RANKING_META = {
 let publicHomeCurrentUserId = null;
 let publicHomeRefreshTimer = null;
 let publicHomeAvatarUrls = {};
+let publicHomeProfiles = {};
 
 function publicHomeEscape(value) {
   return String(value == null ? '' : value)
@@ -44,12 +45,13 @@ function publicHomeRankingRows(rows, category) {
   return categoryRows.map((row) => {
     const isMe = row.user_id === publicHomeCurrentUserId;
     const medal = row.rank_no <= 3 ? ['🥇', '🥈', '🥉'][row.rank_no - 1] : String(row.rank_no);
+    const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(publicHomeProfiles[row.user_id]?.badge_role) : '';
     return `
       <div class="flex items-center gap-3 py-3 ${row.rank_no !== categoryRows.length ? 'border-b border-outline-variant/35' : ''} ${isMe ? 'bg-primary/5 -mx-3 px-3 rounded-xl' : ''}">
         <div class="w-7 text-center text-sm font-bold">${medal}</div>
         ${publicHomeAvatar(row.user_id, row.name)}
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold truncate">${publicHomeEscape(row.name)}${isMe ? ' <span class="text-[10px] text-primary">ME</span>' : ''}</p>
+          <p class="text-sm font-semibold truncate">${publicHomeEscape(row.name)}${badge}${isMe ? ' <span class="text-[10px] text-primary">ME</span>' : ''}</p>
           <p class="text-[11px] text-on-surface-variant truncate">@${publicHomeEscape(row.username)}</p>
         </div>
         <p class="text-sm font-bold text-on-surface whitespace-nowrap">${publicHomeFormatMinutes(row.minutes)}</p>
@@ -116,9 +118,10 @@ async function loadPublicHome() {
   if (messageRes.error) console.error('[public-home] messages', messageRes.error);
   if (verseRes.error) console.error('[public-home] verse', verseRes.error);
 
-  publicHomeAvatarUrls = window.getProfileAvatarUrls
-    ? await window.getProfileAvatarUrls((rankingRes.data || []).map((row) => row.user_id))
+  publicHomeProfiles = window.getPublicProfileCards
+    ? await window.getPublicProfileCards((rankingRes.data || []).map((row) => row.user_id))
     : {};
+  publicHomeAvatarUrls = Object.fromEntries(Object.entries(publicHomeProfiles).map(([id, profile]) => [id, profile.avatarUrl || '']));
   renderPublicHomeRankings(rankingRes.data || []);
   renderPublicHomeMessages(messageRes.data || []);
   renderPublicHomeVerse(verseRes.data || null);
