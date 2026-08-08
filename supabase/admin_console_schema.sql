@@ -226,15 +226,16 @@ begin
 end; $$;
 grant execute on function public.admin_delete_gallery_photo(uuid,date,text,text) to authenticated;
 
+drop function if exists public.admin_get_dashboard(date);
 create or replace function public.admin_get_dashboard(target_date date)
 returns table (
-  user_id uuid, username text, name text, grade_class text, parent_phone text,
+  user_id uuid, username text, name text, grade_class text, phone text, parent_phone text,
   pray_done boolean, pray_minutes bigint, word_done boolean, word_minutes bigint,
   study_done boolean, study_minutes bigint, worship_done boolean, worship_minutes bigint
 )
 language sql stable security definer set search_path = public
 as $$
-  select p.id, p.username, p.name, p.grade_class, p.parent_phone,
+  select p.id, p.username, p.name, p.grade_class, p.phone, p.parent_phone,
     coalesce(jsonb_array_length(pr.entries)>0,false),
     coalesce((select sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60))::bigint
       from jsonb_array_elements(coalesce(pr.entries,'[]'::jsonb)) e

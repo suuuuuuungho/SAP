@@ -29,9 +29,9 @@ Deno.serve(async (req) => {
   const date = String(body.date || '')
   const missing = Array.isArray(body.missing) ? body.missing.map(String).filter(Boolean) : []
   const admin = createClient(url, service)
-  const { data: member } = await admin.from('profiles').select('name,parent_phone').eq('id', userId).maybeSingle()
-  const to = digits(member?.parent_phone || '')
-  if (!member || to.length < 10 || !missing.length) return json({ ok: false, message: '학부모 번호 또는 미인증 정보를 확인해주세요.' })
+  const { data: member } = await admin.from('profiles').select('name,phone').eq('id', userId).maybeSingle()
+  const to = digits(member?.phone || '')
+  if (!member || to.length < 10 || !missing.length) return json({ ok: false, message: '학생 연락처 또는 미인증 정보를 확인해주세요.' })
 
   const apiKey = Deno.env.get('SOLAPI_API_KEY')
   const apiSecret = Deno.env.get('SOLAPI_API_SECRET')
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   const signature = await hmac(apiSecret, stamp + salt)
   const response = await fetch('https://api.solapi.com/messages/v4/send', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `HMAC-SHA256 apiKey=${apiKey}, date=${stamp}, salt=${salt}, signature=${signature}` },
-    body: JSON.stringify({ message: { to, from: sender, text: `[SAP] ${member.name} 학생의 ${date} 미인증 항목: ${missing.join(', ')}. 확인과 참여를 부탁드립니다.` } }),
+    body: JSON.stringify({ message: { to, from: sender, text: `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` } }),
   })
   if (!response.ok) { console.error('[admin-send-sms]', response.status, await response.text()); return json({ ok: false, message: '문자 발송에 실패했습니다.' }, 502) }
   return json({ ok: true })
