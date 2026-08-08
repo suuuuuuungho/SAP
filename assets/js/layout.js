@@ -40,13 +40,18 @@ function navLinkIcon(item, activePage) {
 
 function profileBlock(idSuffix) {
   return `
-    <a href="login.html" id="sidebar-profile-${idSuffix}" class="flex items-center gap-3 cursor-pointer hover:bg-white/40 p-2 rounded-full transition-colors">
-      <div class="icon-glass w-9 h-9 rounded-full text-on-surface flex items-center justify-center font-semibold text-sm flex-shrink-0" data-role="avatar">?</div>
-      <div class="flex flex-col overflow-hidden">
-        <span class="text-sm font-medium truncate text-on-surface" data-role="name">로그인</span>
-        <span class="text-xs text-on-surface-variant truncate" data-role="subtext">로그인이 필요합니다</span>
-      </div>
-    </a>`;
+    <div class="flex items-center gap-1">
+      <a href="login.html" id="sidebar-profile-${idSuffix}" class="flex-1 min-w-0 flex items-center gap-3 cursor-pointer hover:bg-white/40 p-2 rounded-full transition-colors">
+        <div class="icon-glass w-9 h-9 rounded-full text-on-surface flex items-center justify-center font-semibold text-sm flex-shrink-0 overflow-hidden" data-role="avatar">?</div>
+        <div class="flex flex-col overflow-hidden">
+          <span class="text-sm font-medium truncate text-on-surface" data-role="name">로그인</span>
+          <span class="text-xs text-on-surface-variant truncate" data-role="subtext">로그인이 필요합니다</span>
+        </div>
+      </a>
+      <button type="button" data-action="logout" class="hidden h-9 rounded-full flex-shrink-0 items-center justify-center gap-1.5 px-3 text-xs text-on-surface-variant hover:text-error hover:bg-white/40 transition-colors" aria-label="로그아웃" title="로그아웃">
+        <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i><span>로그아웃</span>
+      </button>
+    </div>`;
 }
 
 function renderShell(activePage) {
@@ -78,7 +83,8 @@ function renderShell(activePage) {
         </button>
         <nav class="flex-1 w-full flex flex-col gap-2 px-2">${iconNav}</nav>
         <div class="mt-auto flex flex-col gap-2 items-center pb-2 w-full px-2">
-          <a href="login.html" aria-label="Profile" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-on-surface text-sm font-bold mt-2" id="sidebar-profile-tablet" data-role="avatar">?</a>
+          <a href="login.html" aria-label="개인 프로필" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-on-surface text-sm font-bold mt-2 overflow-hidden" id="sidebar-profile-tablet" data-role="avatar">?</a>
+          <button type="button" data-action="logout" class="hidden icon-glass w-10 h-10 rounded-full items-center justify-center text-on-surface-variant hover:text-error" aria-label="로그아웃" title="로그아웃"><i class="fa-solid fa-arrow-right-from-bracket text-xs"></i></button>
         </div>
       </aside>
 
@@ -155,4 +161,5 @@ function renderApp({ activePage }) {
   if (window.initGalleryWidgets) window.initGalleryWidgets();
   if (window.initStatWidgets) window.initStatWidgets();
   if (window.initAdminWidgets) window.initAdminWidgets();
+  if (window.initProfileWidgets) window.initProfileWidgets();
 }

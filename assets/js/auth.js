@@ -1,30 +1,37 @@
-// Updates every sidebar profile block (desktop/tablet/mobile) based on the current Supabase session.
-// Called by layout.js right after the app shell is injected into the page.
+// 현재 로그인 사용자의 사이드바 프로필과 독립된 로그아웃 버튼을 설정합니다.
 async function initAuthUI() {
-  const profiles = document.querySelectorAll('[id^="sidebar-profile-"]');
-  if (!profiles.length) return;
-
-  if (!window.supabaseClient) {
-    return; // no Supabase config yet — leave default "로그인" state
-  }
+  const profileLinks = document.querySelectorAll('[id^="sidebar-profile-"]');
+  const logoutButtons = document.querySelectorAll('[data-action="logout"]');
+  if (!profileLinks.length || !window.supabaseClient) return;
 
   const { data: { session } } = await window.supabaseClient.auth.getSession();
-
   let displayName = '';
-  if (session && session.user) {
+  let avatarUrl = '';
+  let profile = null;
+
+  if (session?.user) {
     displayName = session.user.email || '';
-    let { data: profile, error: profileError } = await window.supabaseClient
+    let result = await window.supabaseClient
       .from('profiles')
-      .select('name, username, is_admin')
+      .select('name, username, is_admin, avatar_path')
       .eq('id', session.user.id)
       .maybeSingle();
-    // home_admin_schema.sql 실행 전에도 기존 페이지가 깨지지 않도록 구버전 스키마로 폴백.
-    if (profileError) {
-      const fallback = await window.supabaseClient.from('profiles').select('name, username').eq('id', session.user.id).maybeSingle();
-      profile = fallback.data;
+
+    // profile_privacy_schema.sql 또는 home_admin_schema.sql 실행 전에도 기존 화면을 유지합니다.
+    if (result.error) {
+      result = await window.supabaseClient.from('profiles').select('name, username').eq('id', session.user.id).maybeSingle();
     }
+    profile = result.data;
     if (profile) displayName = `${profile.name} (${profile.username})`;
-    const isAdmin = !!(profile && profile.is_admin);
+
+    if (profile?.avatar_path) {
+      const { data } = await window.supabaseClient.storage
+        .from('profile-avatars')
+        .createSignedUrl(profile.avatar_path, 3600);
+      avatarUrl = data?.signedUrl || '';
+    }
+
+    const isAdmin = !!profile?.is_admin;
     document.querySelectorAll('[data-admin-only]').forEach((el) => {
       el.classList.toggle('hidden', !isAdmin);
       el.style.display = isAdmin ? '' : 'none';
@@ -35,29 +42,38 @@ async function initAuthUI() {
     });
   }
 
-  profiles.forEach((el) => {
-    const avatar = el.querySelector('[data-role="avatar"]');
-    const name = el.querySelector('[data-role="name"]');
-    const subtext = el.querySelector('[data-role="subtext"]');
+  profileLinks.forEach((link) => {
+    const avatar = link.matches('[data-role="avatar"]') ? link : link.querySelector('[data-role="avatar"]');
+    const name = link.querySelector('[data-role="name"]');
+    const subtext = link.querySelector('[data-role="subtext"]');
 
-    if (session && session.user) {
-      const initial = displayName.charAt(0).toUpperCase() || 'U';
-      if (avatar) avatar.textContent = initial;
+    if (session?.user) {
+      if (avatarUrl) {
+        avatar.innerHTML = `<img src="${avatarUrl}" alt="" class="w-full h-full object-cover">`;
+      } else {
+        avatar.textContent = displayName.charAt(0).toUpperCase() || 'U';
+      }
       if (name) name.textContent = displayName;
-      if (subtext) subtext.textContent = '로그아웃';
-      el.href = '#';
-      el.onclick = async (e) => {
-        e.preventDefault();
-        await window.supabaseClient.auth.signOut();
-        window.location.reload();
-      };
+      if (subtext) subtext.textContent = '개인 프로필 보기';
+      link.href = 'profile.html';
+      link.onclick = null;
     } else {
-      if (avatar) avatar.textContent = '?';
+      avatar.textContent = '?';
       if (name) name.textContent = '로그인';
       if (subtext) subtext.textContent = '로그인이 필요합니다';
-      el.href = 'login.html';
-      el.onclick = null;
+      link.href = 'login.html';
+      link.onclick = null;
     }
+  });
+
+  logoutButtons.forEach((button) => {
+    button.classList.toggle('hidden', !session?.user);
+    button.classList.toggle('flex', !!session?.user);
+    button.onclick = session?.user ? async () => {
+      button.disabled = true;
+      await window.supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    } : null;
   });
 }
 
