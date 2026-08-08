@@ -13,12 +13,18 @@ async function initAuthUI() {
   let displayName = '';
   if (session && session.user) {
     displayName = session.user.email || '';
-    const { data: profile } = await window.supabaseClient
+    let { data: profile, error: profileError } = await window.supabaseClient
       .from('profiles')
-      .select('name, username')
+      .select('name, username, is_admin')
       .eq('id', session.user.id)
       .maybeSingle();
+    // home_admin_schema.sql 실행 전에도 기존 페이지가 깨지지 않도록 구버전 스키마로 폴백.
+    if (profileError) {
+      const fallback = await window.supabaseClient.from('profiles').select('name, username').eq('id', session.user.id).maybeSingle();
+      profile = fallback.data;
+    }
     if (profile) displayName = `${profile.name} (${profile.username})`;
+    document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !profile || !profile.is_admin));
   }
 
   profiles.forEach((el) => {

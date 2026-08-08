@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - SAP 1기</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="assets/js/tailwind-config.js"></script>
+<link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body class="text-on-surface">
+<div id="app"></div>
+<template id="page-content">
+  <div class="flex items-end justify-between gap-3 mb-8 lg:mb-10">
+    <div><h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin</h1><p class="text-sm text-on-surface-variant mt-1">Home 전광판 관리</p></div>
+    <a href="home.html" class="pill-btn-primary px-4 py-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i>Home</a>
+  </div>
+  <p id="admin-status" class="hidden text-sm mb-4"></p>
+  <div id="admin-access-denied" class="hidden glass-panel rounded-[2rem] p-12 text-center"><i class="fa-solid fa-lock text-3xl text-error mb-3"></i><p class="font-bold">관리자 권한이 필요합니다.</p></div>
+  <div id="admin-content" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-6 mb-16">
+    <section class="glass-panel rounded-[2rem] p-6">
+      <h2 class="text-xl font-bold mb-1">Messages</h2><p class="text-xs text-on-surface-variant mb-5">전체 공지 또는 한 명에게만 보이는 메시지를 전송합니다.</p>
+      <form id="admin-message-form" class="flex flex-col gap-3 mb-6">
+        <select id="admin-message-recipient" class="glass-input rounded-2xl px-4 py-2 text-sm"></select>
+        <textarea id="admin-message-body" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="500" placeholder="전달할 메시지" required></textarea>
+        <label class="text-xs text-on-surface-variant">종료 시각(선택)<input id="admin-message-expires" type="datetime-local" class="glass-input rounded-xl px-3 py-2 text-sm w-full mt-1"></label>
+        <button class="pill-btn-primary py-2.5 text-sm" type="submit">메시지 전송</button>
+      </form>
+      <div id="admin-message-list" class="flex flex-col gap-3"></div>
+    </section>
+    <section class="glass-panel rounded-[2rem] p-6">
+      <h2 class="text-xl font-bold mb-1">Bible Verse</h2><p class="text-xs text-on-surface-variant mb-5">Home 상단 전광판에 표시할 대표 말씀입니다.</p>
+      <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
+        <input id="admin-verse-reference" class="glass-input rounded-2xl px-4 py-2 text-sm" maxlength="100" placeholder="예: 빌립보서 4:13" required>
+        <textarea id="admin-verse-text" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="1000" placeholder="성경구절 본문" required></textarea>
+        <button class="pill-btn-primary py-2.5 text-sm" type="submit">대표 말씀 등록</button>
+      </form>
+      <div id="admin-verse-list" class="flex flex-col gap-3"></div>
+    </section>
+  </div>
+</template>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-guard.js"></script>
+<script src="assets/js/auth.js?v=2"></script>
+<script src="assets/js/layout.js?v=4"></script>
+<script src="assets/js/admin.js?v=1"></script>
+<script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
+</body>
+</html>

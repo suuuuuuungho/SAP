@@ -162,8 +162,8 @@
     }
 
     if (data.session) {
-      showStatus('가입이 완료되었습니다. MyPage로 이동합니다...', false);
-      setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+      showStatus('가입이 완료되었습니다. Home으로 이동합니다...', false);
+      setTimeout(() => { window.location.href = 'home.html'; }, 1000);
     } else {
       // Supabase 프로젝트의 Authentication -> Sign In / Providers -> Email에서
       // "Confirm email"이 꺼져 있으면 signUp() 직후 세션이 바로 오므로 이 분기는 타지 않는다.

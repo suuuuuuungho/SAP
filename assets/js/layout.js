@@ -1,13 +1,15 @@
 // Shared app shell (sidebar + mobile header) injected into every page.
 // Each page provides a <template id="page-content"> with its own <h1> + body,
-// and calls renderApp({ activePage: 'home' }) on DOMContentLoaded.
+// and calls renderApp({ activePage: 'public-home' | 'mypage' | ... }) on DOMContentLoaded.
 // Visual language: "Luminous Glass" — glassmorphic panels floating over a vibrant mesh background.
 
 const NAV_ITEMS = [
-  { id: 'home', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-house' },
+  { id: 'public-home', label: 'Home', href: 'home.html', icon: 'fa-solid fa-house' },
+  { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Sapians', href: 'gallery.html', icon: 'fa-regular fa-image' },
-  { id: 'stat', label: 'Stat', href: 'stat.html', icon: 'fa-solid fa-chart-line' }
+  { id: 'stat', label: 'Stat', href: 'stat.html', icon: 'fa-solid fa-chart-line' },
+  { id: 'admin', label: 'Admin', href: 'admin.html', icon: 'fa-solid fa-sliders', adminOnly: true }
 ];
 
 const OFFCANVAS_HIDDEN = '-translate-x-[120%]';
@@ -15,8 +17,10 @@ const OFFCANVAS_HIDDEN = '-translate-x-[120%]';
 function navLinkFull(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40';
+  const adminAttr = item.adminOnly ? 'data-admin-only' : '';
+  const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" class="flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
+    <a href="${item.href}" ${adminAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
       <i class="${item.icon} w-4 text-center"></i>
       ${item.label}
     </a>`;
@@ -25,8 +29,10 @@ function navLinkFull(item, activePage) {
 function navLinkIcon(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40';
+  const adminAttr = item.adminOnly ? 'data-admin-only' : '';
+  const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" aria-label="${item.label}" class="nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
+    <a href="${item.href}" aria-label="${item.label}" ${adminAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i>
       <div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </a>`;
@@ -144,7 +150,9 @@ function renderApp({ activePage }) {
 
   if (window.initAuthUI) window.initAuthUI();
   if (window.initHomeWidgets) window.initHomeWidgets();
+  if (window.initPublicHomeWidgets) window.initPublicHomeWidgets();
   if (window.initStudyWidgets) window.initStudyWidgets();
   if (window.initGalleryWidgets) window.initGalleryWidgets();
   if (window.initStatWidgets) window.initStatWidgets();
+  if (window.initAdminWidgets) window.initAdminWidgets();
 }
