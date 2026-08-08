@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { id: 'public-home', label: 'Home', href: 'home.html', icon: 'fa-solid fa-house' },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
-  { id: 'gallery', label: 'Sapians', href: 'gallery.html', icon: 'fa-regular fa-image' },
+  { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
   { id: 'stat', label: 'Stat', href: 'stat.html', icon: 'fa-solid fa-chart-line' },
   { id: 'admin', label: 'Admin', href: 'admin.html', icon: 'fa-solid fa-sliders', adminOnly: true }
 ];
