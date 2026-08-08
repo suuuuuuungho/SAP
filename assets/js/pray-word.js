@@ -264,6 +264,37 @@ function updatePrayEntryDateTimeLabel(entryEl) {
   label.textContent = `${fmt(s)} ~ ${fmt(e)}`;
 }
 
+function formatPrayDateTimeLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+function nextPrayMinute(value) {
+  const date = parsePrayDateTime(value);
+  if (!date) return value;
+  date.setMinutes(date.getMinutes() + 1);
+  return formatPrayDateTimeLocal(date);
+}
+
+function applyPrayDateTimeLimits(entryEl) {
+  const startInput = entryEl.querySelector('.pray-start-input');
+  const endInput = entryEl.querySelector('.pray-end-input');
+  if (!startInput || !endInput || !prayModalDateKey) return;
+
+  const selectedDateMinimum = `${prayModalDateKey}T00:00`;
+  startInput.min = selectedDateMinimum;
+  endInput.min = startInput.value ? nextPrayMinute(startInput.value) : selectedDateMinimum;
+
+  const startsTooEarly = !!startInput.value && startInput.value < selectedDateMinimum;
+  const endsTooEarly = !!startInput.value && !!endInput.value && endInput.value <= startInput.value;
+  startInput.setCustomValidity(startsTooEarly ? '시작 일시는 선택한 날짜보다 이전으로 설정할 수 없습니다.' : '');
+  endInput.setCustomValidity(endsTooEarly ? '종료 일시는 시작 일시보다 나중이어야 합니다.' : '');
+}
+
 function addPrayClassEntry(data) {
   const template = document.getElementById('pray-class-template');
   const list = document.getElementById('pray-class-list');
@@ -306,9 +337,16 @@ function addPrayClassEntry(data) {
     }
   }
 
+  applyPrayDateTimeLimits(entryEl);
   updatePrayEntryDateTimeLabel(entryEl);
-  entryEl.querySelector('.pray-start-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
-  entryEl.querySelector('.pray-end-input').addEventListener('input', () => updatePrayEntryDateTimeLabel(entryEl));
+  entryEl.querySelector('.pray-start-input').addEventListener('input', () => {
+    applyPrayDateTimeLimits(entryEl);
+    updatePrayEntryDateTimeLabel(entryEl);
+  });
+  entryEl.querySelector('.pray-end-input').addEventListener('input', () => {
+    applyPrayDateTimeLimits(entryEl);
+    updatePrayEntryDateTimeLabel(entryEl);
+  });
 
   updatePrayRemoveButtons();
 }
@@ -388,12 +426,18 @@ async function savePrayModal() {
   });
 
   const hasIncompleteEntry = drafts.some((d) => !d.hasPhoto || !d.location || !d.start || !d.end || !d.date);
+  const hasStartBeforeSelectedDate = !hasIncompleteEntry
+    && drafts.some((d) => d.start < `${originalDateKey}T00:00`);
   const hasInvalidRange = !hasIncompleteEntry && drafts.some((d) => new Date(d.end) <= new Date(d.start));
-  if (hasIncompleteEntry || hasInvalidRange) {
+  if (hasIncompleteEntry || hasStartBeforeSelectedDate || hasInvalidRange) {
     if (prayClassHint) {
-      prayClassHint.textContent = hasInvalidRange
-        ? '종료 일시는 시작 일시보다 나중이어야 합니다.'
-        : '사진 첨부, 기도 장소, 시작/종료 일시를 모두 입력해주세요.';
+      if (hasStartBeforeSelectedDate) {
+        prayClassHint.textContent = '시작 일시는 선택한 날짜보다 이전으로 설정할 수 없습니다.';
+      } else if (hasInvalidRange) {
+        prayClassHint.textContent = '종료 일시는 시작 일시보다 나중이어야 합니다.';
+      } else {
+        prayClassHint.textContent = '사진 첨부, 기도 장소, 시작/종료 일시를 모두 입력해주세요.';
+      }
       prayClassHint.classList.remove('hidden');
     }
     return;
