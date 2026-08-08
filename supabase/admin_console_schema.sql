@@ -139,6 +139,26 @@ begin
 end; $$;
 grant execute on function public.admin_update_gallery_post(uuid,date,text,jsonb) to authenticated;
 
+create or replace function public.admin_get_gallery_records(target_date date)
+returns table (
+  post_type text, user_id uuid, record_date date, content jsonb,
+  photo_path text, photo_unavailable boolean, admin_hidden boolean
+)
+language plpgsql stable security definer set search_path = public
+as $$
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
+  return query
+    select 'pray'::text, r.user_id, r.record_date, r.entries,
+      null::text, false, r.admin_hidden
+    from public.pray_records r where r.record_date = target_date
+    union all
+    select 'word'::text, r.user_id, r.record_date, r.verses,
+      r.photo_path, r.photo_unavailable, r.admin_hidden
+    from public.word_records r where r.record_date = target_date;
+end; $$;
+grant execute on function public.admin_get_gallery_records(date) to authenticated;
+
 create or replace function public.admin_get_dashboard(target_date date)
 returns table (
   user_id uuid, username text, name text, grade_class text, parent_phone text,

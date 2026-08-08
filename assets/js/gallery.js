@@ -78,6 +78,16 @@ async function loadGalleryDateRecords(dateKey) {
     galleryWordMap = {};
     return;
   }
+  if (window.IS_ADMIN_CONSOLE) {
+    const { data: adminRows, error: adminError } = await window.supabaseClient.rpc('admin_get_gallery_records', { target_date: dateKey });
+    if (!adminError) {
+      galleryPrayMap = Object.fromEntries((adminRows || []).filter((row) => row.post_type === 'pray').map((row) => [row.user_id, { user_id: row.user_id, record_date: row.record_date, entries: row.content || [], admin_hidden: row.admin_hidden }]));
+      galleryWordMap = Object.fromEntries((adminRows || []).filter((row) => row.post_type === 'word').map((row) => [row.user_id, { user_id: row.user_id, record_date: row.record_date, verses: row.content || [], photo_path: row.photo_path, photo_unavailable: row.photo_unavailable, admin_hidden: row.admin_hidden }]));
+      return true;
+    }
+    console.warn('[gallery] admin RPC unavailable; falling back to table query', adminError);
+  }
+
   let prayQuery = window.supabaseClient.from('pray_records').select('user_id, record_date, entries, admin_hidden').eq('record_date', dateKey).in('user_id', ids);
   let wordQuery = window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable, admin_hidden').eq('record_date', dateKey).in('user_id', ids);
   if (!window.IS_ADMIN_CONSOLE) {
@@ -85,10 +95,15 @@ async function loadGalleryDateRecords(dateKey) {
     wordQuery = wordQuery.eq('admin_hidden', false);
   }
   const [prayResult, wordResult] = await Promise.all([prayQuery, wordQuery]);
-  if (prayResult.error) console.error('[gallery] pray records', prayResult.error);
-  if (wordResult.error) console.error('[gallery] word records', wordResult.error);
+  if (prayResult.error || wordResult.error) {
+    console.error('[gallery] records', prayResult.error || wordResult.error);
+    galleryPrayMap = {};
+    galleryWordMap = {};
+    return false;
+  }
   galleryPrayMap = Object.fromEntries((prayResult.data || []).map((row) => [row.user_id, row]));
   galleryWordMap = Object.fromEntries((wordResult.data || []).map((row) => [row.user_id, row]));
+  return true;
 }
 
 function galleryCategoryData(userId, type) {
@@ -505,7 +520,11 @@ async function selectGalleryDay(index) {
   renderGalleryCalendar();
   const grid = document.getElementById('gallery-active-grid');
   if (grid) grid.innerHTML = '<div class="col-span-full py-16 text-center text-sm text-on-surface-variant"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>불러오는 중</div>';
-  await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]);
+  const loaded = await loadGalleryDateRecords(galleryDays[gallerySelectedIndex]);
+  if (!loaded) {
+    if (grid) grid.innerHTML = '<div class="col-span-full glass-panel rounded-[2rem] p-10 text-center"><i class="fa-solid fa-triangle-exclamation text-error text-xl mb-3"></i><p class="text-sm font-bold">Gallery 기록을 불러오지 못했습니다.</p><p class="text-xs text-on-surface-variant mt-2">관리자 스키마를 다시 실행한 뒤 새로고침해주세요.</p></div>';
+    return;
+  }
   renderGalleryGrid();
 }
 
