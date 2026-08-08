@@ -22,11 +22,9 @@
     </div>
   </div>
 
-  <!-- 레벨(가로 스크롤 칩, 최대 5개) + Day(드롭다운 — 최대 50개라 칩 대신 select 하나로) -->
-  <div class="flex flex-wrap items-center gap-3 mb-6">
-    <div class="flex-1 min-w-0 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
-      <div id="study-level-selector" class="flex gap-2 w-max pb-1"></div>
-    </div>
+  <!-- Lv.1 전용 단어장 + Day 선택 -->
+  <div class="flex items-center justify-between gap-3 mb-6">
+    <span class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold nav-pill-active whitespace-nowrap">Lv.1</span>
     <select id="study-day-selector" class="glass-input rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold flex-shrink-0"></select>
   </div>
 
@@ -39,7 +37,7 @@
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/layout.js?v=3"></script>
-<script src="assets/js/study.js?v=3"></script>
+<script src="assets/js/study.js?v=4"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'study' });

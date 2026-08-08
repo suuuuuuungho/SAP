@@ -5,23 +5,14 @@
 
 const STUDY_QUIZ_MAX_QUESTIONS = 15; // 세트가 커질 때 퀴즈 세션 길이 상한
 const STUDY_QUIZ_MIN_WORDS = 2;      // 퀴즈를 진행하기 위한 최소 단어 수
+const STUDY_LEVEL = 1;
 const STUDY_PAGE_SIZE = 1000;        // Supabase REST 기본 최대 반환 행 수 — 이보다 크면 나눠 받아야 함
-
-// 레벨 번호 -> 표시 라벨. 여기 없는 레벨(예: 나중에 추가될 Lv.3)은 그냥 "Lv.N"으로 표시된다.
-const STUDY_LEVEL_LABELS = {
-  0: 'Lv.0 BASIC',
-  1: 'Lv.1 실력',
-  2: 'Lv.2 고난도',
-  4: 'Lv.4 고등',
-  5: 'Lv.5 수능'
-};
 
 let studyAllWords = [];      // vocab_words 전체, study_day/sort_order 순
 let studyProgressMap = {};   // word_id -> vocab_progress row
 let studyCurrentUserId = null;
 
 let studyActiveMode = 'list';  // 'list' | 'flashcard' | 'quiz'
-let studyActiveLevel = null;   // integer (initStudyWidgets에서 데이터 로드 후 가장 낮은 레벨로 초기화)
 let studyActiveDay = 'all';    // 'all' | integer
 
 let studyFlashcardIndex = 0;
@@ -29,7 +20,7 @@ let studyFlashcardFlipped = false;
 
 let studyQuizState = null; // { questions, index, score, missed } | null (null = 시작화면)
 
-let studyCompleteDayKeys = new Set(); // `${level}-${day}` — 그 세트의 모든 단어가 품사+예문 3개까지 채워짐
+let studyCompleteDays = new Set(); // 모든 단어가 품사+예문 3개까지 채워진 Day
 
 // --- 데이터 조회 ---
 
@@ -49,7 +40,7 @@ async function fetchAllVocabWords() {
     const { data, error } = await window.supabaseClient
       .from('vocab_words')
       .select('*')
-      .order('level', { ascending: true })
+      .eq('level', STUDY_LEVEL)
       .order('study_day', { ascending: true })
       .order('sort_order', { ascending: true })
       .range(from, from + STUDY_PAGE_SIZE - 1);
@@ -72,16 +63,8 @@ async function fetchStudyData(userId) {
 
 // --- 필터 헬퍼 ---
 
-function getStudyLevels() {
-  return [...new Set(studyAllWords.map((w) => w.level))].sort((a, b) => a - b);
-}
-
-function studyLevelLabel(level) {
-  return STUDY_LEVEL_LABELS[level] || `Lv.${level}`;
-}
-
 function getStudyDays() {
-  return [...new Set(studyAllWords.filter((w) => w.level === studyActiveLevel).map((w) => w.study_day))].sort((a, b) => a - b);
+  return [...new Set(studyAllWords.map((w) => w.study_day))].sort((a, b) => a - b);
 }
 
 // 품사 + 예문 3개까지 전부 채워진 단어인지 — 아직 안 채워진 단어는 학습 화면에 노출하지 않는다.
@@ -91,10 +74,10 @@ function isWordFilled(word) {
 
 // (level, study_day) 세트 안의 단어가 전부 채워져 있어야 그 Day를 "완료"로 본다 — 절반만 채워진
 // Day를 보여주면 학생이 학습하다가 빈 카드를 만나게 되므로, 하나라도 미완성이면 그 Day 전체를 비활성화.
-function computeCompleteDayKeys() {
+function computeCompleteDays() {
   const groups = {};
   studyAllWords.forEach((w) => {
-    const key = `${w.level}-${w.study_day}`;
+    const key = String(w.study_day);
     (groups[key] = groups[key] || []).push(w);
   });
   const complete = new Set();
@@ -104,17 +87,13 @@ function computeCompleteDayKeys() {
   return complete;
 }
 
-function isDayComplete(level, day) {
-  return studyCompleteDayKeys.has(`${level}-${day}`);
-}
-
-function isLevelUsable(level) {
-  return studyAllWords.some((w) => w.level === level && isDayComplete(w.level, w.study_day));
+function isDayComplete(day) {
+  return studyCompleteDays.has(String(day));
 }
 
 function getActiveWordSet() {
-  const inLevel = studyAllWords.filter((w) => w.level === studyActiveLevel && isDayComplete(w.level, w.study_day));
-  return studyActiveDay === 'all' ? inLevel : inLevel.filter((w) => w.study_day === studyActiveDay);
+  const completeWords = studyAllWords.filter((w) => isDayComplete(w.study_day));
+  return studyActiveDay === 'all' ? completeWords : completeWords.filter((w) => w.study_day === studyActiveDay);
 }
 
 function isLearned(wordId) {
@@ -153,49 +132,16 @@ function exampleSentencesHTML(examples) {
     </div>`).join('');
 }
 
-// --- 레벨 셀렉터 ---
-
-function renderLevelSelector() {
-  const wrap = document.getElementById('study-level-selector');
-  if (!wrap) return;
-  const levels = getStudyLevels();
-  wrap.innerHTML = levels.map((lv) => {
-    const active = studyActiveLevel === lv;
-    const usable = isLevelUsable(lv);
-    const stateClass = !usable
-      ? 'opacity-40 cursor-not-allowed text-on-surface-variant'
-      : (active ? 'nav-pill-active' : 'text-on-surface-variant');
-    return `<button type="button" data-level="${lv}" ${usable ? '' : 'disabled'} class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${stateClass}">${studyLevelLabel(lv)}${usable ? '' : ' <span class="text-[10px]">(준비중)</span>'}</button>`;
-  }).join('');
-}
-
-function wireLevelSelector() {
-  const wrap = document.getElementById('study-level-selector');
-  if (!wrap) return;
-  wrap.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-level]');
-    if (!btn || btn.disabled) return;
-    studyActiveLevel = Number(btn.dataset.level);
-    studyActiveDay = 'all'; // 레벨이 바뀌면 Day 번호 범위가 달라지므로 전체로 초기화
-    studyFlashcardIndex = 0;
-    studyFlashcardFlipped = false;
-    studyQuizState = null;
-    renderLevelSelector();
-    renderDaySelector();
-    renderContent();
-  });
-}
-
-// --- Day 셀렉터 (드롭다운 — Day가 최대 50개까지 있어 칩으로 두면 버튼이 너무 많아짐) ---
+// --- Day 셀렉터 ---
 
 function renderDaySelector() {
   const select = document.getElementById('study-day-selector');
   if (!select) return;
   const days = getStudyDays();
-  const options = [{ value: 'all', label: '전체', disabled: !isLevelUsable(studyActiveLevel) }, ...days.map((d) => ({
+  const options = [{ value: 'all', label: '전체', disabled: studyCompleteDays.size === 0 }, ...days.map((d) => ({
     value: String(d),
-    label: isDayComplete(studyActiveLevel, d) ? `Day ${d}` : `Day ${d} (준비중)`,
-    disabled: !isDayComplete(studyActiveLevel, d)
+    label: isDayComplete(d) ? `Day ${d}` : `Day ${d} (준비중)`,
+    disabled: !isDayComplete(d)
   }))];
   select.innerHTML = options.map((o) =>
     `<option value="${o.value}" ${o.disabled ? 'disabled' : ''} ${String(studyActiveDay) === o.value ? 'selected' : ''}>${o.label}</option>`
@@ -536,7 +482,6 @@ function renderQuizResultsScreen(wordSet) {
 
 async function initStudyWidgets() {
   wireModeTabs();
-  wireLevelSelector();
   wireDaySelector();
 
   const userId = await getStudyCurrentUserId();
@@ -545,12 +490,8 @@ async function initStudyWidgets() {
   const { words, progress } = await fetchStudyData(userId);
   studyAllWords = words;
   studyProgressMap = Object.fromEntries(progress.map((p) => [p.word_id, p]));
-  studyCompleteDayKeys = computeCompleteDayKeys();
+  studyCompleteDays = computeCompleteDays();
 
-  const levels = getStudyLevels();
-  studyActiveLevel = levels.find((lv) => isLevelUsable(lv)) ?? (levels.length > 0 ? levels[0] : null);
-
-  renderLevelSelector();
   renderDaySelector();
   renderContent();
 }
