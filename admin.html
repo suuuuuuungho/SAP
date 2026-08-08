@@ -33,22 +33,11 @@
       </form>
       <div id="admin-message-list" class="flex flex-col gap-3"></div>
       </section><section class="glass-panel rounded-[2rem] p-6">
-      <h2 class="text-xl font-bold mb-1">Bible Verse</h2><p class="text-xs text-on-surface-variant mb-5">Home 상단 전광판에 표시할 대표 말씀입니다.</p>
+      <h2 class="text-xl font-bold mb-5">Home 상단에 게시할 말씀입니다</h2>
       <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
-        <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
-          <p class="text-xs font-bold text-secondary">API.Bible 구절 찾기</p>
-          <select id="admin-bible-version" class="glass-input rounded-xl px-3 py-2 text-sm"><option value="">번역본 불러오는 중...</option></select>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <select id="admin-bible-book" class="glass-input rounded-xl px-2 py-2 text-sm col-span-2 sm:col-span-2"></select>
-            <input id="admin-bible-chapter" type="number" min="1" class="glass-input rounded-xl px-3 py-2 text-sm" placeholder="장">
-            <input id="admin-bible-verse" type="number" min="1" class="glass-input rounded-xl px-3 py-2 text-sm" placeholder="절">
-          </div>
-          <button id="admin-bible-lookup" type="button" class="glass-card rounded-full py-2.5 text-sm font-semibold text-secondary">구절 불러오기</button>
-          <p id="admin-bible-lookup-status" class="hidden text-xs text-on-surface-variant"></p>
-        </div>
         <input id="admin-verse-reference" class="glass-input rounded-2xl px-4 py-2 text-sm" maxlength="100" placeholder="예: 빌립보서 4:13" required>
         <textarea id="admin-verse-text" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="1000" placeholder="성경구절 본문" required></textarea>
-        <button class="pill-btn-primary py-2.5 text-sm" type="submit">대표 말씀 등록</button>
+        <button class="pill-btn-primary py-2.5 text-sm" type="submit">말씀 등록</button>
       </form>
       <div id="admin-verse-list" class="flex flex-col gap-3"></div>
       </section>
@@ -76,7 +65,7 @@
 <script src="assets/js/auth.js?v=6"></script>
 <script src="assets/js/layout.js?v=12"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="assets/js/admin.js?v=5"></script>
+<script src="assets/js/admin.js?v=6"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
