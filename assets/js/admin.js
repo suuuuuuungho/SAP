@@ -603,18 +603,9 @@ async function adminLoadAllStats() {
 
 function adminRenderAllStats() {
   const search = (document.getElementById('admin-stat-search')?.value || '').trim().toLowerCase();
-  const role = document.getElementById('admin-stat-role')?.value || 'all';
+  const role = document.getElementById('admin-stat-role')?.value || 'student';
   const filtered = adminStatRows.filter((row) => (role === 'all' || row.app_role === role)
     && (!search || `${row.name} ${row.username} ${row.grade_class}`.toLowerCase().includes(search)));
-  const totalMinutes = adminStatRows.reduce((sum, row) => sum + (Number(row.total_minutes) || 0), 0);
-  const top = adminStatRows.find((row) => Number(row.total_minutes) > 0);
-  const summary = document.getElementById('admin-stat-summary');
-  if (summary) summary.innerHTML = [
-    [adminStatRows.length, '전체 Member'],
-    [adminFormatMinutes(totalMinutes), '전체 누적 시간'],
-    [adminFormatMinutes(adminStatRows.length ? Math.round(totalMinutes / adminStatRows.length) : 0), 'Member 평균'],
-    [top ? top.name : '-', '최고 누적 Member']
-  ].map(([value,label]) => `<article class="glass-card rounded-2xl p-4"><p class="text-xl sm:text-2xl font-bold text-primary truncate">${adminEscape(value)}</p><p class="text-xs font-bold text-on-surface-variant mt-2">${label}</p></article>`).join('');
 
   const wrap = document.getElementById('admin-stat-list');
   if (!wrap) return;

@@ -69,11 +69,10 @@
     </section>
 
     <section data-admin-panel="stat" class="admin-panel hidden">
-      <div id="admin-stat-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div>
       <section class="glass-panel rounded-[2rem] p-4 sm:p-6">
         <div class="flex flex-wrap items-center gap-3 mb-5">
           <div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-stat-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div>
-          <select id="admin-stat-role" class="glass-input rounded-full px-4 py-2 text-sm"><option value="all">전체 권한</option><option value="student">학생</option><option value="teacher">교사</option><option value="pastor">목사님</option><option value="department_head">부장님</option><option value="secretary">총무님</option><option value="admin">Admin</option></select>
+          <select id="admin-stat-role" class="glass-input rounded-full px-4 py-2 text-sm"><option value="student" selected>학생</option><option value="teacher">교사</option><option value="pastor">목사님</option><option value="department_head">부장님</option><option value="secretary">총무님</option><option value="admin">Admin</option><option value="all">전체 권한</option></select>
           <button id="admin-stat-refresh" type="button" class="icon-glass w-10 h-10 rounded-full text-primary" aria-label="통계 새로고침"><i class="fa-solid fa-rotate text-sm"></i></button>
         </div>
         <div class="overflow-x-auto"><div id="admin-stat-list" class="min-w-[900px]"></div></div>
@@ -98,7 +97,7 @@
 <script src="assets/js/profile-avatar.js?v=4"></script>
 <script>window.IS_ADMIN_CONSOLE = true;</script>
 <script src="assets/js/gallery.js?v=22"></script>
-<script src="assets/js/admin.js?v=26"></script>
+<script src="assets/js/admin.js?v=27"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
