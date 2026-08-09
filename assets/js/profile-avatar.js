@@ -44,8 +44,10 @@ async function getPublicProfileCards(userIds) {
 function publicProfileBadgeHTML(role, isHost = false) {
   const host = isHost ? '<span class="inline-flex w-4 h-4 rounded-full bg-amber-100 text-amber-600 items-center justify-center align-middle ml-1" title="Host" aria-label="Host"><i class="fa-solid fa-crown text-[8px]"></i></span>' : '';
   if (!role) return host;
-  const label = role === 'admin' ? '관리자' : '교사';
-  const color = role === 'teacher' ? 'bg-lime-500' : 'bg-blue-500';
+  const labels = { admin: '관리자', teacher: '교사', pastor: '목사님', department_head: '부장님', secretary: '총무님' };
+  const colors = { teacher: 'bg-lime-500', pastor: 'bg-violet-500', department_head: 'bg-amber-500', secretary: 'bg-cyan-500' };
+  const label = labels[role] || role;
+  const color = colors[role] || 'bg-blue-500';
   return `${host}<span class="inline-flex w-4 h-4 rounded-full ${color} text-white items-center justify-center align-middle ml-1" title="${label}" aria-label="${label}"><i class="fa-solid fa-check text-[8px]"></i></span>`;
 }
 

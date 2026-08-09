@@ -10,12 +10,13 @@ alter table public.profiles
 
 alter table public.profiles drop constraint if exists profiles_app_role_check;
 alter table public.profiles add constraint profiles_app_role_check
-  check (app_role in ('student', 'teacher', 'admin'));
+  check (app_role in ('student', 'teacher', 'admin', 'pastor', 'department_head', 'secretary'));
 
 update public.profiles
 set app_role = case
   when is_admin = true or grade_class = '관리자' then 'admin'
   when grade_class = '교사' then 'teacher'
+  when app_role in ('pastor', 'department_head', 'secretary') then app_role
   else 'student'
 end;
 
@@ -103,7 +104,7 @@ returns void language plpgsql security definer set search_path = public
 as $$
 begin
   if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
-  if new_role not in ('student','teacher','admin') then raise exception 'invalid role'; end if;
+  if new_role not in ('student','teacher','admin','pastor','department_head','secretary') then raise exception 'invalid role'; end if;
   update public.profiles set
     name = trim(new_name), grade_class = new_grade_class, phone = coalesce(new_phone, ''),
     parent_phone = nullif(regexp_replace(coalesce(new_parent_phone,''), '[^0-9]', '', 'g'), ''),
@@ -222,6 +223,33 @@ begin
 end; $$;
 grant execute on function public.admin_add_post_comment(uuid,date,text,text) to authenticated;
 
+create or replace function public.can_write_gallery_comments()
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid()
+      and (p.is_admin = true or p.app_role in ('admin', 'teacher', 'pastor', 'department_head', 'secretary'))
+      and p.is_active = true
+  );
+$$;
+grant execute on function public.can_write_gallery_comments() to authenticated;
+
+drop policy if exists "post_comments_insert" on public.post_comments;
+drop policy if exists "post_comments_select" on public.post_comments;
+create policy "post_comments_select" on public.post_comments for select to authenticated
+using (exists (select 1 from public.profiles p where p.id = post_comments.post_owner_id and p.is_active = true));
+create policy "post_comments_insert" on public.post_comments for insert to authenticated
+with check (
+  author_id = auth.uid()
+  and public.can_write_gallery_comments()
+  and exists (select 1 from public.profiles p where p.id = post_comments.post_owner_id and p.is_active = true)
+);
+drop policy if exists "post_comments_update" on public.post_comments;
+create policy "post_comments_update" on public.post_comments for update to authenticated
+using (author_id = auth.uid() and public.can_write_gallery_comments())
+with check (author_id = auth.uid() and public.can_write_gallery_comments() and char_length(trim(body)) between 1 and 300);
+
 create or replace function public.admin_delete_gallery_photo(
   owner_id uuid, post_date date, post_type text, target_photo_path text
 )
@@ -319,7 +347,7 @@ returns table (user_id uuid, username text, name text, avatar_path text, badge_r
 language sql stable security definer set search_path = public
 as $$
 select p.id,p.username,p.name,p.avatar_path,
-  case when p.app_role='admin' or p.is_admin then 'admin' when p.app_role='teacher' or p.grade_class='교사' then 'teacher' else null end,
+  case when p.app_role='admin' or p.is_admin then 'admin' when p.app_role='teacher' or p.grade_class='교사' then 'teacher' when p.app_role in ('pastor','department_head','secretary') then p.app_role else null end,
   p.is_host
 from public.profiles p where p.id=any(coalesce(requested_user_ids,array[]::uuid[])) and p.is_active=true;
 $$;

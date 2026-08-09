@@ -14,6 +14,7 @@ let galleryPrayMap = {};
 let galleryWordMap = {};
 let galleryAvatarUrls = {};
 let galleryCurrentUserId = null;
+let galleryCanComment = false;
 let galleryActiveCommentsPost = null;
 let galleryComments = [];
 let galleryCommentProfiles = {};
@@ -73,6 +74,14 @@ async function loadGalleryUsers() {
     return [];
   }
   return data || [];
+}
+
+async function loadGalleryCommentPermission() {
+  if (window.IS_ADMIN_CONSOLE) return true;
+  const { data, error } = await window.supabaseClient.rpc('can_write_gallery_comments');
+  if (!error) return data === true;
+  const { data: profile } = await window.supabaseClient.from('profiles').select('app_role,is_admin').eq('id', galleryCurrentUserId).maybeSingle();
+  return !!(profile?.is_admin || ['admin', 'teacher', 'pastor', 'department_head', 'secretary'].includes(profile?.app_role));
 }
 
 async function loadGalleryDateRecords(dateKey) {
@@ -327,7 +336,7 @@ function renderGalleryComments() {
     const profile = galleryCommentProfiles[comment.author_id];
     const badge = window.publicProfileBadgeHTML ? window.publicProfileBadgeHTML(profile?.badge_role, profile?.is_host) : '';
     const controls = comment.author_id === galleryCurrentUserId
-      ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-comment-edit="${comment.id}" class="hover:text-primary">수정</button><button type="button" data-comment-delete="${comment.id}" class="hover:text-error">삭제</button></span>`
+      ? `<span class="inline-flex gap-2 ml-2">${galleryCanComment ? `<button type="button" data-comment-edit="${comment.id}" class="hover:text-primary">수정</button>` : ''}<button type="button" data-comment-delete="${comment.id}" class="hover:text-error">삭제</button></span>`
       : window.IS_ADMIN_CONSOLE ? `<span class="inline-flex gap-2 ml-2"><button type="button" data-admin-comment-delete="${comment.id}" class="text-error hover:underline">관리자 삭제</button></span>` : '';
     return `<article class="flex items-start gap-3">
       ${galleryCommentAvatar(profile)}
@@ -362,6 +371,7 @@ async function openGalleryComments(userId, type) {
   }
   modal.classList.remove('hidden');
   modal.classList.add('flex');
+  document.getElementById('gallery-comments-form')?.classList.toggle('hidden', !galleryCanComment);
   document.getElementById('gallery-comments-list').innerHTML = '<p class="text-sm text-on-surface-variant text-center py-10">불러오는 중...</p>';
   resetGalleryCommentEditor();
   await loadGalleryComments();
@@ -456,6 +466,7 @@ function wireGalleryComments() {
   });
   document.getElementById('gallery-comments-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!galleryCanComment) return;
     const input = document.getElementById('gallery-comments-input');
     const submit = document.getElementById('gallery-comments-submit');
     const body = input.value.trim();
@@ -645,6 +656,7 @@ async function initGalleryWidgets() {
   renderGalleryTypeTabs();
   renderGalleryCalendar();
   galleryCurrentUserId = await getCurrentUserId();
+  galleryCanComment = await loadGalleryCommentPermission();
   galleryUsers = await loadGalleryUsers();
   galleryAvatarUrls = window.getProfileAvatarUrls
     ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
