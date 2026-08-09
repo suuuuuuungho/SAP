@@ -12,8 +12,7 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="flex flex-wrap items-end justify-between gap-4 mb-6 lg:mb-8">
-    <div><p class="text-xs font-bold tracking-[.2em] text-primary uppercase mb-2">SAP Operations</p><h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Admin Console</h1></div>
+  <div class="flex justify-end mb-6 lg:mb-8">
     <div class="glass-card rounded-full px-4 py-2 text-xs text-on-surface-variant"><span class="inline-block w-2 h-2 rounded-full bg-quaternary mr-2"></span>Live workspace</div>
   </div>
   <p id="admin-status" class="hidden text-sm mb-4"></p>
@@ -55,7 +54,7 @@
     <section data-admin-panel="member" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-4 sm:p-6"><div class="flex flex-wrap gap-3 justify-between items-center mb-5"><div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div><div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div></div><div id="admin-member-list" class="flex flex-col gap-3"></div></div></section>
 
     <section data-admin-panel="dashboard" class="admin-panel hidden">
-      <div class="flex flex-wrap items-end justify-between gap-4 mb-5"><div><h2 class="text-2xl font-bold">Dashboard</h2><p class="text-sm text-on-surface-variant">학생별 인증 현황과 후속 조치를 한 화면에서 관리합니다.</p></div><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div>
+      <div class="flex justify-end mb-5"><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div>
       <div id="admin-dashboard-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div>
       <div class="glass-panel rounded-[2rem] p-4 sm:p-6 mb-5">
         <div class="flex flex-wrap items-end gap-3 mb-5">
