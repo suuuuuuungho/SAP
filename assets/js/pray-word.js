@@ -149,12 +149,14 @@ function formatPrayerSummary(entries) {
 }
 
 function formatVerseRange(entry) {
-  if (!entry.startBook || !entry.startChapter || !entry.startVerse) return '';
-  const start = `${entry.startBook} ${entry.startChapter}:${entry.startVerse}`;
-  if (!entry.endBook || !entry.endChapter || !entry.endVerse) return start;
-  const end = entry.endBook === entry.startBook
-    ? `${entry.endChapter}:${entry.endVerse}`
-    : `${entry.endBook} ${entry.endChapter}:${entry.endVerse}`;
+  if (!entry.startBook || !entry.startChapter) return '';
+  const start = entry.startVerse
+    ? `${entry.startBook} ${entry.startChapter}:${entry.startVerse}`
+    : `${entry.startBook} ${entry.startChapter}장`;
+  if (!entry.endBook || !entry.endChapter) return start;
+  if (!entry.startVerse && !entry.endVerse && entry.endBook === entry.startBook && String(entry.endChapter) === String(entry.startChapter)) return start;
+  const endChapter = entry.endVerse ? `${entry.endChapter}:${entry.endVerse}` : `${entry.endChapter}장`;
+  const end = entry.endBook === entry.startBook ? endChapter : `${entry.endBook} ${endChapter}`;
   return `${start} ~ ${end}`;
 }
 
@@ -667,12 +669,14 @@ async function saveWordModal() {
   const verseElements = [...document.querySelectorAll('#word-verse-list .word-verse-entry')];
   const verses = verseElements.map((entry, index) => {
     const minutesInput = entry.querySelector('.word-meditation-minutes');
+    const startBook = entry.querySelector('.word-start-book').value;
+    const startChapter = entry.querySelector('.word-start-chapter').value;
     return {
-      startBook: entry.querySelector('.word-start-book').value,
-      startChapter: entry.querySelector('.word-start-chapter').value,
+      startBook,
+      startChapter,
       startVerse: entry.querySelector('.word-start-verse').value,
-      endBook: entry.querySelector('.word-end-book').value,
-      endChapter: entry.querySelector('.word-end-chapter').value,
+      endBook: entry.querySelector('.word-end-book').value || startBook,
+      endChapter: entry.querySelector('.word-end-chapter').value || startChapter,
       endVerse: entry.querySelector('.word-end-verse').value,
       meditationMinutes: index === 0
         ? 0
@@ -680,7 +684,7 @@ async function saveWordModal() {
     };
   });
 
-  const referenceFields = ['startBook', 'startChapter', 'startVerse', 'endBook', 'endChapter', 'endVerse'];
+  const referenceFields = ['startBook', 'startChapter'];
   const hasIncompleteEntry = verses.some((entry) => referenceFields.some((field) => !entry[field]));
   const hasInvalidExtraMinutes = verses.slice(1).some((entry, index) => {
     const supportsTimeInput = !!verseElements[index + 1].querySelector('.word-meditation-minutes');
@@ -690,7 +694,7 @@ async function saveWordModal() {
     if (wordVerseHint) {
       wordVerseHint.textContent = hasInvalidExtraMinutes
         ? '추가한 말씀 구절의 묵상 시간을 입력해주세요.'
-        : '읽은 말씀 구절(시작 ~ 끝)을 입력해주세요.';
+        : '읽은 말씀의 성경책과 장을 입력해주세요. 절은 선택사항입니다.';
       wordVerseHint.classList.remove('hidden');
     }
     return;
