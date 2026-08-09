@@ -256,9 +256,9 @@ let adminDashboardClass = 'all';
 function adminRoleBadge(member) {
   const roleConfig = {
     admin: { label: 'Admin', color: 'bg-blue-500' },
-    pastor: { label: '목사님', color: 'bg-violet-500' },
-    department_head: { label: '부장님', color: 'bg-amber-500' },
-    secretary: { label: '총무님', color: 'bg-cyan-500' },
+    pastor: { label: '목사님', color: 'bg-teal-400' },
+    department_head: { label: '부장님', color: 'bg-violet-300' },
+    secretary: { label: '총무님', color: 'bg-orange-500' },
     teacher: { label: '교사', color: 'bg-lime-500' }
   }[member.app_role];
   const roleBadge = roleConfig
