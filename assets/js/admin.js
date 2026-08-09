@@ -251,8 +251,6 @@ let adminDashboardRows = [];
 let adminActiveTab = 'board';
 const ADMIN_DASHBOARD_PAGE_SIZE = 20;
 let adminDashboardPage = 1;
-let adminDashboardGrade = 'all';
-let adminDashboardClass = 'all';
 let adminStatRows = [];
 
 function adminRoleBadge(member) {
@@ -382,9 +380,8 @@ async function adminLoadDashboard() {
   const date = document.getElementById('admin-dashboard-date')?.value || '2026-08-10';
   const { data, error } = await window.supabaseClient.rpc('admin_get_dashboard', { target_date: date });
   if (error) { adminShowStatus('인증 현황을 불러오지 못했습니다. 관리자 스키마를 확인해주세요.', true); return; }
-  adminDashboardRows = data || [];
+  adminDashboardRows = (data || []).filter((row) => !row.app_role || row.app_role === 'student');
   adminDashboardPage = 1;
-  adminBuildDashboardFilters();
   adminRenderDashboard();
   await adminLoadSmsLogs();
 }
@@ -418,11 +415,7 @@ function adminDashboardMissing(row, worshipRequired) {
 }
 
 function adminFilteredDashboardRows() {
-  return adminDashboardRows.filter((row) => {
-    const group = adminDashboardGroup(row.grade_class);
-    return (adminDashboardGrade === 'all' || group.grade === adminDashboardGrade)
-      && (adminDashboardClass === 'all' || group.className === adminDashboardClass);
-  });
+  return adminDashboardRows;
 }
 
 function adminRenderDashboard() {
@@ -439,7 +432,7 @@ function adminRenderDashboard() {
   adminDashboardPage = Math.min(adminDashboardPage, totalPages);
   const pageRows = filtered.slice((adminDashboardPage - 1) * ADMIN_DASHBOARD_PAGE_SIZE, adminDashboardPage * ADMIN_DASHBOARD_PAGE_SIZE);
   const wrap = document.getElementById('admin-dashboard-list');
-  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생 / 학년반</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>관리</span></div>${pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[11px] font-medium text-secondary mt-0.5">${adminEscape(row.grade_class || '학년반 미지정')}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div class="flex items-center gap-2"><button data-report-view class="icon-glass w-9 h-9 rounded-full text-primary" title="개인 리포트 보기"><i class="fa-solid fa-file-lines text-sm"></i></button><button data-report-sms class="icon-glass w-9 h-9 rounded-full text-emerald-500" title="학부모에게 리포트 링크 전송"><i class="fa-solid fa-link text-sm"></i></button><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 학생이 없습니다.</p>'}`;
+  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>관리</span></div>${pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div class="flex items-center gap-2"><button data-report-view class="icon-glass w-9 h-9 rounded-full text-primary" title="개인 리포트 보기"><i class="fa-solid fa-file-lines text-sm"></i></button><button data-report-sms class="icon-glass w-9 h-9 rounded-full text-emerald-500" title="학부모에게 리포트 링크 전송"><i class="fa-solid fa-link text-sm"></i></button><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">학생이 없습니다.</p>'}`;
   wrap.querySelectorAll('[data-sms]').forEach((button) => button.addEventListener('click', () => adminSendMissingSms(button.closest('[data-dashboard-user]').dataset.dashboardUser, button.dataset.missing)));
   wrap.querySelectorAll('[data-report-view]').forEach((button) => button.addEventListener('click', () => adminOpenStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser)));
   wrap.querySelectorAll('[data-report-sms]').forEach((button) => button.addEventListener('click', () => adminSendStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser, button)));
@@ -617,8 +610,6 @@ function adminRenderAllStats() {
 function adminWireConsole() {
   adminWireTabs(); adminWireMember();
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
-  document.getElementById('admin-dashboard-grade')?.addEventListener('change', (event) => { adminDashboardGrade = event.target.value; adminDashboardClass = 'all'; adminDashboardPage = 1; adminBuildDashboardFilters(); adminRenderDashboard(); });
-  document.getElementById('admin-dashboard-class')?.addEventListener('change', (event) => { adminDashboardClass = event.target.value; adminDashboardPage = 1; adminRenderDashboard(); });
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
   document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
   document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);

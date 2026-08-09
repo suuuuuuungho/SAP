@@ -54,10 +54,6 @@
       <div class="flex justify-end mb-5"><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div>
       <div id="admin-dashboard-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div>
       <div class="glass-panel rounded-[2rem] p-4 sm:p-6 mb-5">
-        <div class="flex flex-wrap items-end gap-3 mb-3">
-          <label class="text-xs text-on-surface-variant">학년<select id="admin-dashboard-grade" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1 min-w-32"><option value="all">전체 학년</option></select></label>
-          <label class="text-xs text-on-surface-variant">반<select id="admin-dashboard-class" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1 min-w-32"><option value="all">전체 반</option></select></label>
-        </div>
         <div class="flex flex-wrap items-center gap-2 mb-5"><button id="admin-dashboard-bulk-report" type="button" class="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold shadow-lg shadow-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-file-arrow-up mr-2"></i>학부모 리포트 일괄 발송</button><button id="admin-dashboard-bulk-sms" type="button" class="rounded-full bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 text-sm font-bold shadow-lg shadow-sky-200 disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-paper-plane mr-2"></i>미인증 내역 알림 문자 발송</button></div>
         <div class="overflow-x-auto"><div id="admin-dashboard-list" class="min-w-[1100px]"></div></div>
         <div id="admin-dashboard-pagination" class="flex flex-wrap items-center justify-center gap-2 mt-5"></div>
@@ -97,7 +93,7 @@
 <script src="assets/js/profile-avatar.js?v=4"></script>
 <script>window.IS_ADMIN_CONSOLE = true;</script>
 <script src="assets/js/gallery.js?v=22"></script>
-<script src="assets/js/admin.js?v=27"></script>
+<script src="assets/js/admin.js?v=28"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
