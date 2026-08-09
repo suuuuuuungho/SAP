@@ -4,6 +4,7 @@ let adminCurrentUserId = null;
 let adminUsers = [];
 let adminEditingMessageId = null;
 let adminMessages = [];
+const ADMIN_REPORT_PUBLIC_SITE_URL = 'https://suuuuuuungho.github.io/SAP/';
 
 const ADMIN_FEATURE_STRUCTURE = [
   { key: 'board', title: 'Board', description: '전체 이용자가 보는 소식과 랭킹 탭', icon: 'fa-solid fa-clipboard-list', children: [
@@ -488,7 +489,8 @@ async function adminSendStudentReport(userId, button) {
   button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
   try {
     const report = await adminCreateStudentReportLink(userId);
-    const siteUrl = new URL('.', window.location.href).href;
+    // Admin 미리보기 주소(blob/data/localhost)가 문자에 들어가지 않도록 실제 GitHub Pages 주소를 사용합니다.
+    const siteUrl = window.APP_CONFIG?.PUBLIC_SITE_URL || ADMIN_REPORT_PUBLIC_SITE_URL;
     const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId, reportToken: report.token, siteUrl, date: document.getElementById('admin-dashboard-date').value } });
     if (error || !data?.ok) throw new Error(data?.message || '문자를 보내지 못했습니다.');
     adminShowStatus(`${studentName} 학생의 학부모에게 리포트 링크를 보냈습니다.`);
