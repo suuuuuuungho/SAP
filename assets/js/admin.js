@@ -503,6 +503,42 @@ async function adminSendStudentReport(userId, button) {
   }
 }
 
+async function adminSendBulkStudentReports() {
+  const date = document.getElementById('admin-dashboard-date')?.value || '2026-08-10';
+  const targets = adminDashboardRows.filter((row) => String(row.parent_phone || '').replace(/\D/g, '').length >= 10);
+  const missingPhoneCount = adminDashboardRows.length - targets.length;
+  if (!targets.length) { adminShowStatus('학부모 연락처가 등록된 학생이 없습니다.', true); return; }
+  const notice = missingPhoneCount ? `\n학부모 연락처가 없는 ${missingPhoneCount}명은 제외됩니다.` : '';
+  if (!confirm(`전체 학생 ${adminDashboardRows.length}명 중 ${targets.length}명의 학부모에게 개인 리포트를 발송할까요?${notice}`)) return;
+
+  const button = document.getElementById('admin-dashboard-bulk-report');
+  const original = button?.innerHTML || '';
+  if (button) { button.disabled = true; button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>발송 중 0/${targets.length}`; }
+  let cursor = 0;
+  let success = 0;
+  let failed = 0;
+  const siteUrl = window.APP_CONFIG?.PUBLIC_SITE_URL || ADMIN_REPORT_PUBLIC_SITE_URL;
+  const worker = async () => {
+    while (cursor < targets.length) {
+      const target = targets[cursor++];
+      try {
+        const report = await adminCreateStudentReportLink(target.user_id);
+        const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId: target.user_id, reportToken: report.token, siteUrl, date } });
+        if (error || !data?.ok) throw new Error(data?.message || '발송 실패');
+        success += 1;
+      } catch (error) {
+        console.error('[adminSendBulkStudentReports]', target.user_id, error);
+        failed += 1;
+      }
+      if (button) button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>발송 중 ${success + failed}/${targets.length}`;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, targets.length) }, worker));
+  if (button) { button.disabled = false; button.innerHTML = original; }
+  adminShowStatus(`리포트 일괄 발송 완료: 성공 ${success}명 · 실패 ${failed}명${missingPhoneCount ? ` · 연락처 미입력 ${missingPhoneCount}명` : ''}`, failed > 0);
+  await adminLoadSmsLogs();
+}
+
 async function adminSendMissingSms(userId, missing) {
   const row = adminDashboardRows.find((item) => item.user_id === userId);
   const member = adminMembers.find((item) => item.id === userId);
@@ -557,6 +593,7 @@ function adminWireConsole() {
   document.getElementById('admin-dashboard-grade')?.addEventListener('change', (event) => { adminDashboardGrade = event.target.value; adminDashboardClass = 'all'; adminDashboardPage = 1; adminBuildDashboardFilters(); adminRenderDashboard(); });
   document.getElementById('admin-dashboard-class')?.addEventListener('change', (event) => { adminDashboardClass = event.target.value; adminDashboardPage = 1; adminRenderDashboard(); });
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
+  document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
   document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);
 }
 
