@@ -21,6 +21,13 @@
       <div><p class="text-xs font-bold tracking-[0.2em] text-primary mb-2">SAP 1기</p><h1 class="text-3xl sm:text-4xl font-bold">개인 활동 리포트</h1><p id="report-student" class="text-sm text-on-surface-variant mt-3"></p></div>
       <p id="report-generated" class="text-xs text-on-surface-variant"></p>
     </header>
+    <section class="mb-6">
+      <div id="report-kpis" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"></div>
+      <article class="glass-card rounded-[1.5rem] p-5 sm:p-6">
+        <div class="flex flex-wrap items-end justify-between gap-2 mb-5"><div><h2 class="text-lg font-bold">활동 시간 구성</h2><p class="text-xs text-on-surface-variant mt-1">운영기간 동안 카테고리별로 쌓인 시간입니다.</p></div><p id="report-total-time" class="text-sm font-bold text-primary"></p></div>
+        <div id="report-category-stats" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4"></div>
+      </article>
+    </section>
     <section class="glass-card rounded-[1.5rem] p-4 sm:p-6 mb-6"><h2 class="text-lg font-bold mb-4">일별 활동</h2><div class="overflow-x-auto"><table class="w-full min-w-[680px] text-sm"><thead><tr class="border-b border-outline-variant text-left text-xs text-on-surface-variant"><th class="py-3 px-2">날짜</th><th class="py-3 px-2">기도</th><th class="py-3 px-2">말씀</th><th class="py-3 px-2">공부</th><th class="py-3 px-2">예배</th><th class="py-3 px-2">합계</th></tr></thead><tbody id="report-daily-body"></tbody></table></div></section>
     <section class="mb-6"><div class="flex items-center gap-2 mb-4"><i class="fa-solid fa-hands-praying text-primary"></i><h2 class="text-xl font-bold">기도 인증</h2></div><div id="report-pray-posts" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div></section>
     <section><div class="flex items-center gap-2 mb-4"><i class="fa-solid fa-book-bible text-secondary"></i><h2 class="text-xl font-bold">말씀 묵상 인증</h2></div><div id="report-word-posts" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div></section>
@@ -29,6 +36,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/report.js?v=1"></script>
+<script src="assets/js/report.js?v=2"></script>
 </body>
 </html>
