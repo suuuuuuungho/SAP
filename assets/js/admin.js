@@ -254,13 +254,22 @@ let adminDashboardGrade = 'all';
 let adminDashboardClass = 'all';
 
 function adminRoleBadge(member) {
-  const role = member.app_role;
-  const roleBadge = role === 'admin'
-    ? '<span class="inline-flex w-4 h-4 rounded-full bg-blue-500 text-white items-center justify-center" title="Admin"><i class="fa-solid fa-check text-[8px]"></i></span>'
-    : role === 'teacher'
-      ? '<span class="inline-flex w-4 h-4 rounded-full bg-lime-500 text-white items-center justify-center" title="Teacher"><i class="fa-solid fa-check text-[8px]"></i></span>' : '';
-  const host = member.is_host ? '<span class="inline-flex w-5 h-5 rounded-full bg-amber-100 text-amber-600 items-center justify-center" title="Host"><i class="fa-solid fa-crown text-[9px]"></i></span>' : '';
+  const roleConfig = {
+    admin: { label: 'Admin', color: 'bg-blue-500' },
+    pastor: { label: '목사님', color: 'bg-violet-500' },
+    department_head: { label: '부장님', color: 'bg-amber-500' },
+    secretary: { label: '총무님', color: 'bg-cyan-500' },
+    teacher: { label: '교사', color: 'bg-lime-500' }
+  }[member.app_role];
+  const roleBadge = roleConfig
+    ? `<span class="inline-flex w-4 h-4 rounded-full ${roleConfig.color} text-white items-center justify-center" title="${roleConfig.label}"><i class="fa-solid fa-check text-[8px]"></i></span>`
+    : '';
+  const host = member.is_host ? '<span class="inline-flex w-5 h-5 rounded-full bg-amber-100 text-amber-600 items-center justify-center" title="호스트"><i class="fa-solid fa-crown text-[9px]"></i></span>' : '';
   return `${host}${roleBadge}`;
+}
+
+function adminRoleLabel(role) {
+  return { admin: 'Admin', pastor: '목사님', department_head: '부장님', secretary: '총무님', teacher: '교사', student: '학생' }[role] || role;
 }
 
 function adminWireTabs() {
@@ -314,7 +323,7 @@ function adminRenderMembers() {
   const query = (document.getElementById('admin-member-search')?.value || '').trim().toLowerCase();
   if (!wrap) return;
   const filtered = adminMembers.filter((member) => !query || `${member.name} ${member.username} ${member.grade_class}`.toLowerCase().includes(query));
-  wrap.innerHTML = filtered.map((member) => `<article class="admin-member-row glass-card rounded-2xl p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 ${member.is_active ? '' : 'opacity-50'}" data-member-id="${member.id}"><div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center font-bold overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape((member.name || '?')[0])}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><p class="font-bold truncate">${adminEscape(member.name)}</p>${adminRoleBadge(member)}</div><p class="text-xs text-on-surface-variant truncate">@${adminEscape(member.username)} · ${adminEscape(member.grade_class || '-')}</p></div><div class="text-right hidden md:block"><p class="text-xs font-semibold">${adminEscape(member.parent_phone || '학부모 번호 미입력')}</p><p class="text-[10px] text-on-surface-variant">${member.is_active ? 'Active' : 'Inactive'} · ${adminEscape(member.app_role)}</p></div><button type="button" data-edit-member class="icon-glass w-10 h-10 rounded-full"><i class="fa-solid fa-ellipsis"></i></button></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">검색 결과가 없습니다.</p>';
+  wrap.innerHTML = filtered.map((member) => `<article class="admin-member-row glass-card rounded-2xl p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 ${member.is_active ? '' : 'opacity-50'}" data-member-id="${member.id}"><div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center font-bold overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape((member.name || '?')[0])}</div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><p class="font-bold truncate">${adminEscape(member.name)}</p>${adminRoleBadge(member)}</div><p class="text-xs text-on-surface-variant truncate">@${adminEscape(member.username)} · ${adminEscape(member.grade_class || '-')}</p></div><div class="text-right hidden md:block"><p class="text-xs font-semibold">${adminEscape(member.parent_phone || '학부모 번호 미입력')}</p><p class="text-[10px] text-on-surface-variant">${member.is_active ? '활성' : '비활성'} · ${adminEscape(adminRoleLabel(member.app_role))}</p></div><button type="button" data-edit-member class="icon-glass w-10 h-10 rounded-full"><i class="fa-solid fa-ellipsis"></i></button></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">검색 결과가 없습니다.</p>';
   wrap.querySelectorAll('[data-edit-member]').forEach((button) => button.addEventListener('click', () => adminOpenMember(button.closest('[data-member-id]').dataset.memberId)));
 }
 
@@ -335,6 +344,12 @@ function adminOpenMember(id) {
 function adminCloseMember() { const modal = document.getElementById('admin-member-modal'); modal?.classList.add('hidden'); modal?.classList.remove('flex'); }
 
 function adminWireMember() {
+  const roleSelect = document.getElementById('admin-member-role');
+  if (roleSelect) roleSelect.innerHTML = '<option value="admin">Admin</option><option value="pastor">목사님</option><option value="department_head">부장님</option><option value="secretary">총무님</option><option value="teacher">교사</option><option value="student">학생</option>';
+  const hostLabel = document.getElementById('admin-member-host')?.closest('label');
+  const activeLabel = document.getElementById('admin-member-active')?.closest('label');
+  if (hostLabel?.firstChild) hostLabel.firstChild.textContent = '호스트 ';
+  if (activeLabel?.firstChild) activeLabel.firstChild.textContent = '활성 ';
   document.getElementById('admin-member-search')?.addEventListener('input', adminRenderMembers);
   document.querySelectorAll('[data-close-modal]').forEach((item) => item.addEventListener('click', adminCloseMember));
   document.getElementById('admin-member-form')?.addEventListener('submit', async (event) => {
