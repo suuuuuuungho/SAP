@@ -1,4 +1,5 @@
 const REPORT_PHOTO_BUCKET = 'verification-photos-v2';
+let reportTrendChart = null;
 
 function reportEscape(value) {
   return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -107,11 +108,46 @@ function wireReportCarousels() {
   }));
 }
 
+function renderReportTrend(days) {
+  const canvas = document.getElementById('report-trend-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const dayTotals = days.map((day) => ['pray_minutes','word_minutes','study_minutes','worship_minutes'].reduce((sum, key) => sum + (Number(day[key]) || 0), 0));
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const latestActiveIndex = dayTotals.reduce((latest, minutes, index) => minutes > 0 ? index : latest, -1);
+  const todayIndex = days.reduce((latest, day, index) => day.record_date <= todayKey ? index : latest, -1);
+  const endIndex = Math.max(latestActiveIndex, todayIndex);
+  const visibleDays = endIndex >= 0 ? days.slice(0, endIndex + 1) : days.slice(0, 1);
+  const values = visibleDays.map((day) => ['pray_minutes','word_minutes','study_minutes','worship_minutes'].reduce((sum, key) => sum + (Number(day[key]) || 0), 0));
+  const labels = visibleDays.map((day) => reportDate(day.record_date).replace(/ \(.+\)/, ''));
+  if (reportTrendChart) reportTrendChart.destroy();
+  reportTrendChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: '활동 시간', data: values, borderColor: '#b9045e', backgroundColor: 'rgba(255,75,145,0.18)', fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#b9045e' },
+      { label: '300분 목표', data: values.map(() => 300), borderColor: '#8d6f76', borderDash: [6,6], pointRadius: 0, fill: false }
+    ] },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { labels: { font: { family: 'Pretendard' }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y}분` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 7, maxRotation: 0, font: { family: 'Pretendard', size: 10 } } },
+        y: { beginAtZero: true, ticks: { callback: (value) => `${value}분`, font: { family: 'Pretendard', size: 10 } } }
+      }
+    }
+  });
+}
+
 function renderSharedReport(data) {
   const student = data.student || {};
   document.getElementById('report-student').textContent = `${student.name || '-'} · @${student.username || '-'} · ${student.gradeClass || '학년/반 미지정'}`;
   document.getElementById('report-generated').textContent = `생성 ${new Date(data.generatedAt).toLocaleString('ko-KR')}`;
   renderReportStatistics(data.days || []);
+  renderReportTrend(data.days || []);
   document.getElementById('report-daily-body').innerHTML = (data.days || []).map((day) => {
     const total = ['pray_minutes','word_minutes','study_minutes','worship_minutes'].reduce((sum, key) => sum + (Number(day[key]) || 0), 0);
     const weekday = new Date(`${day.record_date}T12:00:00`).getDay();
