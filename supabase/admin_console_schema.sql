@@ -374,7 +374,7 @@ with valid_link as (
   select l.student_id from public.student_report_links l
   where l.token=report_token and l.revoked_at is null and l.expires_at>now()
 ), student as (
-  select p.id,p.name,p.username from public.profiles p join valid_link l on l.student_id=p.id
+  select p.id,p.name,p.username,p.grade_class from public.profiles p join valid_link l on l.student_id=p.id
 ), days as (
   select d::date record_date from generate_series(date '2026-08-10',date '2026-09-06','1 day') d
   where extract(isodow from d) between 1 and 5
@@ -399,7 +399,7 @@ with valid_link as (
   from public.word_records r join student s on s.id=r.user_id where jsonb_array_length(r.verses)>0
 )
 select case when not exists(select 1 from student) then null else jsonb_build_object(
-  'student',(select jsonb_build_object('name',name,'username',username) from student),
+  'student',(select jsonb_build_object('name',name,'username',username,'gradeClass',grade_class) from student),
   'days',(select coalesce(jsonb_agg(to_jsonb(daily) order by record_date),'[]'::jsonb) from daily),
   'prayPosts',(select value from pray_posts),
   'wordPosts',(select value from word_posts),

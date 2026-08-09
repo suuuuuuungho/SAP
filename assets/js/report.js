@@ -17,6 +17,20 @@ function reportMinutes(value) {
   return hours ? `${hours}시간${rest ? ` ${rest}분` : ''}` : `${rest}분`;
 }
 
+function reportCompactMinutes(value) {
+  const minutes = Math.max(0, Number(value) || 0);
+  if (!minutes) return '';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours ? `${hours}h${rest ? `${rest}m` : ''}` : `${rest}m`;
+}
+
+function reportActivityCell(value, required = true) {
+  const compact = reportCompactMinutes(value);
+  if (compact) return `<span class="font-semibold">${compact}</span>`;
+  return required ? '<span class="text-error font-bold">미인증</span>' : '<span class="text-on-surface-variant">-</span>';
+}
+
 function reportPhotoUrl(path) {
   if (!path) return '';
   return window.supabaseClient.storage.from(REPORT_PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
@@ -78,27 +92,35 @@ function renderReportStatistics(days) {
   ].map((item) => `<article class="glass-card rounded-2xl p-4 sm:p-5"><p class="text-xl sm:text-2xl font-bold text-primary">${reportEscape(item.value)}</p><p class="text-xs font-bold text-on-surface-variant mt-2">${reportEscape(item.label)}</p>${item.note ? `<p class="text-[10px] text-on-surface-variant mt-1">${reportEscape(item.note)}</p>` : ''}</article>`).join('');
 
   document.getElementById('report-total-time').textContent = `총 ${reportMinutes(total)}`;
-  const compositionTotal = categoryTotals.reduce((sum, category) => sum + category.minutes, 0);
   const maxCategory = Math.max(1, ...categoryTotals.map((category) => category.minutes));
   document.getElementById('report-category-stats').innerHTML = categoryTotals.map((category) => {
     const width = category.minutes ? Math.max(4, Math.round(category.minutes / maxCategory * 100)) : 0;
-    const share = compositionTotal ? Math.round(category.minutes / compositionTotal * 100) : 0;
-    return `<div><div class="flex items-center justify-between gap-3 text-xs mb-2"><span class="font-bold">${category.label}</span><span class="text-on-surface-variant">${reportMinutes(category.minutes)} · ${share}%</span></div><div class="h-2.5 rounded-full bg-surface-container overflow-hidden"><div class="h-full rounded-full" style="width:${width}%;background:${category.color}"></div></div></div>`;
+    return `<div><div class="flex items-center justify-between gap-3 text-xs mb-2"><span class="font-bold">${category.label}</span><span class="text-on-surface-variant">${reportMinutes(category.minutes)}</span></div><div class="h-2.5 rounded-full bg-surface-container overflow-hidden"><div class="h-full rounded-full" style="width:${width}%;background:${category.color}"></div></div></div>`;
   }).join('');
+}
+
+function wireReportCarousels() {
+  document.querySelectorAll('[data-report-carousel-target]').forEach((button) => button.addEventListener('click', () => {
+    const carousel = document.getElementById(button.dataset.reportCarouselTarget);
+    if (!carousel) return;
+    carousel.scrollBy({ left: Number(button.dataset.reportCarouselDirection) * Math.max(280, carousel.clientWidth * 0.85), behavior: 'smooth' });
+  }));
 }
 
 function renderSharedReport(data) {
   const student = data.student || {};
-  document.getElementById('report-student').textContent = `${student.name || '-'} · @${student.username || '-'}`;
+  document.getElementById('report-student').textContent = `${student.name || '-'} · @${student.username || '-'} · ${student.gradeClass || '학년/반 미지정'}`;
   document.getElementById('report-generated').textContent = `생성 ${new Date(data.generatedAt).toLocaleString('ko-KR')}`;
   renderReportStatistics(data.days || []);
   document.getElementById('report-daily-body').innerHTML = (data.days || []).map((day) => {
     const total = ['pray_minutes','word_minutes','study_minutes','worship_minutes'].reduce((sum, key) => sum + (Number(day[key]) || 0), 0);
-    const worship = day.worship_status ? reportMinutes(day.worship_minutes) : '-';
-    return `<tr class="border-b border-outline-variant/50"><td class="py-3 px-2 font-semibold">${reportEscape(reportDate(day.record_date))}</td><td class="py-3 px-2">${reportMinutes(day.pray_minutes)}</td><td class="py-3 px-2">${reportMinutes(day.word_minutes)}</td><td class="py-3 px-2">${reportMinutes(day.study_minutes)}</td><td class="py-3 px-2">${worship}</td><td class="py-3 px-2 font-bold text-primary">${reportMinutes(total)}</td></tr>`;
+    const weekday = new Date(`${day.record_date}T12:00:00`).getDay();
+    const worshipRequired = weekday === 3 || weekday === 5;
+    return `<tr class="border-b border-outline-variant/50 text-center"><td class="py-2.5 px-0.5 font-semibold whitespace-nowrap">${reportEscape(reportDate(day.record_date).replace(/ \(.+\)/, ''))}</td><td class="py-2.5 px-0.5">${reportActivityCell(day.pray_minutes)}</td><td class="py-2.5 px-0.5">${reportActivityCell(day.word_minutes)}</td><td class="py-2.5 px-0.5">${reportActivityCell(day.study_minutes)}</td><td class="py-2.5 px-0.5">${reportActivityCell(day.worship_minutes, worshipRequired)}</td><td class="py-2.5 px-0.5 font-bold text-primary">${total ? reportCompactMinutes(total) : '-'}</td></tr>`;
   }).join('');
-  document.getElementById('report-pray-posts').innerHTML = (data.prayPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5"><p class="text-xs font-bold text-primary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML((post.entries || []).map((entry) => entry.photoPath), '기도 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportPrayerDetails(post.entries)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant lg:col-span-2">기도 인증 기록이 없습니다.</p>';
-  document.getElementById('report-word-posts').innerHTML = (data.wordPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5"><p class="text-xs font-bold text-secondary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML([post.photoPath], '말씀 묵상 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportVerseDetails(post.verses)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant lg:col-span-2">말씀 묵상 인증 기록이 없습니다.</p>';
+  document.getElementById('report-pray-posts').innerHTML = (data.prayPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5 min-w-[88%] sm:min-w-[420px] lg:min-w-[480px] snap-start"><p class="text-xs font-bold text-primary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML((post.entries || []).map((entry) => entry.photoPath), '기도 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportPrayerDetails(post.entries)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant w-full">기도 인증 기록이 없습니다.</p>';
+  document.getElementById('report-word-posts').innerHTML = (data.wordPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5 min-w-[88%] sm:min-w-[420px] lg:min-w-[480px] snap-start"><p class="text-xs font-bold text-secondary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML([post.photoPath], '말씀 묵상 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportVerseDetails(post.verses)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant w-full">말씀 묵상 인증 기록이 없습니다.</p>';
+  wireReportCarousels();
 }
 
 async function initSharedReport() {
