@@ -13,20 +13,18 @@
 <div id="app"></div>
 <template id="page-content">
   <!-- Header -->
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-8 lg:mb-10">
-    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Stat</h1>
+  <div class="flex flex-wrap items-center justify-end gap-3 mb-8 lg:mb-10">
     <div class="glass-panel rounded-full p-1 flex text-sm font-semibold">
-      <button type="button" id="stat-range-weekly" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">This Week</button>
-      <button type="button" id="stat-range-monthly" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">This Month</button>
-      <button type="button" id="stat-range-all" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">All Time</button>
+      <button type="button" id="stat-range-weekly" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">이번 주</button>
+      <button type="button" id="stat-range-monthly" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">이번 달</button>
+      <button type="button" id="stat-range-all" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">전체 기간</button>
     </div>
   </div>
 
   <!-- 스트릭 + 범위 목표 링 -->
   <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6 flex flex-col">
-      <h3 class="text-sm font-medium text-on-surface-variant">Streak</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">연속적으로 300분을 달성한 일 수</p>
+      <p class="text-sm font-bold text-on-surface-variant mb-4">연속적으로 300분을 달성한 일 수</p>
       <div class="flex-1 flex flex-col items-center justify-center text-center">
         <i class="fa-solid fa-fire text-7xl text-tertiary streak-flame"></i>
         <p id="stat-streak-current" class="text-4xl font-bold text-primary mt-3">0일</p>
@@ -35,8 +33,7 @@
     </div>
 
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant">Completion Rate</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">하루 300분 목표를 달성한 날의 비율</p>
+      <p class="text-sm font-bold text-on-surface-variant mb-4">하루 300분 목표를 달성한 날의 비율</p>
       <div class="relative w-36 h-36 mx-auto">
         <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r="52" fill="none" stroke-width="12" class="stroke-surface-highest"></circle>
@@ -54,7 +51,6 @@
         </svg>
         <div class="absolute inset-0 flex flex-col items-center justify-center">
           <p id="stat-goal-percent" class="text-3xl font-bold text-on-surface">0%</p>
-          <p class="text-[11px] font-semibold text-on-surface-variant tracking-wide mt-0.5">Goal Hit Rate</p>
         </div>
       </div>
       <p id="stat-goal-sub" class="text-center text-xs text-on-surface-variant mt-4">0/0 days hit goal</p>
@@ -64,23 +60,19 @@
   <!-- KPI 타일 -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant">Total</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">누적 시간</p>
+      <p class="text-xs font-bold text-on-surface-variant mb-1">누적 시간</p>
       <p id="stat-kpi-total" class="text-2xl font-bold text-primary">0분</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant">Average</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">하루 평균</p>
+      <p class="text-xs font-bold text-on-surface-variant mb-1">하루 평균</p>
       <p id="stat-kpi-avg" class="text-2xl font-bold text-primary">0분</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant">Days Completed</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">달성 일수</p>
+      <p class="text-xs font-bold text-on-surface-variant mb-1">달성 일수</p>
       <p id="stat-kpi-completed" class="text-2xl font-bold text-primary">0 / 0일</p>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4">
-      <p class="text-xs text-on-surface-variant">Best Day</p>
-      <p class="text-[10px] text-on-surface-variant/60 mb-1">최고기록</p>
+      <p class="text-xs font-bold text-on-surface-variant mb-1">최고기록</p>
       <p id="stat-kpi-best" class="text-2xl font-bold text-primary">-</p>
     </div>
   </section>
@@ -88,7 +80,6 @@
   <!-- 완료 히트맵 -->
   <section class="glass-card rounded-[1.5rem] p-6 mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <h3 class="text-sm font-medium text-on-surface-variant">Heatmap</h3>
       <div id="stat-heatmap-metric-tabs" class="glass-panel rounded-full p-1 flex text-xs font-semibold">
         <button type="button" data-metric="completed" class="px-2.5 py-1 rounded-full nav-pill-active transition-colors">완료</button>
         <button type="button" data-metric="pray" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">기도</button>
@@ -97,7 +88,7 @@
         <button type="button" data-metric="worship" class="px-2.5 py-1 rounded-full text-on-surface-variant transition-colors">예배</button>
       </div>
     </div>
-    <p class="text-[11px] text-on-surface-variant/70 mb-5">요일·날짜별 활동을 색상 진하기로 한눈에</p>
+    <p class="text-sm font-bold text-on-surface-variant mb-5">요일·날짜별 활동을 색상 진하기로 한눈에</p>
     <div class="max-w-xs">
       <div class="grid grid-cols-5 gap-1 mb-1">
         <span class="text-[9px] text-on-surface-variant text-center">Mon</span>
@@ -113,7 +104,7 @@
 
   <!-- 추세 라인 -->
   <section class="glass-card rounded-[1.5rem] p-6 mb-6">
-    <h3 class="text-sm font-medium text-on-surface-variant mb-4">Trend</h3>
+    <p class="text-sm font-bold text-on-surface-variant mb-4">활동 시간 추이</p>
     <div class="relative h-56 sm:h-64 lg:h-72">
       <canvas id="stat-trend-chart"></canvas>
     </div>
@@ -122,15 +113,13 @@
   <!-- 밸런스 레이더 + 시간 배분 도넛 -->
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant">Balance</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 하루 평균 시간</p>
+      <p class="text-sm font-bold text-on-surface-variant mb-4">카테고리별 하루 평균 시간</p>
       <div class="relative h-64">
         <canvas id="stat-radar-chart"></canvas>
       </div>
     </div>
     <div class="glass-card rounded-[1.5rem] p-6">
-      <h3 class="text-sm font-medium text-on-surface-variant">Time Breakdown</h3>
-      <p class="text-[11px] text-on-surface-variant/70 mb-4">카테고리별 시간 비중</p>
+      <p class="text-sm font-bold text-on-surface-variant mb-4">카테고리별 시간 비중</p>
       <div class="relative h-64">
         <canvas id="stat-donut-chart"></canvas>
       </div>
@@ -139,8 +128,7 @@
 
   <!-- 퍼스널 베스트 -->
   <section class="mb-16">
-    <h3 class="text-sm font-medium text-on-surface-variant">Personal Bests</h3>
-    <p class="text-[11px] text-on-surface-variant/70 mb-3">지금까지의 최고 기록들</p>
+    <p class="text-sm font-bold text-on-surface-variant mb-3">지금까지의 최고 기록들</p>
     <div id="stat-best-chips" class="flex flex-wrap gap-3"></div>
   </section>
 </template>
@@ -152,7 +140,7 @@
 <script src="assets/js/layout.js?v=14"></script>
 <script src="assets/js/pray-word.js?v=9"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=12"></script>
+<script src="assets/js/stat.js?v=13"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });

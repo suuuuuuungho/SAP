@@ -215,7 +215,7 @@ function renderRangeGoalRing(days) {
   ring.setAttribute('stroke', rate >= 50 ? 'url(#stat-goal-gradient-high)' : 'url(#stat-goal-gradient-low)');
 
   if (percentEl) percentEl.textContent = `${rate}%`;
-  if (subEl) subEl.textContent = `${days.filter((d) => d.percent >= 100).length}/${days.length} days hit goal`;
+  if (subEl) subEl.textContent = `${days.filter((d) => d.percent >= 100).length}/${days.length}일 달성`;
 }
 
 function renderKpiTiles(days) {
@@ -406,28 +406,27 @@ function renderRadarChart(days) {
 // Time Breakdown 도넛 전용 팔레트 — 공용 브랜드 토큰(primary 핑크 #b9045e / secondary 퍼플 #6e4f9c)은
 // 작은 조각으로 나뉘면 채도/명도가 비슷해 기도·말씀이 잘 구분되지 않아서, 이 차트에서만 색상환을
 // 넓게 벌린 팔레트로 교체한다 (히트맵/칩 등 다른 곳의 카테고리 색상은 그대로 유지).
-const STAT_DONUT_COLORS = ['#ec4899', '#6366f1', '#f97316', '#10b981']; // 기도/말씀/공부/예배
+const STAT_DONUT_COLORS = ['#ec4899', '#6366f1', '#f97316']; // 기도/말씀/공부
 
 function renderDonutChart(days) {
   const canvas = document.getElementById('stat-donut-chart');
   if (!canvas || typeof Chart === 'undefined') return;
 
-  const totals = { pray: 0, word: 0, study: 0, worship: 0 };
+  const totals = { pray: 0, word: 0, study: 0 };
   days.forEach((d) => {
     totals.pray += d.prayMin;
     totals.word += d.wordMin;
     totals.study += d.studyMin;
-    totals.worship += d.worshipMin;
   });
-  const sum = totals.pray + totals.word + totals.study + totals.worship;
+  const sum = totals.pray + totals.word + totals.study;
 
   if (statDonutChart) statDonutChart.destroy();
   statDonutChart = new Chart(canvas.getContext('2d'), {
     type: 'doughnut',
     data: {
-      labels: ['기도', '말씀', '공부', '예배'],
+      labels: ['기도', '말씀', '공부'],
       datasets: [{
-        data: [totals.pray, totals.word, totals.study, totals.worship],
+        data: [totals.pray, totals.word, totals.study],
         backgroundColor: STAT_DONUT_COLORS,
         borderColor: '#ffffff',
         borderWidth: 2
