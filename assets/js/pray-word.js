@@ -152,7 +152,7 @@ function formatVerseRange(entry) {
   if (!entry.startBook || !entry.startChapter) return '';
   const endBook = entry.endBook || entry.startBook;
   const endChapter = entry.endChapter || entry.startChapter;
-  return `${entry.startBook}:${entry.startChapter} ~ ${endBook}:${endChapter}`;
+  return `${entry.startBook} ${entry.startChapter}장 ~ ${endBook} ${endChapter}장`;
 }
 
 function formatWordSummary(entries) {
