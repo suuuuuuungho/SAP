@@ -235,7 +235,7 @@
       </div>
 
       <div id="word-verse-list" class="flex flex-col gap-4"></div>
-      <p id="word-verse-hint" class="text-xs text-error mt-2 hidden">읽은 말씀의 성경책과 장을 입력해주세요. 절은 선택사항입니다.</p>
+      <p id="word-verse-hint" class="text-xs text-error mt-2 hidden">시작 책과 장, 끝 책과 장을 모두 입력해주세요.</p>
 
       <button id="word-add-verse" type="button" aria-label="구절 추가" class="glass-card w-full mt-4 py-2.5 rounded-2xl text-sm font-medium text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
         <i class="fa-solid fa-plus"></i>
@@ -257,19 +257,19 @@
       </button>
       <div class="flex flex-col gap-3 pr-8">
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-start-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 책:장</label>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-2 items-center">
+            <select class="word-start-book glass-input px-2 py-2 rounded-xl text-xs"></select>
+            <span class="font-bold text-on-surface-variant">:</span>
             <input type="number" min="1" placeholder="장" class="word-start-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절 (선택)" class="word-start-verse glass-input px-2 py-2 rounded-xl text-xs">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">끝 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-end-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">끝 책:장</label>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-2 items-center">
+            <select class="word-end-book glass-input px-2 py-2 rounded-xl text-xs"></select>
+            <span class="font-bold text-on-surface-variant">:</span>
             <input type="number" min="1" placeholder="장" class="word-end-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절 (선택)" class="word-end-verse glass-input px-2 py-2 rounded-xl text-xs">
           </div>
         </div>
         <div class="word-meditation-time-wrap hidden">
@@ -378,7 +378,7 @@
 <script src="assets/js/auth.js?v=6"></script>
 <script src="assets/js/layout.js?v=14"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/pray-word.js?v=7"></script>
+<script src="assets/js/pray-word.js?v=8"></script>
 <script src="assets/js/home.js?v=29"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {

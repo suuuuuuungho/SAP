@@ -177,19 +177,19 @@
       </button>
       <div class="flex flex-col gap-3 pr-8">
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-start-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">시작 책:장</label>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-2 items-center">
+            <select class="word-start-book glass-input px-2 py-2 rounded-xl text-xs"></select>
+            <span class="font-bold text-on-surface-variant">:</span>
             <input type="number" min="1" placeholder="장" class="word-start-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절" class="word-start-verse glass-input px-2 py-2 rounded-xl text-xs">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-on-surface-variant mb-1">끝 구절</label>
-          <div class="grid grid-cols-3 gap-2">
-            <select class="word-end-book glass-input px-2 py-2 rounded-xl text-xs col-span-1"></select>
+          <label class="block text-xs font-medium text-on-surface-variant mb-1">끝 책:장</label>
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-2 items-center">
+            <select class="word-end-book glass-input px-2 py-2 rounded-xl text-xs"></select>
+            <span class="font-bold text-on-surface-variant">:</span>
             <input type="number" min="1" placeholder="장" class="word-end-chapter glass-input px-2 py-2 rounded-xl text-xs">
-            <input type="number" min="1" placeholder="절" class="word-end-verse glass-input px-2 py-2 rounded-xl text-xs">
           </div>
         </div>
       </div>
@@ -203,7 +203,7 @@
 <script src="assets/js/auth.js?v=6"></script>
 <script src="assets/js/layout.js?v=14"></script>
 <script src="assets/js/bible-books.js"></script>
-<script src="assets/js/pray-word.js?v=7"></script>
+<script src="assets/js/pray-word.js?v=8"></script>
 <script src="assets/js/sapians-instagram.js?v=1"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
