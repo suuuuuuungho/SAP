@@ -47,16 +47,24 @@ function reportPhotosHTML(paths, alt) {
 }
 
 function renderReportStatistics(days) {
-  const categories = [
+  const allCategories = [
     { key: 'pray_minutes', label: '기도', color: '#ff4b91' },
     { key: 'word_minutes', label: '말씀', color: '#6e4f9c' },
     { key: 'study_minutes', label: '공부', color: '#ee6650' },
     { key: 'worship_minutes', label: '예배', color: '#14b8a6' }
   ];
-  const dayTotals = days.map((day) => categories.reduce((sum, category) => sum + (Number(day[category.key]) || 0), 0));
-  const categoryTotals = categories.map((category) => ({ ...category, minutes: days.reduce((sum, day) => sum + (Number(day[category.key]) || 0), 0) }));
+  const compositionCategories = allCategories.filter((category) => category.key !== 'worship_minutes');
+  const dayTotals = days.map((day) => allCategories.reduce((sum, category) => sum + (Number(day[category.key]) || 0), 0));
+  const categoryTotals = compositionCategories.map((category) => ({ ...category, minutes: days.reduce((sum, day) => sum + (Number(day[category.key]) || 0), 0) }));
   const total = dayTotals.reduce((sum, minutes) => sum + minutes, 0);
-  const average = days.length ? Math.round(total / days.length) : 0;
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const latestActiveIndex = dayTotals.reduce((latest, minutes, index) => minutes > 0 ? index : latest, -1);
+  const todayIndex = days.reduce((latest, day, index) => day.record_date <= todayKey ? index : latest, -1);
+  const movingEndIndex = Math.max(latestActiveIndex, todayIndex);
+  const movingDays = movingEndIndex >= 0 ? days.slice(0, movingEndIndex + 1) : [];
+  const movingTotal = movingDays.reduce((sum, day) => sum + allCategories.reduce((daySum, category) => daySum + (Number(day[category.key]) || 0), 0), 0);
+  const average = movingDays.length ? Math.round(movingTotal / movingDays.length) : 0;
   const completedDays = dayTotals.filter((minutes) => minutes >= 300).length;
   const bestMinutes = Math.max(0, ...dayTotals);
   const bestIndex = dayTotals.indexOf(bestMinutes);
@@ -64,16 +72,17 @@ function renderReportStatistics(days) {
 
   document.getElementById('report-kpis').innerHTML = [
     { value: reportMinutes(total), label: '누적 시간' },
-    { value: reportMinutes(average), label: '하루 평균' },
+    { value: reportMinutes(average), label: '하루 평균', note: `현재까지 ${movingDays.length}일 기준` },
     { value: `${completedDays}일`, label: '300분 달성일' },
     { value: reportMinutes(bestMinutes), label: '최고 기록', note: bestDate }
   ].map((item) => `<article class="glass-card rounded-2xl p-4 sm:p-5"><p class="text-xl sm:text-2xl font-bold text-primary">${reportEscape(item.value)}</p><p class="text-xs font-bold text-on-surface-variant mt-2">${reportEscape(item.label)}</p>${item.note ? `<p class="text-[10px] text-on-surface-variant mt-1">${reportEscape(item.note)}</p>` : ''}</article>`).join('');
 
   document.getElementById('report-total-time').textContent = `총 ${reportMinutes(total)}`;
+  const compositionTotal = categoryTotals.reduce((sum, category) => sum + category.minutes, 0);
   const maxCategory = Math.max(1, ...categoryTotals.map((category) => category.minutes));
   document.getElementById('report-category-stats').innerHTML = categoryTotals.map((category) => {
     const width = category.minutes ? Math.max(4, Math.round(category.minutes / maxCategory * 100)) : 0;
-    const share = total ? Math.round(category.minutes / total * 100) : 0;
+    const share = compositionTotal ? Math.round(category.minutes / compositionTotal * 100) : 0;
     return `<div><div class="flex items-center justify-between gap-3 text-xs mb-2"><span class="font-bold">${category.label}</span><span class="text-on-surface-variant">${reportMinutes(category.minutes)} · ${share}%</span></div><div class="h-2.5 rounded-full bg-surface-container overflow-hidden"><div class="h-full rounded-full" style="width:${width}%;background:${category.color}"></div></div></div>`;
   }).join('');
 }
