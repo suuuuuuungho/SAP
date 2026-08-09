@@ -340,6 +340,74 @@ from days d where public.is_app_admin(auth.uid()) order by d.record_date;
 $$;
 grant execute on function public.admin_get_member_report(uuid) to authenticated;
 
+-- 학부모에게 전달하는 개인 리포트 공유 링크입니다. UUID 토큰을 아는 사람만 조회할 수 있고
+-- 학생의 auth id는 URL이나 공개 응답에 노출하지 않습니다. 링크는 생성 후 30일간 유효합니다.
+create table if not exists public.student_report_links (
+  token uuid primary key default gen_random_uuid(),
+  student_id uuid not null references auth.users(id) on delete cascade,
+  created_by uuid references auth.users(id) on delete set null,
+  expires_at timestamptz not null default (now() + interval '30 days'),
+  revoked_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists student_report_links_student_idx on public.student_report_links(student_id, created_at desc);
+alter table public.student_report_links enable row level security;
+
+create or replace function public.admin_create_student_report_link(target_user_id uuid)
+returns uuid
+language plpgsql security definer set search_path = public
+as $$
+declare new_token uuid;
+begin
+  if not public.is_app_admin(auth.uid()) then raise exception 'admin only'; end if;
+  if not exists(select 1 from public.profiles where id=target_user_id and app_role='student') then raise exception 'student not found'; end if;
+  insert into public.student_report_links(student_id,created_by) values(target_user_id,auth.uid()) returning token into new_token;
+  return new_token;
+end; $$;
+grant execute on function public.admin_create_student_report_link(uuid) to authenticated;
+
+create or replace function public.get_shared_student_report(report_token uuid)
+returns jsonb
+language sql stable security definer set search_path = public
+as $$
+with valid_link as (
+  select l.student_id from public.student_report_links l
+  where l.token=report_token and l.revoked_at is null and l.expires_at>now()
+), student as (
+  select p.id,p.name,p.username from public.profiles p join valid_link l on l.student_id=p.id
+), days as (
+  select d::date record_date from generate_series(date '2026-08-10',date '2026-09-06','1 day') d
+  where extract(isodow from d) between 1 and 5
+), daily as (
+  select d.record_date,
+    coalesce((select sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60))::bigint
+      from public.pray_records r cross join lateral jsonb_array_elements(r.entries)e
+      where r.user_id=s.id and r.record_date=d.record_date and e->>'start' ~ '^[0-9]{4}-' and e->>'end' ~ '^[0-9]{4}-'),0) pray_minutes,
+    case when coalesce(jsonb_array_length(wo.verses),0)>0 then 60 + coalesce((select sum(coalesce(nullif(v->>'meditationMinutes','')::numeric,0))::bigint from jsonb_array_elements(wo.verses) with ordinality x(v,n) where n>1),0) else 0 end word_minutes,
+    coalesce((select round(sum(coalesce(nullif(x->>'seconds','')::numeric,0))/60)::bigint from jsonb_array_elements(coalesce(st.sessions,'[]'::jsonb))x),0) study_minutes,
+    coalesce(wr.minutes,0)::bigint worship_minutes,
+    wr.status worship_status
+  from days d cross join student s
+  left join public.word_records wo on wo.user_id=s.id and wo.record_date=d.record_date
+  left join public.study_records st on st.user_id=s.id and st.record_date=d.record_date
+  left join public.worship_records wr on wr.user_id=s.id and wr.record_date=d.record_date
+), pray_posts as (
+  select coalesce(jsonb_agg(jsonb_build_object('date',r.record_date,'entries',r.entries) order by r.record_date),'[]'::jsonb) value
+  from public.pray_records r join student s on s.id=r.user_id where jsonb_array_length(r.entries)>0
+), word_posts as (
+  select coalesce(jsonb_agg(jsonb_build_object('date',r.record_date,'verses',r.verses,'photoPath',r.photo_path,'photoUnavailable',r.photo_unavailable) order by r.record_date),'[]'::jsonb) value
+  from public.word_records r join student s on s.id=r.user_id where jsonb_array_length(r.verses)>0
+)
+select case when not exists(select 1 from student) then null else jsonb_build_object(
+  'student',(select jsonb_build_object('name',name,'username',username) from student),
+  'days',(select coalesce(jsonb_agg(to_jsonb(daily) order by record_date),'[]'::jsonb) from daily),
+  'prayPosts',(select value from pray_posts),
+  'wordPosts',(select value from word_posts),
+  'generatedAt',now()
+) end;
+$$;
+grant execute on function public.get_shared_student_report(uuid) to anon, authenticated;
+
 -- 공개 프로필 뱃지 함수는 host 왕관과 역할을 함께 표시할 수 있도록 role 값을 반환합니다.
 drop function if exists public.get_public_profile_cards(uuid[]);
 create function public.get_public_profile_cards(requested_user_ids uuid[])

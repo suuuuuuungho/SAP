@@ -436,8 +436,10 @@ function adminRenderDashboard() {
   adminDashboardPage = Math.min(adminDashboardPage, totalPages);
   const pageRows = filtered.slice((adminDashboardPage - 1) * ADMIN_DASHBOARD_PAGE_SIZE, adminDashboardPage * ADMIN_DASHBOARD_PAGE_SIZE);
   const wrap = document.getElementById('admin-dashboard-list');
-  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_140px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생 / 학년반</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>문자 발송</span></div>${pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_140px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[11px] font-medium text-secondary mt-0.5">${adminEscape(row.grade_class || '학년반 미지정')}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 학생이 없습니다.</p>'}`;
+  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생 / 학년반</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>관리</span></div>${pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[11px] font-medium text-secondary mt-0.5">${adminEscape(row.grade_class || '학년반 미지정')}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}<div class="flex items-center gap-2"><button data-report-view class="icon-glass w-9 h-9 rounded-full text-primary" title="개인 리포트 보기"><i class="fa-solid fa-file-lines text-sm"></i></button><button data-report-sms class="icon-glass w-9 h-9 rounded-full text-emerald-500" title="학부모에게 리포트 링크 전송"><i class="fa-solid fa-link text-sm"></i></button><button data-sms data-missing="${adminEscape(missing.join(', '))}" class="icon-glass w-9 h-9 rounded-full ${missing.length ? 'text-sky-500' : 'opacity-30'}" ${missing.length ? '' : 'disabled'} title="학생에게 미인증 문자 발송"><i class="fa-solid fa-paper-plane text-sm"></i></button></div></article>`; }).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 학생이 없습니다.</p>'}`;
   wrap.querySelectorAll('[data-sms]').forEach((button) => button.addEventListener('click', () => adminSendMissingSms(button.closest('[data-dashboard-user]').dataset.dashboardUser, button.dataset.missing)));
+  wrap.querySelectorAll('[data-report-view]').forEach((button) => button.addEventListener('click', () => adminOpenStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser)));
+  wrap.querySelectorAll('[data-report-sms]').forEach((button) => button.addEventListener('click', () => adminSendStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser, button)));
   adminRenderDashboardPagination(filtered.length, totalPages);
   const bulkButton = document.getElementById('admin-dashboard-bulk-sms');
   if (bulkButton) bulkButton.disabled = pending === 0;
@@ -453,6 +455,49 @@ function adminRenderDashboardPagination(total, totalPages) {
     .map((page, index, pages) => `${index > 0 && page - pages[index - 1] > 1 ? '<span class="text-on-surface-variant">…</span>' : ''}<button type="button" data-dashboard-page="${page}" class="w-9 h-9 rounded-full text-xs font-bold ${page === adminDashboardPage ? 'nav-pill-active' : 'glass-card'}">${page}</button>`).join('');
   wrap.innerHTML = `<span class="text-xs text-on-surface-variant mr-2">${start}-${end} / ${total}명</span><button type="button" data-dashboard-page="${adminDashboardPage - 1}" class="icon-glass w-9 h-9 rounded-full" ${adminDashboardPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>${pageButtons}<button type="button" data-dashboard-page="${adminDashboardPage + 1}" class="icon-glass w-9 h-9 rounded-full" ${adminDashboardPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
   wrap.querySelectorAll('[data-dashboard-page]').forEach((button) => button.addEventListener('click', () => { adminDashboardPage = Number(button.dataset.dashboardPage); adminRenderDashboard(); }));
+}
+
+async function adminCreateStudentReportUrl(userId) {
+  const { data, error } = await window.supabaseClient.rpc('admin_create_student_report_link', { target_user_id: userId });
+  if (error || !data) throw new Error(error?.message || '리포트 링크를 만들지 못했습니다.');
+  const url = new URL('report.html', window.location.href);
+  url.searchParams.set('token', data);
+  return url.href;
+}
+
+async function adminOpenStudentReport(userId) {
+  const popup = window.open('', '_blank');
+  try {
+    const reportUrl = await adminCreateStudentReportUrl(userId);
+    if (popup) popup.location.href = reportUrl; else window.open(reportUrl, '_blank', 'noopener');
+  } catch (error) {
+    if (popup) popup.close();
+    adminShowStatus(error.message || '리포트를 열지 못했습니다.', true);
+  }
+}
+
+async function adminSendStudentReport(userId, button) {
+  const row = adminDashboardRows.find((item) => item.user_id === userId);
+  const member = adminMembers.find((item) => item.id === userId);
+  const parentPhone = row?.parent_phone || member?.parent_phone || '';
+  const studentName = row?.name || member?.name || '학생';
+  if (!parentPhone) { adminShowStatus(`${studentName} 학생의 학부모 연락처가 없습니다. Member에서 입력해주세요.`, true); return; }
+  if (!confirm(`${studentName} 학생의 개인 리포트 링크를 학부모에게 보낼까요?`)) return;
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+  try {
+    const reportUrl = await adminCreateStudentReportUrl(userId);
+    const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId, reportUrl, date: document.getElementById('admin-dashboard-date').value } });
+    if (error || !data?.ok) throw new Error(data?.message || '문자를 보내지 못했습니다.');
+    adminShowStatus(`${studentName} 학생의 학부모에게 리포트 링크를 보냈습니다.`);
+    await adminLoadSmsLogs();
+  } catch (error) {
+    adminShowStatus(error.message || '리포트 링크를 보내지 못했습니다.', true);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = original;
+  }
 }
 
 async function adminSendMissingSms(userId, missing) {
@@ -496,7 +541,11 @@ async function adminLoadSmsLogs() {
   if (!wrap) return;
   const { data, error } = await window.supabaseClient.from('admin_sms_logs').select('*').order('created_at', { ascending: false }).limit(100);
   if (error) { wrap.innerHTML = '<p class="text-xs text-on-surface-variant py-4 text-center">문자 로그 스키마를 적용하면 발송 현황이 표시됩니다.</p>'; return; }
-  wrap.innerHTML = (data || []).map((log) => `<article class="glass-card rounded-2xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center gap-3"><span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${log.status === 'success' ? 'bg-sky-100 text-sky-500' : 'bg-error-container text-error'}"><i class="fa-solid ${log.status === 'success' ? 'fa-check' : 'fa-xmark'} text-xs"></i></span><div class="min-w-0 flex-1"><p class="text-sm font-bold">${adminEscape(log.target_name || '학생')} <span class="font-normal text-on-surface-variant">· ${adminEscape(log.grade_class || '-')}</span></p><p class="text-xs text-on-surface-variant truncate">${adminEscape(log.target_date || '')} · 미인증 ${adminEscape((log.missing_items || []).join(', '))}${log.error_message ? ` · ${adminEscape(log.error_message)}` : ''}</p></div><time class="text-[10px] text-on-surface-variant whitespace-nowrap">${new Date(log.created_at).toLocaleString('ko-KR')}</time></article>`).join('') || '<p class="text-xs text-on-surface-variant py-4 text-center">아직 문자 발송 기록이 없습니다.</p>';
+  wrap.innerHTML = (data || []).map((log) => {
+    const items = log.missing_items || [];
+    const detail = items.includes('개인 리포트') ? '개인 리포트 링크' : `미인증 ${items.join(', ')}`;
+    return `<article class="glass-card rounded-2xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center gap-3"><span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${log.status === 'success' ? 'bg-sky-100 text-sky-500' : 'bg-error-container text-error'}"><i class="fa-solid ${log.status === 'success' ? 'fa-check' : 'fa-xmark'} text-xs"></i></span><div class="min-w-0 flex-1"><p class="text-sm font-bold">${adminEscape(log.target_name || '학생')} <span class="font-normal text-on-surface-variant">· ${adminEscape(log.grade_class || '-')}</span></p><p class="text-xs text-on-surface-variant truncate">${adminEscape(log.target_date || '')} · ${adminEscape(detail)}${log.error_message ? ` · ${adminEscape(log.error_message)}` : ''}</p></div><time class="text-[10px] text-on-surface-variant whitespace-nowrap">${new Date(log.created_at).toLocaleString('ko-KR')}</time></article>`;
+  }).join('') || '<p class="text-xs text-on-surface-variant py-4 text-center">아직 문자 발송 기록이 없습니다.</p>';
 }
 
 function adminWireConsole() {
