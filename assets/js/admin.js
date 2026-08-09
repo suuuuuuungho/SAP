@@ -414,8 +414,8 @@ function adminRenderDashboard() {
   const completed = adminDashboardRows.filter((row) => cats.every((cat) => row[cat])).length;
   const pending = adminDashboardRows.length - completed;
   document.getElementById('admin-dashboard-summary').innerHTML = [
-    ['Students',adminDashboardRows.length,'전체 학생 수'],['Complete',completed,worshipRequired ? '4개 인증 완료' : '3개 인증 완료'],['Needs Action',pending,'하나 이상 미인증'],['Completion',(adminDashboardRows.length ? `${Math.round(completed/adminDashboardRows.length*100)}%` : '0%'),'완료 학생 비율']
-  ].map(([title,value,desc]) => `<article class="glass-card rounded-2xl p-4"><p class="text-xs text-on-surface-variant">${title}</p><p class="text-2xl font-bold mt-1 ${title==='Needs Action'&&pending?'text-error':'text-primary'}">${value}</p><p class="text-[10px] text-on-surface-variant mt-1">${desc}</p></article>`).join('');
+    ['students',adminDashboardRows.length,'전체 학생수'],['complete',completed,worshipRequired ? '4개 인증완료' : '3개 인증완료'],['needs-action',pending,'하나 이상 미인증'],['completion',(adminDashboardRows.length ? `${Math.round(completed/adminDashboardRows.length*100)}%` : '0%'),'완료 학생 비율']
+  ].map(([key,value,desc]) => `<article class="glass-card rounded-2xl p-4"><p class="text-2xl font-bold ${key==='needs-action'&&pending?'text-error':'text-primary'}">${value}</p><p class="text-xs font-bold text-on-surface-variant mt-2">${desc}</p></article>`).join('');
   const filtered = adminFilteredDashboardRows();
   const totalPages = Math.max(1, Math.ceil(filtered.length / ADMIN_DASHBOARD_PAGE_SIZE));
   adminDashboardPage = Math.min(adminDashboardPage, totalPages);
