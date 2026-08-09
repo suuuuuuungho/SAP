@@ -457,19 +457,19 @@ function adminRenderDashboardPagination(total, totalPages) {
   wrap.querySelectorAll('[data-dashboard-page]').forEach((button) => button.addEventListener('click', () => { adminDashboardPage = Number(button.dataset.dashboardPage); adminRenderDashboard(); }));
 }
 
-async function adminCreateStudentReportUrl(userId) {
+async function adminCreateStudentReportLink(userId) {
   const { data, error } = await window.supabaseClient.rpc('admin_create_student_report_link', { target_user_id: userId });
   if (error || !data) throw new Error(error?.message || '리포트 링크를 만들지 못했습니다.');
   const url = new URL('report.html', window.location.href);
   url.searchParams.set('token', data);
-  return url.href;
+  return { token: String(data), url: url.href };
 }
 
 async function adminOpenStudentReport(userId) {
   const popup = window.open('', '_blank');
   try {
-    const reportUrl = await adminCreateStudentReportUrl(userId);
-    if (popup) popup.location.href = reportUrl; else window.open(reportUrl, '_blank', 'noopener');
+    const report = await adminCreateStudentReportLink(userId);
+    if (popup) popup.location.href = report.url; else window.open(report.url, '_blank', 'noopener');
   } catch (error) {
     if (popup) popup.close();
     adminShowStatus(error.message || '리포트를 열지 못했습니다.', true);
@@ -487,8 +487,9 @@ async function adminSendStudentReport(userId, button) {
   button.disabled = true;
   button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
   try {
-    const reportUrl = await adminCreateStudentReportUrl(userId);
-    const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId, reportUrl, date: document.getElementById('admin-dashboard-date').value } });
+    const report = await adminCreateStudentReportLink(userId);
+    const siteUrl = new URL('.', window.location.href).href;
+    const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId, reportToken: report.token, siteUrl, date: document.getElementById('admin-dashboard-date').value } });
     if (error || !data?.ok) throw new Error(data?.message || '문자를 보내지 못했습니다.');
     adminShowStatus(`${studentName} 학생의 학부모에게 리포트 링크를 보냈습니다.`);
     await adminLoadSmsLogs();

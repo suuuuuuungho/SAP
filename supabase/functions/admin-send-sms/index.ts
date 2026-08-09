@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
   const userId = String(body.userId || '')
   const date = String(body.date || '')
   const missing = Array.isArray(body.missing) ? body.missing.map(String).filter(Boolean) : []
-  const reportUrl = String(body.reportUrl || '')
+  const reportToken = String(body.reportToken || '')
+  const siteUrl = String(body.siteUrl || '')
   const admin = createClient(url, service)
   const { data: member } = await admin.from('profiles').select('name,phone,parent_phone,grade_class').eq('id', userId).maybeSingle()
   const to = digits(mode === 'report' ? member?.parent_phone || '' : member?.phone || '')
@@ -46,13 +47,27 @@ Deno.serve(async (req) => {
   }
   let parsedReportUrl: URL | null = null
   if (mode === 'report') {
-    try { parsedReportUrl = new URL(reportUrl) } catch { parsedReportUrl = null }
+    try {
+      const base = new URL(siteUrl)
+      if (!['https:', 'http:'].includes(base.protocol)) throw new Error('invalid protocol')
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportToken)) throw new Error('invalid token')
+      parsedReportUrl = new URL('report.html', base)
+      parsedReportUrl.searchParams.set('token', reportToken)
+    } catch { parsedReportUrl = null }
   }
-  const invalidReport = mode === 'report' && (!parsedReportUrl || !['https:', 'http:'].includes(parsedReportUrl.protocol) || !parsedReportUrl.searchParams.get('token'))
-  if (!member || to.length < 10 || (mode === 'missing' && !missing.length) || invalidReport) {
-    const reason = mode === 'report' ? '학부모 연락처 또는 리포트 링크 누락' : '학생 연락처 또는 미인증 정보 누락'
-    await writeLog('failed', reason)
-    return json({ ok: false, message: mode === 'report' ? '학부모 연락처와 리포트 링크를 확인해주세요.' : '학생 연락처와 미인증 정보를 확인해주세요.' })
+  if (!member) return json({ ok: false, message: '학생 정보를 찾을 수 없습니다.' })
+  if (to.length < 10) {
+    const message = mode === 'report' ? 'Member에서 학부모 연락처를 확인해주세요.' : 'Member에서 학생 연락처를 확인해주세요.'
+    await writeLog('failed', message)
+    return json({ ok: false, message })
+  }
+  if (mode === 'missing' && !missing.length) {
+    await writeLog('failed', '미인증 정보 누락')
+    return json({ ok: false, message: '미인증 정보를 확인해주세요.' })
+  }
+  if (mode === 'report' && !parsedReportUrl) {
+    await writeLog('failed', '리포트 링크 생성 오류')
+    return json({ ok: false, message: '리포트 링크를 만들지 못했습니다. Admin 페이지를 새로고침한 후 다시 시도해주세요.' })
   }
 
   const apiKey = Deno.env.get('SOLAPI_API_KEY')
