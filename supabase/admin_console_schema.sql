@@ -12,6 +12,16 @@ alter table public.profiles drop constraint if exists profiles_app_role_check;
 alter table public.profiles add constraint profiles_app_role_check
   check (app_role in ('student', 'teacher', 'admin', 'pastor', 'department_head', 'secretary'));
 
+-- 호스트는 관리자와 동일하게 Admin Console 전체 기능을 사용할 수 있습니다.
+create or replace function public.is_app_admin(check_user_id uuid default auth.uid())
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select coalesce((select p.is_admin or p.is_host or p.app_role='admin' from public.profiles p where p.id=check_user_id),false);
+$$;
+revoke all on function public.is_app_admin(uuid) from public;
+grant execute on function public.is_app_admin(uuid) to authenticated;
+
 update public.profiles
 set app_role = case
   when is_admin = true or grade_class = '관리자' then 'admin'
@@ -302,6 +312,70 @@ as $$
   order by p.name, p.username;
 $$;
 grant execute on function public.admin_get_dashboard(date) to authenticated;
+
+-- 운영기간 전체 Member별 누적 인증시간입니다. Admin Stat 탭에서 사용합니다.
+drop function if exists public.admin_get_all_member_stats();
+create or replace function public.admin_get_all_member_stats()
+returns table (
+  user_id uuid, username text, name text, grade_class text, app_role text,
+  is_host boolean, is_active boolean, pray_minutes bigint, word_minutes bigint,
+  study_minutes bigint, worship_minutes bigint, total_minutes bigint, goal_days bigint
+)
+language sql stable security definer set search_path = public
+as $$
+with pray_day as (
+  select r.user_id,r.record_date,coalesce(sum(greatest(0,extract(epoch from ((e->>'end')::timestamp-(e->>'start')::timestamp))/60)),0)::bigint minutes
+  from public.pray_records r cross join lateral jsonb_array_elements(r.entries)e
+  where r.record_date between date '2026-08-10' and date '2026-09-06'
+    and extract(isodow from r.record_date) between 1 and 5
+    and e->>'start' ~ '^[0-9]{4}-' and e->>'end' ~ '^[0-9]{4}-'
+  group by r.user_id,r.record_date
+), word_day as (
+  select r.user_id,r.record_date,(60 + coalesce((select sum(coalesce(nullif(v->>'meditationMinutes','')::numeric,0)) from jsonb_array_elements(r.verses) with ordinality x(v,n) where n>1),0))::bigint minutes
+  from public.word_records r
+  where r.record_date between date '2026-08-10' and date '2026-09-06'
+    and extract(isodow from r.record_date) between 1 and 5 and jsonb_array_length(r.verses)>0
+), study_day as (
+  select r.user_id,r.record_date,coalesce(round(sum(coalesce(nullif(s->>'seconds','')::numeric,0))/60),0)::bigint minutes
+  from public.study_records r cross join lateral jsonb_array_elements(r.sessions)s
+  where r.record_date between date '2026-08-10' and date '2026-09-06'
+    and extract(isodow from r.record_date) between 1 and 5
+  group by r.user_id,r.record_date
+), worship_day as (
+  select r.user_id,r.record_date,coalesce(r.minutes,0)::bigint minutes
+  from public.worship_records r
+  where r.record_date between date '2026-08-10' and date '2026-09-06'
+    and extract(isodow from r.record_date) between 1 and 5
+), category_totals as (
+  select user_id,
+    coalesce(sum(minutes) filter(where category='pray'),0)::bigint pray_minutes,
+    coalesce(sum(minutes) filter(where category='word'),0)::bigint word_minutes,
+    coalesce(sum(minutes) filter(where category='study'),0)::bigint study_minutes,
+    coalesce(sum(minutes) filter(where category='worship'),0)::bigint worship_minutes,
+    coalesce(sum(minutes),0)::bigint total_minutes
+  from (
+    select user_id,record_date,minutes,'pray' category from pray_day union all
+    select user_id,record_date,minutes,'word' category from word_day union all
+    select user_id,record_date,minutes,'study' category from study_day union all
+    select user_id,record_date,minutes,'worship' category from worship_day
+  ) parts group by user_id
+), daily_total as (
+  select user_id,record_date,sum(minutes)::bigint minutes from (
+    select * from pray_day union all select * from word_day union all select * from study_day union all select * from worship_day
+  ) days group by user_id,record_date
+), goal_counts as (
+  select user_id,count(*) filter(where minutes>=300)::bigint goal_days from daily_total group by user_id
+), member_stats as (
+  select p.id user_id,p.username,p.name,p.grade_class,p.app_role,p.is_host,p.is_active,
+    coalesce(t.pray_minutes,0)::bigint pray_minutes,coalesce(t.word_minutes,0)::bigint word_minutes,
+    coalesce(t.study_minutes,0)::bigint study_minutes,coalesce(t.worship_minutes,0)::bigint worship_minutes,
+    coalesce(t.total_minutes,0)::bigint total_minutes,coalesce(g.goal_days,0)::bigint goal_days
+  from public.profiles p left join category_totals t on t.user_id=p.id left join goal_counts g on g.user_id=p.id
+  where public.is_app_admin(auth.uid())
+)
+select * from member_stats order by total_minutes desc,name,username;
+$$;
+grant execute on function public.admin_get_all_member_stats() to authenticated;
 
 -- Gallery는 모든 활성 학생의 고정 칸을 먼저 만들고 MyPage와 같은 인증 원본을 읽습니다.
 create or replace function public.get_gallery_users()

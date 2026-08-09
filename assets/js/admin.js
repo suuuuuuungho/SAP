@@ -60,8 +60,8 @@ async function adminCheckAccess() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();
   if (!session) return false;
   adminCurrentUserId = session.user.id;
-  const { data, error } = await window.supabaseClient.from('profiles').select('is_admin').eq('id', adminCurrentUserId).maybeSingle();
-  return !error && !!(data && data.is_admin);
+  const { data, error } = await window.supabaseClient.rpc('is_app_admin');
+  return !error && data === true;
 }
 
 async function adminLoadUsers() {
@@ -253,6 +253,7 @@ const ADMIN_DASHBOARD_PAGE_SIZE = 20;
 let adminDashboardPage = 1;
 let adminDashboardGrade = 'all';
 let adminDashboardClass = 'all';
+let adminStatRows = [];
 
 function adminRoleBadge(member) {
   const roleConfig = {
@@ -274,7 +275,7 @@ function adminRoleLabel(role) {
 }
 
 function adminWireTabs() {
-  const validTabs = ['board', 'gallery', 'control', 'member', 'dashboard'];
+  const validTabs = ['board', 'gallery', 'control', 'member', 'dashboard', 'stat'];
   const selectTab = (tab) => {
     adminActiveTab = validTabs.includes(tab) ? tab : 'board';
     window.history.replaceState(null, '', `#${adminActiveTab}`);
@@ -283,6 +284,7 @@ function adminWireTabs() {
     if (adminActiveTab === 'control') adminLoadFeatures();
     if (adminActiveTab === 'member') adminLoadMembers();
     if (adminActiveTab === 'dashboard') adminLoadDashboard();
+    if (adminActiveTab === 'stat') adminLoadAllStats();
     document.getElementById('sidebar-menu')?.classList.add('-translate-x-[120%]');
     document.getElementById('sidebar-overlay')?.classList.add('hidden', 'opacity-0');
     document.body.style.overflow = '';
@@ -587,6 +589,38 @@ async function adminLoadSmsLogs() {
   }).join('') || '<p class="text-xs text-on-surface-variant py-4 text-center">아직 문자 발송 기록이 없습니다.</p>';
 }
 
+async function adminLoadAllStats() {
+  const wrap = document.getElementById('admin-stat-list');
+  if (wrap) wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center"><i class="fa-solid fa-spinner fa-spin mr-2"></i>회원 통계를 불러오고 있습니다.</p>';
+  const { data, error } = await window.supabaseClient.rpc('admin_get_all_member_stats');
+  if (error) {
+    if (wrap) wrap.innerHTML = '<p class="text-sm text-error py-10 text-center">admin_console_schema.sql을 다시 실행해주세요.</p>';
+    return;
+  }
+  adminStatRows = data || [];
+  adminRenderAllStats();
+}
+
+function adminRenderAllStats() {
+  const search = (document.getElementById('admin-stat-search')?.value || '').trim().toLowerCase();
+  const role = document.getElementById('admin-stat-role')?.value || 'all';
+  const filtered = adminStatRows.filter((row) => (role === 'all' || row.app_role === role)
+    && (!search || `${row.name} ${row.username} ${row.grade_class}`.toLowerCase().includes(search)));
+  const totalMinutes = adminStatRows.reduce((sum, row) => sum + (Number(row.total_minutes) || 0), 0);
+  const top = adminStatRows.find((row) => Number(row.total_minutes) > 0);
+  const summary = document.getElementById('admin-stat-summary');
+  if (summary) summary.innerHTML = [
+    [adminStatRows.length, '전체 Member'],
+    [adminFormatMinutes(totalMinutes), '전체 누적 시간'],
+    [adminFormatMinutes(adminStatRows.length ? Math.round(totalMinutes / adminStatRows.length) : 0), 'Member 평균'],
+    [top ? top.name : '-', '최고 누적 Member']
+  ].map(([value,label]) => `<article class="glass-card rounded-2xl p-4"><p class="text-xl sm:text-2xl font-bold text-primary truncate">${adminEscape(value)}</p><p class="text-xs font-bold text-on-surface-variant mt-2">${label}</p></article>`).join('');
+
+  const wrap = document.getElementById('admin-stat-list');
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(100px,1fr))_minmax(115px,1fr)_90px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>Member</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>총 시간</span><span>300분 달성</span></div>${filtered.map((row) => `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(100px,1fr))_minmax(115px,1fr)_90px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2 ${row.is_active ? '' : 'opacity-50'}"><div class="min-w-0"><div class="flex items-center gap-1.5"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p>${adminRoleBadge(row)}</div><p class="text-[10px] text-on-surface-variant truncate">@${adminEscape(row.username)} · ${adminEscape(row.grade_class || '학년/반 미지정')} · ${row.is_active ? '활성' : '비활성'} · ${adminEscape(adminRoleLabel(row.app_role))}</p></div><span class="text-xs font-semibold">${adminFormatMinutes(row.pray_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.word_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.study_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.worship_minutes)}</span><span class="text-sm font-bold text-primary">${adminFormatMinutes(row.total_minutes)}</span><span class="text-xs font-bold">${Number(row.goal_days) || 0}일</span></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 Member가 없습니다.</p>';
+}
+
 function adminWireConsole() {
   adminWireTabs(); adminWireMember();
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
@@ -595,6 +629,9 @@ function adminWireConsole() {
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
   document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
   document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);
+  document.getElementById('admin-stat-search')?.addEventListener('input', adminRenderAllStats);
+  document.getElementById('admin-stat-role')?.addEventListener('change', adminRenderAllStats);
+  document.getElementById('admin-stat-refresh')?.addEventListener('click', adminLoadAllStats);
 }
 
 async function initAdminWidgets() {

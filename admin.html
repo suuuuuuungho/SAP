@@ -67,6 +67,18 @@
         <div id="admin-sms-log-list" class="flex flex-col gap-2"></div>
       </section>
     </section>
+
+    <section data-admin-panel="stat" class="admin-panel hidden">
+      <div id="admin-stat-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div>
+      <section class="glass-panel rounded-[2rem] p-4 sm:p-6">
+        <div class="flex flex-wrap items-center gap-3 mb-5">
+          <div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-stat-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div>
+          <select id="admin-stat-role" class="glass-input rounded-full px-4 py-2 text-sm"><option value="all">전체 권한</option><option value="student">학생</option><option value="teacher">교사</option><option value="pastor">목사님</option><option value="department_head">부장님</option><option value="secretary">총무님</option><option value="admin">Admin</option></select>
+          <button id="admin-stat-refresh" type="button" class="icon-glass w-10 h-10 rounded-full text-primary" aria-label="통계 새로고침"><i class="fa-solid fa-rotate text-sm"></i></button>
+        </div>
+        <div class="overflow-x-auto"><div id="admin-stat-list" class="min-w-[900px]"></div></div>
+      </section>
+    </section>
   </div>
 
   <div id="admin-member-modal" class="hidden fixed inset-0 z-[80] items-center justify-center p-4"><div class="absolute inset-0 bg-on-surface/35 backdrop-blur-sm" data-close-modal></div><form id="admin-member-form" class="glass-panel relative rounded-[2rem] p-6 w-full max-w-lg flex flex-col gap-3"><div class="flex justify-between items-center"><h2 class="text-xl font-bold">Edit Member</h2><button type="button" data-close-modal class="icon-glass w-9 h-9 rounded-full"><i class="fa-solid fa-xmark"></i></button></div><input id="admin-member-id" type="hidden"><div class="grid grid-cols-2 gap-3"><label class="text-xs">이름<input id="admin-member-name" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학년/반<input id="admin-member-grade" class="glass-input rounded-xl p-2 w-full mt-1"></label></div><label class="text-xs">학생 전화번호<input id="admin-member-phone" class="glass-input rounded-xl p-2 w-full mt-1"></label><label class="text-xs">학부모 전화번호<input id="admin-member-parent-phone" class="glass-input rounded-xl p-2 w-full mt-1" placeholder="리포트 및 안내 문자 발송에 사용"></label><label class="text-xs">권한<select id="admin-member-role" class="glass-input rounded-xl p-2 w-full mt-1"><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></select></label><div class="grid grid-cols-2 gap-3"><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Host <input id="admin-member-host" type="checkbox" class="rounded text-primary"></label><label class="glass-card rounded-xl p-3 flex justify-between text-sm">Active <input id="admin-member-active" type="checkbox" class="rounded text-primary"></label></div><div class="flex gap-2 mt-2"><button class="pill-btn-primary flex-1 py-2.5">저장</button><button id="admin-member-delete" type="button" class="glass-card rounded-full px-5 text-error">강제 탈퇴</button></div></form></div>
@@ -80,13 +92,13 @@
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=6"></script>
-<script src="assets/js/layout.js?v=14"></script>
+<script src="assets/js/auth.js?v=7"></script>
+<script src="assets/js/layout.js?v=15"></script>
 <script src="assets/js/pray-word.js?v=9"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
 <script>window.IS_ADMIN_CONSOLE = true;</script>
 <script src="assets/js/gallery.js?v=22"></script>
-<script src="assets/js/admin.js?v=24"></script>
+<script src="assets/js/admin.js?v=25"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

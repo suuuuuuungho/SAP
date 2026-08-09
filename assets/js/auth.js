@@ -37,7 +37,7 @@ async function initAuthUI() {
       avatarUrl = data?.signedUrl || '';
     }
 
-    const isAdmin = !!profile?.is_admin;
+    const isAdmin = !!(profile?.is_admin || profile?.is_host || profile?.app_role === 'admin');
     document.querySelectorAll('[data-admin-only]').forEach((el) => {
       el.classList.toggle('hidden', !isAdmin);
       el.style.display = isAdmin ? '' : 'none';

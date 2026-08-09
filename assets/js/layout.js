@@ -20,7 +20,8 @@ const ADMIN_NAV_GROUPS = [
   [
     { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders' },
     { id: 'member', label: 'Member', icon: 'fa-solid fa-users' },
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large' }
+    { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large' },
+    { id: 'stat', label: 'Stat', icon: 'fa-solid fa-chart-line' }
   ]
 ];
 
