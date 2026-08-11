@@ -156,7 +156,7 @@ function galleryMediaHTML(userId, type, view = 'card') {
     return `<div class="${aspectClass} rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
   return `<div class="relative ${aspectClass} rounded-2xl overflow-hidden bg-surface-container" data-gallery-carousel data-carousel-index="0">
-    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" class="w-full h-full object-contain bg-surface-container" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}">${window.IS_ADMIN_CONSOLE ? `<button type="button" data-admin-gallery-photo-delete data-admin-gallery-owner="${userId}" data-admin-gallery-type="${type}" data-admin-gallery-photo-path="${galleryEscape(photo)}" class="absolute left-2 top-2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error" aria-label="사진 삭제"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}</div>`).join('')}
+    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}">${window.IS_ADMIN_CONSOLE ? `<button type="button" data-admin-gallery-photo-delete data-admin-gallery-owner="${userId}" data-admin-gallery-type="${type}" data-admin-gallery-photo-path="${galleryEscape(photo)}" class="absolute left-2 top-2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error" aria-label="사진 삭제"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}</div>`).join('')}
     ${photos.length > 1 ? `
       <button type="button" data-carousel-direction="-1" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="이전 사진"><i class="fa-solid fa-chevron-left text-xs"></i></button>
       <button type="button" data-carousel-direction="1" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="다음 사진"><i class="fa-solid fa-chevron-right text-xs"></i></button>
@@ -304,6 +304,126 @@ function moveGalleryCarousel(button) {
   if (counter) counter.textContent = `${next + 1}/${slides.length}`;
 }
 
+const LIGHTBOX_MIN_SCALE = 1;
+const LIGHTBOX_MAX_SCALE = 5;
+let lightboxScale = 1;
+let lightboxOriginX = 0;
+let lightboxOriginY = 0;
+let lightboxPointers = new Map();
+let lightboxPinchDistance = null;
+let lightboxDragStart = null;
+
+function clampLightboxScale(scale) {
+  return Math.min(LIGHTBOX_MAX_SCALE, Math.max(LIGHTBOX_MIN_SCALE, scale));
+}
+
+function applyLightboxTransform() {
+  const img = document.getElementById('photo-lightbox-img');
+  const reset = document.getElementById('photo-lightbox-reset');
+  if (!img) return;
+  img.style.transform = `translate(${lightboxOriginX}px, ${lightboxOriginY}px) scale(${lightboxScale})`;
+  img.classList.toggle('is-zoomed', lightboxScale > 1);
+  if (reset) reset.textContent = `${Math.round(lightboxScale * 100)}%`;
+}
+
+function resetLightboxTransform() {
+  lightboxScale = 1;
+  lightboxOriginX = 0;
+  lightboxOriginY = 0;
+  applyLightboxTransform();
+}
+
+function setLightboxScale(nextScale) {
+  lightboxScale = clampLightboxScale(nextScale);
+  if (lightboxScale === 1) { lightboxOriginX = 0; lightboxOriginY = 0; }
+  applyLightboxTransform();
+}
+
+function openPhotoLightbox(url) {
+  const overlay = document.getElementById('photo-lightbox');
+  const img = document.getElementById('photo-lightbox-img');
+  if (!overlay || !img) return;
+  img.src = url;
+  resetLightboxTransform();
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePhotoLightbox() {
+  const overlay = document.getElementById('photo-lightbox');
+  const img = document.getElementById('photo-lightbox-img');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+  lightboxPointers.clear();
+  lightboxPinchDistance = null;
+  lightboxDragStart = null;
+  if (img) img.src = '';
+}
+
+function wirePhotoLightbox() {
+  const overlay = document.getElementById('photo-lightbox');
+  const img = document.getElementById('photo-lightbox-img');
+  if (!overlay || !img || overlay.dataset.wired) return;
+  overlay.dataset.wired = '1';
+
+  document.getElementById('photo-lightbox-close')?.addEventListener('click', closePhotoLightbox);
+  document.getElementById('photo-lightbox-zoom-in')?.addEventListener('click', () => setLightboxScale(lightboxScale + 0.6));
+  document.getElementById('photo-lightbox-zoom-out')?.addEventListener('click', () => setLightboxScale(lightboxScale - 0.6));
+  document.getElementById('photo-lightbox-reset')?.addEventListener('click', resetLightboxTransform);
+  document.getElementById('photo-lightbox-stage')?.addEventListener('click', (event) => {
+    if (event.target === img) return;
+    closePhotoLightbox();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !overlay.classList.contains('hidden')) closePhotoLightbox();
+  });
+
+  overlay.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const delta = -event.deltaY * 0.0018;
+    setLightboxScale(lightboxScale + delta * lightboxScale);
+  }, { passive: false });
+
+  img.addEventListener('dblclick', () => setLightboxScale(lightboxScale > 1 ? 1 : 2.5));
+
+  img.addEventListener('pointerdown', (event) => {
+    try { img.setPointerCapture(event.pointerId); } catch (error) { /* 합성 포인터 등 캡처 불가 상황은 무시하고 계속 진행 */ }
+    lightboxPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (lightboxPointers.size === 1) {
+      lightboxDragStart = { x: event.clientX - lightboxOriginX, y: event.clientY - lightboxOriginY };
+    } else if (lightboxPointers.size === 2) {
+      const [a, b] = [...lightboxPointers.values()];
+      lightboxPinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+
+  img.addEventListener('pointermove', (event) => {
+    if (!lightboxPointers.has(event.pointerId)) return;
+    lightboxPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (lightboxPointers.size === 2) {
+      const [a, b] = [...lightboxPointers.values()];
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      if (lightboxPinchDistance) setLightboxScale(lightboxScale * (distance / lightboxPinchDistance));
+      lightboxPinchDistance = distance;
+    } else if (lightboxPointers.size === 1 && lightboxScale > 1 && lightboxDragStart) {
+      img.classList.add('is-panning');
+      lightboxOriginX = event.clientX - lightboxDragStart.x;
+      lightboxOriginY = event.clientY - lightboxDragStart.y;
+      applyLightboxTransform();
+    }
+  });
+
+  const endLightboxPointer = (event) => {
+    lightboxPointers.delete(event.pointerId);
+    if (lightboxPointers.size < 2) lightboxPinchDistance = null;
+    if (lightboxPointers.size === 0) { lightboxDragStart = null; img.classList.remove('is-panning'); }
+  };
+  img.addEventListener('pointerup', endLightboxPointer);
+  img.addEventListener('pointercancel', endLightboxPointer);
+  img.addEventListener('pointerleave', endLightboxPointer);
+}
+
 function galleryCommentAvatar(profile) {
   if (profile?.avatarUrl) return `<div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${galleryEscape(profile.avatarUrl)}" alt="" class="w-full h-full object-cover"></div>`;
   const initial = galleryEscape((profile?.name || '?').charAt(0));
@@ -420,6 +540,12 @@ function wireGalleryComments() {
       event.preventDefault();
       event.stopPropagation();
       moveGalleryCarousel(carouselButton);
+      return;
+    }
+    const photo = event.target.closest('img[data-gallery-photo]');
+    if (photo && photo.src) {
+      event.preventDefault();
+      openPhotoLightbox(photo.src);
     }
   });
   document.getElementById('gallery-active-grid')?.addEventListener('click', (event) => {
@@ -675,6 +801,7 @@ async function initGalleryWidgets() {
     ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
     : {};
   applyGalleryGridClass();
+  wirePhotoLightbox();
   await selectGalleryDay(gallerySelectedIndex);
   document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
   document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);

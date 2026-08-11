@@ -370,14 +370,24 @@ async function adminToggleCommentRole(role, enabled, input) {
   adminShowStatus(`${label} 댓글 작성 권한을 ${enabled ? '켰습니다' : '껐습니다'}.`);
 }
 
+const COMMENT_PAGE_SIZE = 5;
 let commentDays = [];
 let commentSelectedIndex = 0;
+let commentSelectedPage = 0;
 let commentUsers = [];
 let commentAvatarUrls = {};
 let commentCanWrite = false;
 let commentWordMap = {};
 let commentThreads = {};
 let commentTabInitialized = false;
+
+function commentPhotoHTML(record) {
+  if (!record || record.photo_unavailable || !record.photo_path) {
+    const message = record && Array.isArray(record.verses) && record.verses.length ? '사진 없이 인증했어요' : '아직 인증 사진이 없어요';
+    return `<div class="aspect-[4/3] rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
+  }
+  return `<div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+}
 
 function commentDayMeta() {
   const count = document.getElementById('comment-day-count');
@@ -399,8 +409,10 @@ function renderCommentDaySelect() {
 function renderCommentList() {
   const wrap = document.getElementById('comment-list');
   if (!wrap) return;
-  if (!commentUsers.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; return; }
-  wrap.innerHTML = commentUsers.map((user) => {
+  if (!commentUsers.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; renderCommentPagination(); return; }
+  const start = commentSelectedPage * COMMENT_PAGE_SIZE;
+  const pageUsers = commentUsers.slice(start, start + COMMENT_PAGE_SIZE);
+  wrap.innerHTML = pageUsers.map((user) => {
     const record = commentWordMap[user.id];
     const verses = record && Array.isArray(record.verses) ? record.verses : [];
     const verified = verses.length > 0;
@@ -415,12 +427,22 @@ function renderCommentList() {
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${verified ? 'text-secondary bg-secondary/10' : 'text-on-surface-variant bg-surface-container'}">${verified ? '인증완료' : '미인증'}</span>
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${threads.length ? 'text-primary bg-primary/10' : 'text-on-surface-variant bg-surface-container'}">${threads.length ? `댓글 ${threads.length}개` : '댓글 없음'}</span>
       </div>
+      <div class="mb-3">${commentPhotoHTML(record)}</div>
       ${threads.length ? `<div class="flex flex-col gap-1.5 mb-3 pl-3 border-l-2 border-outline-variant/40">${threads.map((c) => `<p class="text-xs leading-5">${galleryEscape(c.body)} <span class="text-on-surface-variant">· ${galleryRelativeTime(c.created_at)}</span></p>`).join('')}</div>` : ''}
       ${commentCanWrite
         ? `<form data-comment-form="${user.id}" class="flex items-center gap-2"><input type="text" data-comment-input required maxlength="300" autocomplete="off" placeholder="댓글 달기..." class="glass-input flex-1 rounded-full px-4 py-2 text-sm"><button type="submit" class="text-primary font-bold text-sm px-2">게시</button></form>`
         : ''}
     </article>`;
   }).join('');
+  renderCommentPagination();
+}
+
+function renderCommentPagination() {
+  const nav = document.getElementById('comment-pagination');
+  if (!nav) return;
+  const pageCount = Math.max(1, Math.ceil(commentUsers.length / COMMENT_PAGE_SIZE));
+  commentSelectedPage = Math.min(commentSelectedPage, pageCount - 1);
+  nav.innerHTML = Array.from({ length: pageCount }, (_, index) => `<button type="button" data-comment-page="${index}" class="w-9 h-9 rounded-full text-sm font-bold ${index === commentSelectedPage ? 'nav-pill-active' : 'glass-card text-on-surface-variant'}" aria-label="${index + 1}페이지">${index + 1}</button>`).join('');
 }
 
 async function loadCommentDay() {
@@ -428,7 +450,7 @@ async function loadCommentDay() {
   const ids = commentUsers.map((user) => user.id);
   if (!ids.length) { commentWordMap = {}; commentThreads = {}; renderCommentList(); return; }
   const [wordResult, commentsResult] = await Promise.all([
-    window.supabaseClient.from('word_records').select('user_id, record_date, verses, admin_hidden').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
+    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable, admin_hidden').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
     window.supabaseClient.from('post_comments').select('*').in('post_owner_id', ids).eq('post_date', dateKey).eq('post_type', 'word').order('created_at', { ascending: true })
   ]);
   if (wordResult.error || commentsResult.error) { adminShowStatus('말씀 묵상 기록을 불러오지 못했습니다.', true); return; }
@@ -440,6 +462,7 @@ async function loadCommentDay() {
 
 async function selectCommentDay(index) {
   commentSelectedIndex = Math.max(0, Math.min(commentDays.length - 1, index));
+  commentSelectedPage = 0;
   commentDayMeta();
   await loadCommentDay();
 }
@@ -448,6 +471,13 @@ function wireCommentControls() {
   document.getElementById('comment-prev-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex - 1));
   document.getElementById('comment-next-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex + 1));
   document.getElementById('comment-day-select')?.addEventListener('change', (event) => selectCommentDay(commentDays.indexOf(event.target.value)));
+  document.getElementById('comment-pagination')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-comment-page]');
+    if (!button) return;
+    commentSelectedPage = Number(button.dataset.commentPage);
+    renderCommentList();
+    document.getElementById('comment-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   document.getElementById('comment-list')?.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-comment-form]');
     if (!form) return;

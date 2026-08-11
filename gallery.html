@@ -75,6 +75,18 @@
       </div>
     </section>
   </div>
+
+  <div id="photo-lightbox" class="hidden lightbox-overlay">
+    <div class="lightbox-stage" id="photo-lightbox-stage">
+      <img id="photo-lightbox-img" class="lightbox-img" src="" alt="확대된 사진">
+    </div>
+    <button type="button" id="photo-lightbox-close" class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center" aria-label="닫기"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      <button type="button" id="photo-lightbox-zoom-out" class="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center" aria-label="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+      <button type="button" id="photo-lightbox-reset" class="px-4 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-bold flex items-center justify-center" aria-label="원래 크기">100%</button>
+      <button type="button" id="photo-lightbox-zoom-in" class="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center" aria-label="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+    </div>
+  </div>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
@@ -84,7 +96,7 @@
 <script src="assets/js/layout.js?v=17"></script>
 <script src="assets/js/pray-word.js?v=9"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
-<script src="assets/js/gallery.js?v=25"></script>
+<script src="assets/js/gallery.js?v=26"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });

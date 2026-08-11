@@ -314,3 +314,37 @@ body {
     width: 300px;
   }
 }
+
+/* 사진 확대/축소 라이트박스 */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.92);
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+.lightbox-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.lightbox-img {
+  max-width: 92vw;
+  max-height: 88vh;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+  will-change: transform;
+}
+.lightbox-img.is-zoomed {
+  cursor: grab;
+}
+.lightbox-img.is-panning {
+  cursor: grabbing;
+}
