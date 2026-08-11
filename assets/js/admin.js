@@ -69,6 +69,12 @@ async function adminCheckFullAccess() {
   return !error && data === true;
 }
 
+async function adminCheckCommentTabAccess() {
+  if (adminFullAccess) return true;
+  const { data, error } = await window.supabaseClient.from('profiles').select('app_role').eq('id', adminCurrentUserId).maybeSingle();
+  return !error && data?.app_role === 'pastor';
+}
+
 async function adminLoadUsers() {
   const { data, error } = await window.supabaseClient.rpc('get_admin_message_users');
   if (error) { console.error('[admin] users', error); return; }
@@ -255,6 +261,7 @@ let adminMemberAvatarUrls = {};
 let adminDashboardRows = [];
 let adminActiveTab = 'board';
 let adminFullAccess = false;
+let adminCommentTabAccess = false;
 const ADMIN_DASHBOARD_PAGE_SIZE = 20;
 let adminDashboardPage = 1;
 let adminStatRows = [];
@@ -282,16 +289,18 @@ const ADMIN_PANEL_FOR_TAB = { 'gallery-manage': 'gallery' };
 const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat']);
 
 function adminWireTabs() {
-  const validTabs = ['board', 'gallery', 'board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
+  const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
   const selectTab = (tab) => {
     let nextTab = validTabs.includes(tab) ? tab : 'board';
     if (ADMIN_FULL_ONLY_TABS.has(nextTab) && !adminFullAccess) nextTab = 'board';
+    if (nextTab === 'comment' && !adminCommentTabAccess) nextTab = 'board';
     adminActiveTab = nextTab;
     window.history.replaceState(null, '', `#${adminActiveTab}`);
     document.querySelectorAll('[data-admin-tab]').forEach((item) => item.classList.toggle('nav-pill-active', item.dataset.adminTab === adminActiveTab));
     const panelId = ADMIN_PANEL_FOR_TAB[adminActiveTab] || adminActiveTab;
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== panelId));
     if (adminActiveTab === 'gallery' || adminActiveTab === 'gallery-manage') window.setGalleryAdminMode?.(adminActiveTab === 'gallery-manage');
+    if (adminActiveTab === 'comment') adminLoadCommentTab();
     if (adminActiveTab === 'control') { adminLoadFeatures(); adminLoadCommentRoles(); }
     if (adminActiveTab === 'member') adminLoadMembers();
     if (adminActiveTab === 'dashboard') adminLoadDashboard();
@@ -359,6 +368,118 @@ async function adminToggleCommentRole(role, enabled, input) {
     adminCommentRoles.delete(role);
   }
   adminShowStatus(`${label} 댓글 작성 권한을 ${enabled ? '켰습니다' : '껐습니다'}.`);
+}
+
+let commentDays = [];
+let commentSelectedIndex = 0;
+let commentUsers = [];
+let commentAvatarUrls = {};
+let commentCanWrite = false;
+let commentWordMap = {};
+let commentThreads = {};
+let commentTabInitialized = false;
+
+function commentDayMeta() {
+  const count = document.getElementById('comment-day-count');
+  if (count) count.textContent = `DAY ${commentSelectedIndex + 1} / ${commentDays.length}`;
+  const select = document.getElementById('comment-day-select');
+  if (select) select.value = commentDays[commentSelectedIndex];
+  const prev = document.getElementById('comment-prev-day');
+  const next = document.getElementById('comment-next-day');
+  if (prev) prev.disabled = commentSelectedIndex === 0;
+  if (next) next.disabled = commentSelectedIndex === commentDays.length - 1;
+}
+
+function renderCommentDaySelect() {
+  const select = document.getElementById('comment-day-select');
+  if (!select) return;
+  select.innerHTML = commentDays.map((day) => `<option value="${day}">${day} · ${galleryDateParts(day).full}</option>`).join('');
+}
+
+function renderCommentList() {
+  const wrap = document.getElementById('comment-list');
+  if (!wrap) return;
+  if (!commentUsers.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; return; }
+  wrap.innerHTML = commentUsers.map((user) => {
+    const record = commentWordMap[user.id];
+    const verses = record && Array.isArray(record.verses) ? record.verses : [];
+    const verified = verses.length > 0;
+    const threads = commentThreads[user.id] || [];
+    const avatar = commentAvatarUrls[user.id]
+      ? `<img src="${galleryEscape(commentAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
+      : (galleryEscape(user.name).charAt(0) || '?');
+    return `<article class="glass-card rounded-2xl p-4" data-comment-user="${user.id}">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold flex-shrink-0 overflow-hidden">${avatar}</div>
+        <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant truncate">@${galleryEscape(user.username)}</p></div>
+        <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${verified ? 'text-secondary bg-secondary/10' : 'text-on-surface-variant bg-surface-container'}">${verified ? '인증완료' : '미인증'}</span>
+        <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${threads.length ? 'text-primary bg-primary/10' : 'text-on-surface-variant bg-surface-container'}">${threads.length ? `댓글 ${threads.length}개` : '댓글 없음'}</span>
+      </div>
+      ${threads.length ? `<div class="flex flex-col gap-1.5 mb-3 pl-3 border-l-2 border-outline-variant/40">${threads.map((c) => `<p class="text-xs leading-5">${galleryEscape(c.body)} <span class="text-on-surface-variant">· ${galleryRelativeTime(c.created_at)}</span></p>`).join('')}</div>` : ''}
+      ${commentCanWrite
+        ? `<form data-comment-form="${user.id}" class="flex items-center gap-2"><input type="text" data-comment-input required maxlength="300" autocomplete="off" placeholder="댓글 달기..." class="glass-input flex-1 rounded-full px-4 py-2 text-sm"><button type="submit" class="text-primary font-bold text-sm px-2">게시</button></form>`
+        : ''}
+    </article>`;
+  }).join('');
+}
+
+async function loadCommentDay() {
+  const dateKey = commentDays[commentSelectedIndex];
+  const ids = commentUsers.map((user) => user.id);
+  if (!ids.length) { commentWordMap = {}; commentThreads = {}; renderCommentList(); return; }
+  const [wordResult, commentsResult] = await Promise.all([
+    window.supabaseClient.from('word_records').select('user_id, record_date, verses, admin_hidden').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
+    window.supabaseClient.from('post_comments').select('*').in('post_owner_id', ids).eq('post_date', dateKey).eq('post_type', 'word').order('created_at', { ascending: true })
+  ]);
+  if (wordResult.error || commentsResult.error) { adminShowStatus('말씀 묵상 기록을 불러오지 못했습니다.', true); return; }
+  commentWordMap = Object.fromEntries((wordResult.data || []).map((row) => [row.user_id, row]));
+  commentThreads = {};
+  (commentsResult.data || []).forEach((row) => { (commentThreads[row.post_owner_id] ||= []).push(row); });
+  renderCommentList();
+}
+
+async function selectCommentDay(index) {
+  commentSelectedIndex = Math.max(0, Math.min(commentDays.length - 1, index));
+  commentDayMeta();
+  await loadCommentDay();
+}
+
+function wireCommentControls() {
+  document.getElementById('comment-prev-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex - 1));
+  document.getElementById('comment-next-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex + 1));
+  document.getElementById('comment-day-select')?.addEventListener('change', (event) => selectCommentDay(commentDays.indexOf(event.target.value)));
+  document.getElementById('comment-list')?.addEventListener('submit', async (event) => {
+    const form = event.target.closest('[data-comment-form]');
+    if (!form) return;
+    event.preventDefault();
+    const input = form.querySelector('[data-comment-input]');
+    const body = input.value.trim();
+    if (!body) return;
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    const { error } = await window.supabaseClient.from('post_comments').insert({
+      post_owner_id: form.dataset.commentForm, post_date: commentDays[commentSelectedIndex], post_type: 'word', author_id: adminCurrentUserId, body
+    });
+    submitButton.disabled = false;
+    if (error) { adminShowStatus('댓글을 저장하지 못했습니다.', true); return; }
+    input.value = '';
+    await loadCommentDay();
+  });
+}
+
+async function adminLoadCommentTab() {
+  if (!commentTabInitialized) {
+    commentTabInitialized = true;
+    commentDays = buildGalleryDays();
+    commentSelectedIndex = galleryDefaultDayIndex();
+    commentUsers = await loadGalleryUsers();
+    commentAvatarUrls = window.getProfileAvatarUrls ? await window.getProfileAvatarUrls(commentUsers.map((user) => user.id)) : {};
+    commentCanWrite = await loadGalleryCommentPermission();
+    wireCommentControls();
+    renderCommentDaySelect();
+  }
+  commentDayMeta();
+  await loadCommentDay();
 }
 
 async function adminLoadMembers() {
@@ -680,6 +801,7 @@ async function initAdminWidgets() {
     return;
   }
   adminFullAccess = await adminCheckFullAccess();
+  adminCommentTabAccess = await adminCheckCommentTabAccess();
   if (denied) denied.classList.add('hidden');
   if (content) content.classList.remove('hidden');
   if (adminFullAccess) {
