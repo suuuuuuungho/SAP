@@ -380,6 +380,28 @@ let commentCanWrite = false;
 let commentWordMap = {};
 let commentThreads = {};
 let commentTabInitialized = false;
+let commentViewMode = 'list';
+let commentTableWordMap = {};
+let commentTableThreadCounts = {};
+let commentTableLoaded = false;
+
+function commentCellKey(userId, dateKey) { return `${userId}|${dateKey}`; }
+
+function renderCommentViewTabs() {
+  document.querySelectorAll('[data-comment-view-tab]').forEach((button) => {
+    const active = button.dataset.commentViewTab === commentViewMode;
+    button.classList.toggle('nav-pill-active', active);
+    button.classList.toggle('text-on-surface-variant', !active);
+  });
+  document.getElementById('comment-list-view')?.classList.toggle('hidden', commentViewMode !== 'list');
+  document.getElementById('comment-table-view')?.classList.toggle('hidden', commentViewMode !== 'table');
+}
+
+async function selectCommentView(view) {
+  commentViewMode = view === 'table' ? 'table' : 'list';
+  renderCommentViewTabs();
+  if (commentViewMode === 'table') await loadCommentTable();
+}
 
 function commentPhotoHTML(record) {
   if (!record || record.photo_unavailable || !record.photo_path) {
@@ -445,6 +467,50 @@ function renderCommentPagination() {
   nav.innerHTML = Array.from({ length: pageCount }, (_, index) => `<button type="button" data-comment-page="${index}" class="w-9 h-9 rounded-full text-sm font-bold ${index === commentSelectedPage ? 'nav-pill-active' : 'glass-card text-on-surface-variant'}" aria-label="${index + 1}페이지">${index + 1}</button>`).join('');
 }
 
+async function loadCommentTable() {
+  const wrap = document.getElementById('comment-table');
+  if (!wrap) return;
+  const ids = commentUsers.map((user) => user.id);
+  if (!ids.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; return; }
+  wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center"><i class="fa-solid fa-spinner fa-spin mr-2"></i>불러오는 중</p>';
+  const [wordResult, commentsResult] = await Promise.all([
+    window.supabaseClient.from('word_records').select('user_id, record_date, verses').in('user_id', ids).in('record_date', commentDays),
+    window.supabaseClient.from('post_comments').select('post_owner_id, post_date').in('post_owner_id', ids).eq('post_type', 'word').in('post_date', commentDays)
+  ]);
+  if (wordResult.error || commentsResult.error) { wrap.innerHTML = '<p class="text-sm text-error py-10 text-center">현황을 불러오지 못했습니다.</p>'; return; }
+  commentTableWordMap = {};
+  (wordResult.data || []).forEach((row) => {
+    const verified = Array.isArray(row.verses) && row.verses.length > 0;
+    if (verified) commentTableWordMap[commentCellKey(row.user_id, row.record_date)] = true;
+  });
+  commentTableThreadCounts = {};
+  (commentsResult.data || []).forEach((row) => {
+    const key = commentCellKey(row.post_owner_id, row.post_date);
+    commentTableThreadCounts[key] = (commentTableThreadCounts[key] || 0) + 1;
+  });
+  commentTableLoaded = true;
+  renderCommentTable();
+}
+
+function commentTableCellHTML(userId, dateKey) {
+  const key = commentCellKey(userId, dateKey);
+  if (!commentTableWordMap[key]) return '<span class="text-outline-variant">–</span>';
+  if (commentTableThreadCounts[key]) return '<span class="inline-flex w-6 h-6 rounded-full bg-quaternary/15 text-quaternary items-center justify-center" title="댓글 완료"><i class="fa-solid fa-check text-[11px]"></i></span>';
+  return `<button type="button" data-comment-jump-user="${userId}" data-comment-jump-date="${dateKey}" class="inline-flex w-6 h-6 rounded-full bg-error/10 text-error hover:bg-error hover:text-white items-center justify-center transition-colors" title="댓글 달기"><i class="fa-solid fa-comment-dots text-[11px]"></i></button>`;
+}
+
+function renderCommentTable() {
+  const wrap = document.getElementById('comment-table');
+  if (!wrap) return;
+  if (!commentUsers.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; return; }
+  const headerCells = commentDays.map((day) => `<th class="px-2 py-2 text-center text-[10px] font-bold text-on-surface-variant whitespace-nowrap">${galleryDateParts(day).short}</th>`).join('');
+  const rows = commentUsers.map((user) => `<tr>
+    <td class="sticky left-0 bg-white px-3 py-2 text-xs font-bold whitespace-nowrap border-r border-outline-variant/30">${galleryEscape(user.name)}</td>
+    ${commentDays.map((day) => `<td class="px-2 py-2 text-center">${commentTableCellHTML(user.id, day)}</td>`).join('')}
+  </tr>`).join('');
+  wrap.innerHTML = `<table class="border-collapse w-full"><thead><tr><th class="sticky left-0 bg-white px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant border-r border-outline-variant/30">학생</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 async function loadCommentDay() {
   const dateKey = commentDays[commentSelectedIndex];
   const ids = commentUsers.map((user) => user.id);
@@ -467,7 +533,35 @@ async function selectCommentDay(index) {
   await loadCommentDay();
 }
 
+async function jumpToCommentEntry(userId, dateKey) {
+  const dayIndex = commentDays.indexOf(dateKey);
+  if (dayIndex < 0) return;
+  const userIndex = commentUsers.findIndex((user) => user.id === userId);
+  commentSelectedIndex = dayIndex;
+  commentSelectedPage = userIndex >= 0 ? Math.floor(userIndex / COMMENT_PAGE_SIZE) : 0;
+  commentViewMode = 'list';
+  renderCommentViewTabs();
+  commentDayMeta();
+  await loadCommentDay();
+  const row = document.querySelector(`#comment-list [data-comment-user="${userId}"]`);
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.add('ring-2', 'ring-primary');
+  setTimeout(() => row.classList.remove('ring-2', 'ring-primary'), 2000);
+  row.querySelector('[data-comment-input]')?.focus();
+}
+
 function wireCommentControls() {
+  document.getElementById('comment-view-tabs')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-comment-view-tab]');
+    if (!button) return;
+    selectCommentView(button.dataset.commentViewTab);
+  });
+  document.getElementById('comment-table')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-comment-jump-user]');
+    if (!button) return;
+    jumpToCommentEntry(button.dataset.commentJumpUser, button.dataset.commentJumpDate);
+  });
   document.getElementById('comment-prev-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex - 1));
   document.getElementById('comment-next-day')?.addEventListener('click', () => selectCommentDay(commentSelectedIndex + 1));
   document.getElementById('comment-day-select')?.addEventListener('change', (event) => selectCommentDay(commentDays.indexOf(event.target.value)));
@@ -509,7 +603,7 @@ async function adminLoadCommentTab() {
     renderCommentDaySelect();
   }
   commentDayMeta();
-  await loadCommentDay();
+  if (commentViewMode === 'table') { await loadCommentTable(); } else { await loadCommentDay(); }
 }
 
 async function adminLoadMembers() {

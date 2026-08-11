@@ -76,18 +76,34 @@
 
     <section data-admin-panel="comment" class="admin-panel hidden">
       <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Comment</h2><p class="text-xs text-on-surface-variant">말씀 묵상 게시물에 날짜별로 댓글을 남깁니다.</p></div>
-      <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6">
-        <div class="flex items-center gap-3">
-          <button id="comment-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜"><i class="fa-solid fa-chevron-left"></i></button>
-          <div class="flex-1 min-w-0 text-center">
-            <p id="comment-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p>
-            <select id="comment-day-select" class="glass-input rounded-xl px-4 py-2 text-sm font-semibold w-full max-w-[320px] mx-auto"></select>
+      <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="comment-view-tabs">
+        <button id="comment-view-list" type="button" data-comment-view-tab="list" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-list mr-1.5"></i>List</button>
+        <button id="comment-view-table" type="button" data-comment-view-tab="table" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-table-cells mr-1.5"></i>Table</button>
+      </div>
+
+      <div id="comment-list-view">
+        <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6">
+          <div class="flex items-center gap-3">
+            <button id="comment-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="flex-1 min-w-0 text-center">
+              <p id="comment-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p>
+              <select id="comment-day-select" class="glass-input rounded-xl px-4 py-2 text-sm font-semibold w-full max-w-[320px] mx-auto"></select>
+            </div>
+            <button id="comment-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
-          <button id="comment-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-      </section>
-      <div id="comment-list" class="flex flex-col gap-3 mb-5"></div>
-      <nav id="comment-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="Comment 페이지"></nav>
+        </section>
+        <div id="comment-list" class="flex flex-col gap-3 mb-5"></div>
+        <nav id="comment-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="Comment 페이지"></nav>
+      </div>
+
+      <div id="comment-table-view" class="hidden">
+        <section class="glass-panel rounded-[2rem] p-4 sm:p-6 mb-16">
+          <p class="text-xs text-on-surface-variant mb-4">행: 학생, 열: 운영기간 — 말씀 묵상 게시물에 댓글을 달았는지 한눈에 봅니다. 안 단 칸을 누르면 해당 날짜로 이동해서 바로 댓글을 달 수 있어요.</p>
+          <div class="overflow-auto max-h-[70vh] rounded-2xl border border-outline-variant/40">
+            <div id="comment-table"></div>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section data-admin-panel="control" class="admin-panel hidden">
@@ -156,7 +172,7 @@
 <script src="assets/js/public-home.js?v=8"></script>
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=27"></script>
-<script src="assets/js/admin.js?v=33"></script>
+<script src="assets/js/admin.js?v=34"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
