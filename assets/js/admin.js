@@ -450,7 +450,7 @@ async function loadCommentDay() {
   const ids = commentUsers.map((user) => user.id);
   if (!ids.length) { commentWordMap = {}; commentThreads = {}; renderCommentList(); return; }
   const [wordResult, commentsResult] = await Promise.all([
-    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable, admin_hidden').eq('record_date', dateKey).eq('admin_hidden', false).in('user_id', ids),
+    window.supabaseClient.from('word_records').select('user_id, record_date, verses, photo_path, photo_unavailable, admin_hidden').eq('record_date', dateKey).in('user_id', ids),
     window.supabaseClient.from('post_comments').select('*').in('post_owner_id', ids).eq('post_date', dateKey).eq('post_type', 'word').order('created_at', { ascending: true })
   ]);
   if (wordResult.error || commentsResult.error) { adminShowStatus('말씀 묵상 기록을 불러오지 못했습니다.', true); return; }

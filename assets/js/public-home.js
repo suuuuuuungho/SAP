@@ -109,20 +109,11 @@ function renderPublicHomeVerse(verse) {
 }
 
 async function loadPublicHome() {
-  const nowIso = new Date().toISOString();
-  let messageQuery = window.supabaseClient.from('home_messages')
-    .select('id, recipient_user_id, body, created_at, expires_at, is_active')
-    .eq('is_active', true)
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
-  // recipient 조건은 로그인 사용자를 알아야 걸 수 있어서, 세션 확인 전(=아직 null)에는 걸지 않는다.
-  if (publicHomeCurrentUserId) {
-    messageQuery = messageQuery.or(`recipient_user_id.is.null,recipient_user_id.eq.${publicHomeCurrentUserId}`);
-  } else {
-    messageQuery = messageQuery.is('recipient_user_id', null);
-  }
+  // 다건 .or() 체이닝은 PostgREST에서 조건이 하나만 반영될 수 있어(검증 어려움),
+  // is_active만 서버에서 걸러 넉넉히 가져온 뒤 나머지 조건(만료·수신자)은 클라이언트에서 확정 필터링한다.
   const [rankingRes, messageRes, verseRes] = await Promise.all([
     window.supabaseClient.rpc('get_home_rankings'),
-    messageQuery.order('created_at', { ascending: false }).limit(10),
+    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, expires_at, is_active').eq('is_active', true).order('created_at', { ascending: false }).limit(200),
     window.supabaseClient.from('home_bible_verses').select('id, reference, verse_text, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
@@ -135,11 +126,13 @@ async function loadPublicHome() {
     : {};
   publicHomeAvatarUrls = Object.fromEntries(Object.entries(publicHomeProfiles).map(([id, profile]) => [id, profile.avatarUrl || '']));
   const now = new Date();
-  const visibleMessages = (messageRes.data || []).filter((message) =>
-    message.is_active !== false
-    && (!message.expires_at || new Date(message.expires_at) > now)
-    && (!message.recipient_user_id || message.recipient_user_id === publicHomeCurrentUserId)
-  );
+  const visibleMessages = (messageRes.data || [])
+    .filter((message) =>
+      message.is_active !== false
+      && (!message.expires_at || new Date(message.expires_at) > now)
+      && (!message.recipient_user_id || message.recipient_user_id === publicHomeCurrentUserId)
+    )
+    .slice(0, 10);
   renderPublicHomeRankings(rankingRes.data || []);
   renderPublicHomeMessages(visibleMessages);
   renderPublicHomeVerse(verseRes.data || null);
