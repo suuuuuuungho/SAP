@@ -109,9 +109,20 @@ function renderPublicHomeVerse(verse) {
 }
 
 async function loadPublicHome() {
+  const nowIso = new Date().toISOString();
+  let messageQuery = window.supabaseClient.from('home_messages')
+    .select('id, recipient_user_id, body, created_at, expires_at, is_active')
+    .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+  // recipient 조건은 로그인 사용자를 알아야 걸 수 있어서, 세션 확인 전(=아직 null)에는 걸지 않는다.
+  if (publicHomeCurrentUserId) {
+    messageQuery = messageQuery.or(`recipient_user_id.is.null,recipient_user_id.eq.${publicHomeCurrentUserId}`);
+  } else {
+    messageQuery = messageQuery.is('recipient_user_id', null);
+  }
   const [rankingRes, messageRes, verseRes] = await Promise.all([
     window.supabaseClient.rpc('get_home_rankings'),
-    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, expires_at, is_active').order('created_at', { ascending: false }).limit(10),
+    messageQuery.order('created_at', { ascending: false }).limit(10),
     window.supabaseClient.from('home_bible_verses').select('id, reference, verse_text, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
