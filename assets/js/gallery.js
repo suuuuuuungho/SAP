@@ -3,6 +3,8 @@
 const GALLERY_START_DATE = '2026-08-10';
 const GALLERY_END_DATE = '2026-09-06';
 const GALLERY_PAGE_SIZE = 8;
+const GALLERY_GRID_CLASS_VIEW = 'gallery-swipe-grid';
+const GALLERY_GRID_CLASS_MANAGE = 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4';
 
 let galleryDays = [];
 let gallerySelectedIndex = 0;
@@ -63,6 +65,16 @@ function galleryDateParts(key) {
   };
 }
 
+function galleryDefaultDayIndex() {
+  const todayKey = galleryDateKey(new Date());
+  const exact = galleryDays.indexOf(todayKey);
+  if (exact >= 0) return exact;
+  if (todayKey < galleryDays[0]) return 0;
+  if (todayKey > galleryDays[galleryDays.length - 1]) return galleryDays.length - 1;
+  const next = galleryDays.findIndex((day) => day > todayKey);
+  return next >= 0 ? next : galleryDays.length - 1;
+}
+
 function galleryReadingLabel(index) {
   return index === galleryDays.length - 1 ? '요한복음 20장·21장' : `요한복음 ${index + 1}장`;
 }
@@ -77,7 +89,6 @@ async function loadGalleryUsers() {
 }
 
 async function loadGalleryCommentPermission() {
-  if (window.IS_ADMIN_CONSOLE) return true;
   const { data, error } = await window.supabaseClient.rpc('can_write_gallery_comments');
   if (!error) return data === true;
   const { data: profile } = await window.supabaseClient.from('profiles').select('app_role,is_admin').eq('id', galleryCurrentUserId).maybeSingle();
@@ -648,7 +659,9 @@ async function initGalleryWidgets() {
   const params = new URLSearchParams(window.location.search);
   const requestedDate = params.get('date');
   const requestedType = params.get('type');
-  if (requestedDate && galleryDays.includes(requestedDate)) gallerySelectedIndex = galleryDays.indexOf(requestedDate);
+  gallerySelectedIndex = requestedDate && galleryDays.includes(requestedDate)
+    ? galleryDays.indexOf(requestedDate)
+    : galleryDefaultDayIndex();
   if (requestedType === 'pray' || requestedType === 'word') galleryActiveType = requestedType;
   galleryCalendarPage = galleryDays[gallerySelectedIndex]?.startsWith('2026-09') ? 1 : 0;
   wireGalleryCalendar();
@@ -661,11 +674,25 @@ async function initGalleryWidgets() {
   galleryAvatarUrls = window.getProfileAvatarUrls
     ? await window.getProfileAvatarUrls(galleryUsers.map((user) => user.id))
     : {};
+  applyGalleryGridClass();
   await selectGalleryDay(gallerySelectedIndex);
-  if (window.IS_ADMIN_CONSOLE) {
-    document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
-    document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);
-  }
+  document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
+  document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);
+}
+
+function applyGalleryGridClass() {
+  const grid = document.getElementById('gallery-active-grid');
+  if (!grid) return;
+  grid.className = window.IS_ADMIN_CONSOLE ? GALLERY_GRID_CLASS_MANAGE : GALLERY_GRID_CLASS_VIEW;
+}
+
+async function setGalleryAdminMode(isAdmin) {
+  if (window.IS_ADMIN_CONSOLE === isAdmin) return;
+  window.IS_ADMIN_CONSOLE = isAdmin;
+  applyGalleryGridClass();
+  galleryCanComment = await loadGalleryCommentPermission();
+  if (galleryDays.length) await selectGalleryDay(gallerySelectedIndex);
 }
 
 window.initGalleryWidgets = initGalleryWidgets;
+window.setGalleryAdminMode = setGalleryAdminMode;

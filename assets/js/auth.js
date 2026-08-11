@@ -37,14 +37,20 @@ async function initAuthUI() {
       avatarUrl = data?.signedUrl || '';
     }
 
-    const isAdmin = !!(profile?.is_admin || profile?.is_host || profile?.app_role === 'admin');
+    const CONSOLE_TIER_ROLES = ['admin', 'teacher', 'pastor', 'department_head', 'secretary'];
+    const isConsoleTier = !!(profile?.is_admin || profile?.is_host || CONSOLE_TIER_ROLES.includes(profile?.app_role));
+    const isFullTier = !!profile?.is_host;
     document.querySelectorAll('[data-admin-only]').forEach((el) => {
-      el.classList.toggle('hidden', !isAdmin);
-      el.style.display = isAdmin ? '' : 'none';
+      el.classList.toggle('hidden', !isConsoleTier);
+      el.style.display = isConsoleTier ? '' : 'none';
+    });
+    document.querySelectorAll('[data-admin-full-only]').forEach((el) => {
+      el.classList.toggle('hidden', !isFullTier);
+      el.style.display = isFullTier ? '' : 'none';
     });
     document.querySelectorAll('[data-member-nav]').forEach((el) => {
-      el.classList.toggle('hidden', isAdmin);
-      el.style.display = isAdmin ? 'none' : '';
+      el.classList.toggle('hidden', isConsoleTier);
+      el.style.display = isConsoleTier ? 'none' : '';
     });
   }
 

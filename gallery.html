@@ -47,7 +47,7 @@
   </div>
 
   <section class="mb-7">
-    <div id="gallery-active-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+    <div id="gallery-active-grid" class="gallery-swipe-grid"></div>
   </section>
 
   <nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
@@ -80,11 +80,11 @@
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=7"></script>
-<script src="assets/js/layout.js?v=15"></script>
+<script src="assets/js/auth.js?v=8"></script>
+<script src="assets/js/layout.js?v=16"></script>
 <script src="assets/js/pray-word.js?v=9"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
-<script src="assets/js/gallery.js?v=22"></script>
+<script src="assets/js/gallery.js?v=25"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'gallery' });

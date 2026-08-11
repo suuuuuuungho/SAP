@@ -18,10 +18,12 @@ const ADMIN_NAV_GROUPS = [
     { id: 'gallery', label: 'Gallery', icon: 'fa-regular fa-images' }
   ],
   [
-    { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders' },
-    { id: 'member', label: 'Member', icon: 'fa-solid fa-users' },
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large' },
-    { id: 'stat', label: 'Stat', icon: 'fa-solid fa-chart-line' }
+    { id: 'board-manage', label: 'Board manage', icon: 'fa-solid fa-bullhorn', full: true },
+    { id: 'gallery-manage', label: 'Gallery manage', icon: 'fa-solid fa-photo-film', full: true },
+    { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders', full: true },
+    { id: 'member', label: 'Member', icon: 'fa-solid fa-users', full: true },
+    { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large', full: true },
+    { id: 'stat', label: 'Stat', icon: 'fa-solid fa-chart-line', full: true }
   ]
 ];
 
@@ -54,7 +56,7 @@ function navLinkIcon(item, activePage) {
 function adminNavFull() {
   const active = window.location.hash.replace('#', '') || 'board';
   return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="flex items-center gap-2 px-3 pt-5 pb-2"><span class="h-px bg-outline-variant/60 flex-1"></span><span class="text-[9px] font-bold tracking-[.16em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/60 flex-1"></span></div>' : ''}${group.map((item) => `
-    <button type="button" data-admin-only data-admin-tab="${item.id}" class="hidden flex w-full items-center gap-3 px-4 py-2.5 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40'} font-medium text-sm transition-all duration-200 text-left">
+    <button type="button" ${item.full ? 'data-admin-full-only' : 'data-admin-only'} data-admin-tab="${item.id}" class="hidden flex w-full items-center gap-3 px-4 py-2.5 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40'} font-medium text-sm transition-all duration-200 text-left">
       <i class="${item.icon} w-4 text-center"></i><span>${item.label}</span>
     </button>`).join('')}`).join('');
 }
@@ -62,7 +64,7 @@ function adminNavFull() {
 function adminNavIcon() {
   const active = window.location.hash.replace('#', '') || 'board';
   return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="h-px bg-outline-variant/60 mx-2 my-2"></div>' : ''}${group.map((item) => `
-    <button type="button" aria-label="${item.label}" data-admin-only data-admin-tab="${item.id}" class="hidden flex nav-icon-item w-12 h-12 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40'} items-center justify-center mx-auto transition-all relative">
+    <button type="button" aria-label="${item.label}" ${item.full ? 'data-admin-full-only' : 'data-admin-only'} data-admin-tab="${item.id}" class="hidden flex nav-icon-item w-12 h-12 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40'} items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i><div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </button>`).join('')}`).join('');
 }

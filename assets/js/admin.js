@@ -60,6 +60,11 @@ async function adminCheckAccess() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();
   if (!session) return false;
   adminCurrentUserId = session.user.id;
+  const { data, error } = await window.supabaseClient.rpc('can_view_admin_console');
+  return !error && data === true;
+}
+
+async function adminCheckFullAccess() {
   const { data, error } = await window.supabaseClient.rpc('is_app_admin');
   return !error && data === true;
 }
@@ -249,6 +254,7 @@ let adminMembers = [];
 let adminMemberAvatarUrls = {};
 let adminDashboardRows = [];
 let adminActiveTab = 'board';
+let adminFullAccess = false;
 const ADMIN_DASHBOARD_PAGE_SIZE = 20;
 let adminDashboardPage = 1;
 let adminStatRows = [];
@@ -272,14 +278,21 @@ function adminRoleLabel(role) {
   return { admin: 'Admin', pastor: '목사님', department_head: '부장님', secretary: '총무님', teacher: '교사', student: '학생' }[role] || role;
 }
 
+const ADMIN_PANEL_FOR_TAB = { 'gallery-manage': 'gallery' };
+const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat']);
+
 function adminWireTabs() {
-  const validTabs = ['board', 'gallery', 'control', 'member', 'dashboard', 'stat'];
+  const validTabs = ['board', 'gallery', 'board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
   const selectTab = (tab) => {
-    adminActiveTab = validTabs.includes(tab) ? tab : 'board';
+    let nextTab = validTabs.includes(tab) ? tab : 'board';
+    if (ADMIN_FULL_ONLY_TABS.has(nextTab) && !adminFullAccess) nextTab = 'board';
+    adminActiveTab = nextTab;
     window.history.replaceState(null, '', `#${adminActiveTab}`);
     document.querySelectorAll('[data-admin-tab]').forEach((item) => item.classList.toggle('nav-pill-active', item.dataset.adminTab === adminActiveTab));
-    document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== adminActiveTab));
-    if (adminActiveTab === 'control') adminLoadFeatures();
+    const panelId = ADMIN_PANEL_FOR_TAB[adminActiveTab] || adminActiveTab;
+    document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== panelId));
+    if (adminActiveTab === 'gallery' || adminActiveTab === 'gallery-manage') window.setGalleryAdminMode?.(adminActiveTab === 'gallery-manage');
+    if (adminActiveTab === 'control') { adminLoadFeatures(); adminLoadCommentRoles(); }
     if (adminActiveTab === 'member') adminLoadMembers();
     if (adminActiveTab === 'dashboard') adminLoadDashboard();
     if (adminActiveTab === 'stat') adminLoadAllStats();
@@ -307,6 +320,45 @@ async function adminLoadFeatures() {
     else adminShowStatus(`${input.dataset.featureLabel} 기능을 ${input.checked ? '켰습니다' : '껐습니다'}.`);
     syncGroups();
   }));
+}
+
+const ADMIN_COMMENT_ROLE_OPTIONS = [
+  { role: 'admin', label: 'Admin' },
+  { role: 'teacher', label: '교사' },
+  { role: 'pastor', label: '목사님' },
+  { role: 'department_head', label: '부장님' },
+  { role: 'secretary', label: '총무님' }
+];
+let adminCommentRoles = new Set();
+
+async function adminLoadCommentRoles() {
+  const wrap = document.getElementById('admin-comment-roles');
+  if (!wrap) return;
+  const { data, error } = await window.supabaseClient.from('app_role_permissions').select('role').eq('permission_key', 'gallery_comments');
+  if (error) { wrap.innerHTML = '<p class="text-sm text-error">gallery_comment_role_permission.sql을 먼저 실행해주세요.</p>'; return; }
+  adminCommentRoles = new Set((data || []).map((row) => row.role));
+  adminRenderCommentRoles();
+}
+
+function adminRenderCommentRoles() {
+  const wrap = document.getElementById('admin-comment-roles');
+  if (!wrap) return;
+  wrap.innerHTML = ADMIN_COMMENT_ROLE_OPTIONS.map((option) => `<label class="glass-card rounded-full pl-3 pr-4 py-2 flex items-center gap-2 text-sm font-semibold cursor-pointer"><input type="checkbox" data-comment-role="${option.role}" class="rounded text-primary" ${adminCommentRoles.has(option.role) ? 'checked' : ''}>${option.label}</label>`).join('');
+  wrap.querySelectorAll('[data-comment-role]').forEach((input) => input.addEventListener('change', () => adminToggleCommentRole(input.dataset.commentRole, input.checked, input)));
+}
+
+async function adminToggleCommentRole(role, enabled, input) {
+  const label = ADMIN_COMMENT_ROLE_OPTIONS.find((option) => option.role === role)?.label || role;
+  if (enabled) {
+    const { error } = await window.supabaseClient.from('app_role_permissions').upsert({ permission_key: 'gallery_comments', role });
+    if (error) { if (input) input.checked = false; adminShowStatus('권한을 저장하지 못했습니다.', true); return; }
+    adminCommentRoles.add(role);
+  } else {
+    const { error } = await window.supabaseClient.from('app_role_permissions').delete().eq('permission_key', 'gallery_comments').eq('role', role);
+    if (error) { if (input) input.checked = true; adminShowStatus('권한을 저장하지 못했습니다.', true); return; }
+    adminCommentRoles.delete(role);
+  }
+  adminShowStatus(`${label} 댓글 작성 권한을 ${enabled ? '켰습니다' : '껐습니다'}.`);
 }
 
 async function adminLoadMembers() {
@@ -627,15 +679,18 @@ async function initAdminWidgets() {
     if (content) content.classList.add('hidden');
     return;
   }
+  adminFullAccess = await adminCheckFullAccess();
   if (denied) denied.classList.add('hidden');
   if (content) content.classList.remove('hidden');
-  adminWireMessageForm();
-  adminWireMessageList();
-  adminWireVerseForm();
-  adminWireVerseList();
-  await adminLoadUsers();
+  if (adminFullAccess) {
+    adminWireMessageForm();
+    adminWireMessageList();
+    adminWireVerseForm();
+    adminWireVerseList();
+    await adminLoadUsers();
+  }
   adminWireConsole();
-  await Promise.all([adminLoadMessages(), adminLoadVerses(), adminLoadMembers()]);
+  if (adminFullAccess) await Promise.all([adminLoadMessages(), adminLoadVerses(), adminLoadMembers()]);
 }
 
 window.initAdminWidgets = initAdminWidgets;

@@ -15,7 +15,35 @@
   <p id="admin-status" class="hidden text-sm mb-4"></p>
   <div id="admin-access-denied" class="hidden glass-panel rounded-[2rem] p-12 text-center"><i class="fa-solid fa-lock text-3xl text-error mb-3"></i><p class="font-bold">관리자 권한이 필요합니다.</p></div>
   <div id="admin-content" class="hidden mb-16">
-    <section data-admin-panel="board" class="admin-panel grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <section data-admin-panel="board" class="admin-panel">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-8 lg:mb-10">
+        <div><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Board</h2></div>
+        <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
+          <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-quaternary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-quaternary"></span></span>
+          <span id="home-last-refreshed">실시간 집계</span>
+        </div>
+      </div>
+      <section class="glass-panel rounded-[2rem] p-6 sm:p-8 mb-6 overflow-hidden relative">
+        <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-secondary-container/30 blur-2xl"></div>
+        <div class="relative">
+          <p id="home-verse-reference" class="text-xs font-bold text-secondary mb-3">오늘의 말씀</p>
+          <blockquote id="home-verse-text" class="text-xl sm:text-2xl font-semibold leading-relaxed max-w-3xl">관리자가 등록한 성경구절이 여기에 표시됩니다.</blockquote>
+        </div>
+      </section>
+      <section class="mb-8">
+        <div class="flex items-center gap-2 mb-3">
+          <h3 class="text-lg font-bold">Board</h3>
+          <i class="fa-solid fa-bullhorn text-primary text-sm"></i>
+        </div>
+        <div id="home-message-list" class="flex flex-col gap-3"></div>
+      </section>
+      <section class="mb-8">
+        <div class="mb-4"><h3 class="text-lg font-bold">Ranking</h3></div>
+        <div id="home-ranking-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
+      </section>
+    </section>
+
+    <section data-admin-panel="board-manage" class="admin-panel hidden grid grid-cols-1 xl:grid-cols-2 gap-6">
       <section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-1">Board Message</h2><p class="text-xs text-on-surface-variant mb-5">전체 또는 한 명에게만 보이는 Board Message를 전송합니다.</p>
       <form id="admin-message-form" class="flex flex-col gap-3 mb-6">
@@ -43,10 +71,16 @@
       <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Gallery</h2><p class="text-xs text-on-surface-variant">2026.08.10 – 09.06 · Weekdays</p></div>
       <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6 relative z-50 overflow-visible"><div class="flex items-center gap-3"><button id="gallery-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜"><i class="fa-solid fa-chevron-left"></i></button><div class="flex-1 min-w-0 text-center relative"><p id="gallery-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p><button id="gallery-calendar-toggle" type="button" class="glass-input rounded-xl px-4 py-2 text-sm font-semibold w-full max-w-[220px] mx-auto flex items-center justify-center gap-2" aria-haspopup="dialog" aria-expanded="false"><i class="fa-regular fa-calendar"></i><span id="gallery-date-display">2026-08-10</span></button><p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p><div id="gallery-calendar-popover" style="background-color:#ffffff" class="hidden absolute z-[70] top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] rounded-[1.5rem] border border-outline-variant p-4 text-left shadow-xl"><div id="gallery-calendar-months"></div></div></div><button id="gallery-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜"><i class="fa-solid fa-chevron-right"></i></button></div></section>
       <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="gallery-type-tabs"><button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>기도</button><button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>말씀묵상</button></div>
-      <section class="mb-7"><div id="gallery-active-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div></section><nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
+      <section class="mb-7"><div id="gallery-active-grid" class="gallery-swipe-grid"></div></section><nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
     </section>
 
-    <section data-admin-panel="control" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-5 sm:p-7"><div class="flex items-start justify-between gap-4 mb-6"><div><h2 class="text-2xl font-bold">Control Panel</h2><p class="text-sm text-on-surface-variant mt-1">이용자가 보는 탭과 탭 안의 세부 기능을 제어합니다.</p></div><div class="icon-glass w-12 h-12 rounded-full flex items-center justify-center text-primary"><i class="fa-solid fa-power-off"></i></div></div><div id="admin-feature-groups" class="flex flex-col gap-5"></div></div></section>
+    <section data-admin-panel="control" class="admin-panel hidden">
+      <div class="glass-panel rounded-[2rem] p-5 sm:p-7"><div class="flex items-start justify-between gap-4 mb-6"><div><h2 class="text-2xl font-bold">Control Panel</h2><p class="text-sm text-on-surface-variant mt-1">이용자가 보는 탭과 탭 안의 세부 기능을 제어합니다.</p></div><div class="icon-glass w-12 h-12 rounded-full flex items-center justify-center text-primary"><i class="fa-solid fa-power-off"></i></div></div><div id="admin-feature-groups" class="flex flex-col gap-5"></div></div>
+      <div class="glass-panel rounded-[2rem] p-5 sm:p-7 mt-6">
+        <div class="flex items-start justify-between gap-4 mb-5"><div><h2 class="text-lg font-bold">Gallery 댓글 작성 권한</h2><p class="text-sm text-on-surface-variant mt-1">호스트 여부와 관계없이, 아래에서 체크한 권한을 가진 계정만 Gallery에 댓글을 작성할 수 있습니다.</p></div><div class="icon-glass w-11 h-11 rounded-full flex items-center justify-center text-primary flex-shrink-0"><i class="fa-regular fa-comment"></i></div></div>
+        <div id="admin-comment-roles" class="flex flex-wrap gap-2"></div>
+      </div>
+    </section>
 
     <section data-admin-panel="member" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-4 sm:p-6"><div class="flex flex-wrap gap-3 justify-between items-center mb-5"><div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div><div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div></div><div id="admin-member-list" class="flex flex-col gap-3"></div></div></section>
 
@@ -87,13 +121,14 @@
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=7"></script>
-<script src="assets/js/layout.js?v=15"></script>
+<script src="assets/js/auth.js?v=8"></script>
+<script src="assets/js/layout.js?v=16"></script>
 <script src="assets/js/pray-word.js?v=9"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
-<script>window.IS_ADMIN_CONSOLE = true;</script>
-<script src="assets/js/gallery.js?v=22"></script>
-<script src="assets/js/admin.js?v=28"></script>
+<script src="assets/js/public-home.js?v=5"></script>
+<script>window.IS_ADMIN_CONSOLE = false;</script>
+<script src="assets/js/gallery.js?v=25"></script>
+<script src="assets/js/admin.js?v=30"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

@@ -289,3 +289,28 @@ body {
 .flip-card-back {
   transform: rotateY(180deg);
 }
+
+/* Gallery 탭: 세로로 늘어지지 않게 가로 스와이프 카드 목록 */
+.gallery-swipe-grid {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 1rem;
+  padding: 0.25rem 0.25rem 0.75rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.gallery-swipe-grid::-webkit-scrollbar {
+  display: none;
+}
+.gallery-swipe-grid > article {
+  flex: 0 0 auto;
+  width: min(78vw, 300px);
+  scroll-snap-align: start;
+}
+@media (min-width: 640px) {
+  .gallery-swipe-grid > article {
+    width: 300px;
+  }
+}
