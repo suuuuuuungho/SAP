@@ -70,7 +70,7 @@
     <section data-admin-panel="gallery" class="admin-panel hidden">
       <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Gallery</h2><p class="text-xs text-on-surface-variant">2026.08.10 – 09.06 · Weekdays</p></div>
       <section class="glass-panel rounded-[2rem] p-4 sm:p-5 mb-6 relative z-50 overflow-visible"><div class="flex items-center gap-3"><button id="gallery-prev-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="이전 날짜"><i class="fa-solid fa-chevron-left"></i></button><div class="flex-1 min-w-0 text-center relative"><p id="gallery-day-count" class="text-[11px] font-bold text-primary mb-1">DAY 1 / 20</p><button id="gallery-calendar-toggle" type="button" class="glass-input rounded-xl px-4 py-2 text-sm font-semibold w-full max-w-[220px] mx-auto flex items-center justify-center gap-2" aria-haspopup="dialog" aria-expanded="false"><i class="fa-regular fa-calendar"></i><span id="gallery-date-display">2026-08-10</span></button><p id="gallery-date-label" class="text-xs text-on-surface-variant mt-1"></p><div id="gallery-calendar-popover" style="background-color:#ffffff" class="hidden absolute z-[70] top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,560px)] rounded-[1.5rem] border border-outline-variant p-4 text-left shadow-xl"><div id="gallery-calendar-months"></div></div></div><button id="gallery-next-day" type="button" class="icon-glass w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" aria-label="다음 날짜"><i class="fa-solid fa-chevron-right"></i></button></div></section>
-      <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="gallery-type-tabs"><button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>말씀묵상</button><button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>기도</button></div>
+      <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="gallery-type-tabs"><button id="gallery-type-word" type="button" data-gallery-type-tab="word" class="nav-pill-active rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-book-bible mr-1.5"></i>말씀묵상</button><button id="gallery-type-pray" type="button" data-gallery-type-tab="pray" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors"><i class="fa-solid fa-hands-praying mr-1.5"></i>기도</button></div>
       <section class="mb-7"><div id="gallery-active-grid" class="gallery-swipe-grid"></div></section><nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
     </section>
 
@@ -155,7 +155,7 @@
 <script src="assets/js/profile-avatar.js?v=4"></script>
 <script src="assets/js/public-home.js?v=8"></script>
 <script>window.IS_ADMIN_CONSOLE = false;</script>
-<script src="assets/js/gallery.js?v=26"></script>
+<script src="assets/js/gallery.js?v=27"></script>
 <script src="assets/js/admin.js?v=33"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
