@@ -111,7 +111,7 @@ function renderPublicHomeVerse(verse) {
 async function loadPublicHome() {
   const [rankingRes, messageRes, verseRes] = await Promise.all([
     window.supabaseClient.rpc('get_home_rankings'),
-    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, expires_at').order('created_at', { ascending: false }).limit(10),
+    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, expires_at, is_active').order('created_at', { ascending: false }).limit(10),
     window.supabaseClient.from('home_bible_verses').select('id, reference, verse_text, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
@@ -123,8 +123,14 @@ async function loadPublicHome() {
     ? await window.getPublicProfileCards((rankingRes.data || []).map((row) => row.user_id))
     : {};
   publicHomeAvatarUrls = Object.fromEntries(Object.entries(publicHomeProfiles).map(([id, profile]) => [id, profile.avatarUrl || '']));
+  const now = new Date();
+  const visibleMessages = (messageRes.data || []).filter((message) =>
+    message.is_active !== false
+    && (!message.expires_at || new Date(message.expires_at) > now)
+    && (!message.recipient_user_id || message.recipient_user_id === publicHomeCurrentUserId)
+  );
   renderPublicHomeRankings(rankingRes.data || []);
-  renderPublicHomeMessages(messageRes.data || []);
+  renderPublicHomeMessages(visibleMessages);
   renderPublicHomeVerse(verseRes.data || null);
 
   const refreshed = document.getElementById('home-last-refreshed');
