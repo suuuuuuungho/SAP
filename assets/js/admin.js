@@ -837,6 +837,54 @@ async function adminSendBulkStudentReports() {
   await adminLoadSmsLogs();
 }
 
+async function adminExportStudentReportLinks() {
+  if (typeof XLSX === 'undefined') { adminShowStatus('엑셀 내보내기 라이브러리를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.', true); return; }
+  const rows = adminDashboardRows;
+  if (!rows.length) { adminShowStatus('내보낼 학생이 없습니다.', true); return; }
+  if (!confirm(`학생 ${rows.length}명의 개인 리포트 링크를 새로 생성해서 엑셀로 내보낼까요?`)) return;
+
+  const button = document.getElementById('admin-dashboard-export-excel');
+  const original = button?.innerHTML || '';
+  if (button) { button.disabled = true; button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>생성 중 0/${rows.length}`; }
+
+  // 문자 발송과 동일하게, 관리자가 로컬/미리보기 주소에서 실행해도 링크는 항상
+  // 실제 GitHub Pages 주소를 가리키도록 한다.
+  const siteUrl = window.APP_CONFIG?.PUBLIC_SITE_URL || ADMIN_REPORT_PUBLIC_SITE_URL;
+  const results = new Array(rows.length);
+  let cursor = 0;
+  let done = 0;
+  let failed = 0;
+  const worker = async () => {
+    while (cursor < rows.length) {
+      const index = cursor++;
+      const row = rows[index];
+      try {
+        const report = await adminCreateStudentReportLink(row.user_id);
+        const reportUrl = new URL('report.html', siteUrl);
+        reportUrl.searchParams.set('token', report.token);
+        results[index] = { 학생이름: row.name, 학년반: row.grade_class || '', 개인리포트링크: reportUrl.href };
+      } catch (error) {
+        console.error('[adminExportStudentReportLinks]', row.user_id, error);
+        results[index] = { 학생이름: row.name, 학년반: row.grade_class || '', 개인리포트링크: '링크 생성 실패' };
+        failed += 1;
+      }
+      done += 1;
+      if (button) button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>생성 중 ${done}/${rows.length}`;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, rows.length) }, worker));
+
+  const worksheet = XLSX.utils.json_to_sheet(results);
+  worksheet['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 62 }];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, '개인리포트링크');
+  const dateStr = document.getElementById('admin-dashboard-date')?.value || adminTodayDateValue();
+  XLSX.writeFile(workbook, `SAP_학생_리포트링크_${dateStr}.xlsx`);
+
+  if (button) { button.disabled = false; button.innerHTML = original; }
+  adminShowStatus(`엑셀 파일을 내려받았습니다 (성공 ${rows.length - failed}명${failed ? ` · 실패 ${failed}명` : ''}).`, failed > 0);
+}
+
 async function adminSendMissingSms(userId, missing) {
   const row = adminDashboardRows.find((item) => item.user_id === userId);
   const member = adminMembers.find((item) => item.id === userId);
@@ -922,6 +970,7 @@ function adminWireConsole() {
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
   document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
+  document.getElementById('admin-dashboard-export-excel')?.addEventListener('click', adminExportStudentReportLinks);
   document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);
   document.getElementById('admin-stat-search')?.addEventListener('input', adminRenderAllStats);
   document.getElementById('admin-stat-role')?.addEventListener('change', adminRenderAllStats);
