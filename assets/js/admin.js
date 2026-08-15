@@ -122,6 +122,12 @@ function adminDateTimeLocalValue(isoValue) {
   return local.toISOString().slice(0, 16);
 }
 
+function adminTodayDateValue() {
+  const date = new Date();
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
 function adminResetMessageForm() {
   const form = document.getElementById('admin-message-form');
   if (form) form.reset();
@@ -906,6 +912,13 @@ function adminRenderAllStats() {
 
 function adminWireConsole() {
   adminWireTabs(); adminWireMember();
+  const dashboardDateInput = document.getElementById('admin-dashboard-date');
+  if (dashboardDateInput) {
+    const today = adminTodayDateValue();
+    dashboardDateInput.value = dashboardDateInput.min && today < dashboardDateInput.min ? dashboardDateInput.min
+      : dashboardDateInput.max && today > dashboardDateInput.max ? dashboardDateInput.max
+      : today;
+  }
   document.getElementById('admin-dashboard-date')?.addEventListener('change',adminLoadDashboard);
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
   document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
