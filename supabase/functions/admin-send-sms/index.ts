@@ -14,6 +14,29 @@ async function hmac(secret: string, value: string) {
   return Array.from(new Uint8Array(result), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+function buildParentReportMessage(studentName: string, reportUrl: string): string {
+  return `${studentName} 학부모님, 안녕하세요.
+이번 SAP 1기에 신청해 주셔서 감사합니다.
+
+SAP는 “Faith is Life”, 신앙이 교회 안에만 머무는 것이 아니라 학교와 가정 등 우리의 모든 삶 속에서 이어지도록 돕기 위한 프로그램입니다.
+
+아래 링크를 통해 ${studentName} 학생의 기도·말씀·예배·공부 실천 현황과 함께, 특히 요한복음 말씀묵상 내용을 확인하실 수 있습니다.
+
+🔗 학생 개인 리포트: ${reportUrl}
+
+**모임(시험) 시간
+- 8. 22.(토) 오전 10시 30분
+- 9. 5.(토) 오전 10시 30분
+
+**말씀묵상 항목에서 사진이 등록되어 있지 않은 경우 해당 날짜의 말씀묵상을 진행하지 않은 것으로 확인해 주시면 됩니다.
+
+**사이트에서 학생 이름 옆에 표시된 @로 시작하는 단어는 학생의 아이디입니다. 학생들에게 자신의 꿈과 관련된 단어로 아이디를 정하도록 안내하였으니 참고해 주시면 감사하겠습니다.
+
+**매주 학생들의 활동 내용을 확인하여 가정에서도 함께 격려해 주시면 감사하겠습니다.
+
+학생들이 끝까지 SAP를 완주하며 교회뿐만 아니라 학교와 가정에서도 신앙으로 살아가는 힘을 기를 수 있도록 함께 응원해 주세요.`
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   const url = Deno.env.get('SUPABASE_URL')!
@@ -83,7 +106,7 @@ Deno.serve(async (req) => {
   const response = await fetch('https://api.solapi.com/messages/v4/send', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `HMAC-SHA256 apiKey=${apiKey}, date=${stamp}, salt=${salt}, signature=${signature}` },
     body: JSON.stringify({ message: { to, from: sender, text: mode === 'report'
-      ? `[SAP] ${member.name} 학생의 개인 활동 리포트입니다.\n${parsedReportUrl!.href}`
+      ? buildParentReportMessage(member.name, parsedReportUrl!.href)
       : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` } }),
   })
   if (!response.ok) {
