@@ -7,10 +7,13 @@ let adminMessages = [];
 const ADMIN_REPORT_PUBLIC_SITE_URL = 'https://suuuuuuungho.github.io/SAP/';
 
 const ADMIN_FEATURE_STRUCTURE = [
-  { key: 'board', title: 'Board', description: '전체 이용자가 보는 소식과 랭킹 탭', icon: 'fa-solid fa-clipboard-list', children: [
+  { key: 'board', title: 'Board', description: '전체 이용자가 보는 소식 탭', icon: 'fa-solid fa-clipboard-list', children: [
     { key: 'board_messages', title: 'Board Message', description: '전체 공지와 개인 메시지를 표시합니다.' },
-    { key: 'board_verse', title: '오늘의 말씀', description: '관리자가 등록한 성경 말씀을 상단에 표시합니다.' },
-    { key: 'ranking', title: '실시간 랭킹', description: '활동 시간 기준 상위 이용자를 표시합니다.' }
+    { key: 'board_verse', title: '오늘의 말씀', description: '관리자가 등록한 성경 말씀을 상단에 표시합니다.' }
+  ] },
+  { key: 'hall_of_fame', title: 'Hall of Fame', description: '전체 이용자가 보는 랭킹 탭', icon: 'fa-solid fa-trophy', children: [
+    { key: 'ranking', title: '전체 누적 랭킹', description: '운영기간 전체 누적 활동 시간 기준 상위 이용자를 표시합니다.' },
+    { key: 'ranking_weekly', title: '주차별 랭킹', description: 'Week1~4 탭으로 나눈 주차별 랭킹을 표시합니다.' }
   ] },
   { key: 'mypage', title: 'MyPage', description: '개인의 일별 인증과 활동 기록 탭', icon: 'fa-solid fa-user', children: [
     { key: 'pray', title: '기도 인증', description: '기도 시간과 인증 사진을 기록합니다.' },

@@ -5,6 +5,7 @@
 
 const NAV_ITEMS = [
   { id: 'public-home', label: 'Board', href: 'home.html', icon: 'fa-solid fa-clipboard-list' },
+  { id: 'hall-of-fame', label: 'Hall of Fame', href: 'hall-of-fame.html', icon: 'fa-solid fa-trophy' },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
@@ -193,13 +194,15 @@ async function applyFeatureFlags(activePage) {
   if (error) return; // 관리자 스키마 적용 전에는 기존 기능을 그대로 유지합니다.
   const flags = Object.fromEntries((data || []).map((item) => [item.feature_key, item.is_enabled]));
   window.APP_FEATURE_FLAGS = flags;
-  const pageFeature = { 'public-home': 'board', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[activePage];
+  const pageFeature = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[activePage];
   NAV_ITEMS.forEach((item) => {
-    const key = { 'public-home': 'board', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[item.id];
+    const key = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[item.id];
     if (key && flags[key] === false) document.querySelectorAll(`a[href="${item.href}"]`).forEach((link) => { link.classList.add('hidden'); link.style.display = 'none'; });
   });
   const hideClosest = (selector, key) => { if (flags[key] === false) document.querySelector(selector)?.closest('section')?.classList.add('hidden'); };
-  hideClosest('#home-message-list', 'board_messages'); hideClosest('#home-ranking-grid', 'ranking'); hideClosest('#home-verse-text', 'board_verse');
+  hideClosest('#home-message-list', 'board_messages'); hideClosest('#home-verse-text', 'board_verse');
+  hideClosest('#hof-ranking-grid', 'ranking');
+  if (flags.ranking_weekly === false) document.querySelectorAll('[data-hof-tab]:not([data-hof-tab="total"])').forEach((btn) => btn.classList.add('hidden'));
   if (flags.pray === false) document.getElementById('widget-pray')?.classList.add('hidden');
   if (flags.word === false) document.getElementById('widget-word')?.classList.add('hidden');
   if (flags.study_timer === false) document.getElementById('widget-study')?.classList.add('hidden');
@@ -237,6 +240,7 @@ function renderApp({ activePage }) {
   if (window.initAuthUI) window.initAuthUI();
   if (window.initHomeWidgets) window.initHomeWidgets();
   if (window.initPublicHomeWidgets) window.initPublicHomeWidgets();
+  if (window.initHallOfFameWidgets) window.initHallOfFameWidgets();
   if (window.initStudyWidgets) window.initStudyWidgets();
   if (window.initGalleryWidgets) window.initGalleryWidgets();
   if (window.initStatWidgets) window.initStatWidgets();

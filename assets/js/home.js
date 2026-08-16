@@ -456,13 +456,21 @@ function renderSelectedDateLabel() {
   if (resetBtn) resetBtn.classList.toggle('hidden', selectedDateKey === todayKey());
 }
 
+function isWeekendDate(d) {
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
+
 function calendarCellHTML(d, { isToday, isSelected }) {
+  const weekend = isWeekendDate(d);
   const filled = isSelected
     ? 'bg-gradient-to-br from-primary-container to-tertiary-container text-on-primary font-bold'
     : isToday
       ? 'ring-2 ring-primary text-on-surface font-semibold'
-      : 'text-on-surface';
-  return { filled };
+      : weekend
+        ? 'text-outline-variant'
+        : 'text-on-surface';
+  return { filled, weekend };
 }
 
 function renderCalendarStrip() {
@@ -488,7 +496,7 @@ function renderCalendarStrip() {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + offset);
     const key = dateKey(d);
-    const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
+    const { filled, weekend } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
 
     const weekdayLabel = offset < 7
       ? `<span class="text-[10px] font-semibold ${key === todayKeyValue ? 'text-primary' : 'text-on-surface-variant'}">${dayNames[d.getDay()]}</span>`
@@ -496,8 +504,9 @@ function renderCalendarStrip() {
 
     const cell = document.createElement('button');
     cell.type = 'button';
-    cell.className = 'calendar-day-cell flex flex-col items-center gap-2';
+    cell.className = `calendar-day-cell flex flex-col items-center gap-2${weekend ? ' opacity-40 cursor-not-allowed' : ''}`;
     cell.dataset.dateKey = key;
+    if (weekend) cell.disabled = true;
     cell.innerHTML = `
       ${weekdayLabel}
       <span class="w-9 h-9 flex items-center justify-center rounded-full text-sm ${filled}">${d.getDate()}</span>
@@ -534,12 +543,13 @@ function renderMonthlyCalendar() {
   for (let date = 1; date <= daysInMonth; date += 1) {
     const d = new Date(year, month, date);
     const key = dateKey(d);
-    const { filled } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
+    const { filled, weekend } = calendarCellHTML(d, { isToday: key === todayKeyValue, isSelected: key === selectedDateKey });
 
     const cell = document.createElement('button');
     cell.type = 'button';
-    cell.className = 'calendar-day-cell flex items-center justify-center py-1';
+    cell.className = `calendar-day-cell flex items-center justify-center py-1${weekend ? ' opacity-40 cursor-not-allowed' : ''}`;
     cell.dataset.dateKey = key;
+    if (weekend) cell.disabled = true;
     cell.innerHTML = `<span class="w-8 h-8 flex items-center justify-center rounded-full text-sm ${filled}">${date}</span>`;
     grid.appendChild(cell);
   }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Board - SAP 1기</title>
+<title>Hall of Fame - SAP 1기</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <script src="assets/js/tailwind-config.js"></script>
@@ -14,28 +14,25 @@
 <template id="page-content">
   <div class="flex flex-wrap items-end justify-between gap-3 mb-8 lg:mb-10">
     <div>
-      <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Board</h1>
+      <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Hall of Fame</h1>
+      <p class="text-sm text-on-surface-variant mt-1">기도 · 공부 · 말씀 · 예배 활동 랭킹</p>
     </div>
     <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
       <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-quaternary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-quaternary"></span></span>
-      <span id="home-last-refreshed">실시간 집계</span>
+      <span id="hof-last-refreshed">실시간 집계</span>
     </div>
   </div>
 
-  <section class="glass-panel rounded-[2rem] p-6 sm:p-8 mb-6 overflow-hidden relative">
-    <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-secondary-container/30 blur-2xl"></div>
-    <div class="relative">
-      <p id="home-verse-reference" class="text-xs font-bold text-secondary mb-3">오늘의 말씀</p>
-      <blockquote id="home-verse-text" class="text-xl sm:text-2xl font-semibold leading-relaxed max-w-3xl">관리자가 등록한 성경구절이 여기에 표시됩니다.</blockquote>
-    </div>
-  </section>
+  <div class="glass-panel rounded-full p-1 flex flex-wrap text-sm font-semibold mb-8 w-fit" id="hof-tabs">
+    <button type="button" data-hof-tab="total" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">전체누적</button>
+    <button type="button" data-hof-tab="1" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week1</button>
+    <button type="button" data-hof-tab="2" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week2</button>
+    <button type="button" data-hof-tab="3" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week3</button>
+    <button type="button" data-hof-tab="4" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week4</button>
+  </div>
 
   <section class="mb-16">
-    <div class="flex items-center gap-2 mb-3">
-      <h2 class="text-lg font-bold">Board</h2>
-      <i class="fa-solid fa-bullhorn text-primary text-sm"></i>
-    </div>
-    <div id="home-message-list" class="flex flex-col gap-3"></div>
+    <div id="hof-ranking-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
   </section>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -45,10 +42,10 @@
 <script src="assets/js/auth.js?v=9"></script>
 <script src="assets/js/layout.js?v=18"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
-<script src="assets/js/public-home.js?v=9"></script>
+<script src="assets/js/hall-of-fame.js?v=1"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
-    if (await requireAuth()) renderApp({ activePage: 'public-home' });
+    if (await requireAuth()) renderApp({ activePage: 'hall-of-fame' });
   });
 </script>
 </body>
