@@ -9,11 +9,26 @@ const HOF_RANKING_META = {
   word: { title: 'Word', description: '누적 말씀 묵상 시간', icon: 'fa-solid fa-book-bible', accent: 'text-secondary' }
 };
 
+const HOF_PROGRAM_START = '2026-08-10';
+const HOF_PROGRAM_END = '2026-09-06';
+
 let hofCurrentUserId = null;
 let hofRefreshTimer = null;
 let hofAvatarUrls = {};
 let hofProfiles = {};
 let hofActiveTab = 'total';
+
+// 오늘 날짜가 속한 주차를 기본 탭으로 연다 (예: 8/18 -> Week2). 운영기간 시작 전이면
+// Week1, 운영기간이 끝났으면 전체누적을 기본으로 보여준다.
+function hofDefaultTab() {
+  const now = new Date();
+  const todayKey = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  if (todayKey < HOF_PROGRAM_START) return '1';
+  if (todayKey > HOF_PROGRAM_END) return 'total';
+  const diffDays = Math.round((new Date(`${todayKey}T00:00:00`) - new Date(`${HOF_PROGRAM_START}T00:00:00`)) / 86400000);
+  const week = Math.floor(diffDays / 7) + 1;
+  return String(Math.max(1, Math.min(4, week)));
+}
 
 function hofEscape(value) {
   return String(value == null ? '' : value)
@@ -97,17 +112,20 @@ async function refreshHofActiveTab() {
   if (refreshed) refreshed.textContent = `${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트`;
 }
 
+function applyHofTabStyles() {
+  document.querySelectorAll('[data-hof-tab]').forEach((btn) => {
+    const active = btn.dataset.hofTab === hofActiveTab;
+    btn.classList.toggle('nav-pill-active', active);
+    btn.classList.toggle('text-on-surface-variant', !active);
+  });
+}
+
 function wireHofTabs() {
-  const tabs = [...document.querySelectorAll('[data-hof-tab]')];
-  tabs.forEach((btn) => {
+  document.querySelectorAll('[data-hof-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.dataset.hofTab === hofActiveTab) return;
       hofActiveTab = btn.dataset.hofTab;
-      tabs.forEach((b) => {
-        const active = b === btn;
-        b.classList.toggle('nav-pill-active', active);
-        b.classList.toggle('text-on-surface-variant', !active);
-      });
+      applyHofTabStyles();
       refreshHofActiveTab();
     });
   });
@@ -116,6 +134,8 @@ function wireHofTabs() {
 async function initHallOfFameWidgets() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();
   hofCurrentUserId = session ? session.user.id : null;
+  hofActiveTab = hofDefaultTab();
+  applyHofTabStyles();
   wireHofTabs();
   await refreshHofActiveTab();
   if (hofRefreshTimer) clearInterval(hofRefreshTimer);

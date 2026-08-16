@@ -24,11 +24,11 @@
   </div>
 
   <div class="glass-panel rounded-full p-1 flex flex-wrap text-sm font-semibold mb-8 w-fit" id="hof-tabs">
-    <button type="button" data-hof-tab="total" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">전체누적</button>
     <button type="button" data-hof-tab="1" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week1</button>
     <button type="button" data-hof-tab="2" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week2</button>
     <button type="button" data-hof-tab="3" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week3</button>
     <button type="button" data-hof-tab="4" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">Week4</button>
+    <button type="button" data-hof-tab="total" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">전체누적</button>
   </div>
 
   <section class="mb-16">
@@ -42,7 +42,7 @@
 <script src="assets/js/auth.js?v=9"></script>
 <script src="assets/js/layout.js?v=18"></script>
 <script src="assets/js/profile-avatar.js?v=4"></script>
-<script src="assets/js/hall-of-fame.js?v=1"></script>
+<script src="assets/js/hall-of-fame.js?v=2"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'hall-of-fame' });
