@@ -5,7 +5,10 @@
 
 const NAV_ITEMS = [
   { id: 'public-home', label: 'Board', href: 'home.html', icon: 'fa-solid fa-clipboard-list' },
-  { id: 'hall-of-fame', label: 'Hall of Fame', href: 'hall-of-fame.html', icon: 'fa-solid fa-trophy' },
+  // shared: true -> 학생/교사/관리자 등급과 무관하게 항상 보인다 (auth.js의
+  // [data-member-nav] 숨김 로직 대상에서 제외). 다른 항목은 관리자/교사 등급이면
+  // 숨겨지는 게 기존 의도된 동작이라 그대로 둔다.
+  { id: 'hall-of-fame', label: 'Hall of Fame', href: 'hall-of-fame.html', icon: 'fa-solid fa-trophy', shared: true },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
@@ -34,7 +37,7 @@ const OFFCANVAS_HIDDEN = '-translate-x-[120%]';
 function navLinkFull(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40';
-  const visibilityAttr = item.adminOnly ? 'data-admin-only' : 'data-member-nav';
+  const visibilityAttr = item.shared ? '' : (item.adminOnly ? 'data-admin-only' : 'data-member-nav');
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
     <a href="${item.href}" ${visibilityAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
@@ -46,7 +49,7 @@ function navLinkFull(item, activePage) {
 function navLinkIcon(item, activePage) {
   const isActive = item.id === activePage;
   const activeCls = isActive ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40';
-  const visibilityAttr = item.adminOnly ? 'data-admin-only' : 'data-member-nav';
+  const visibilityAttr = item.shared ? '' : (item.adminOnly ? 'data-admin-only' : 'data-member-nav');
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
     <a href="${item.href}" aria-label="${item.label}" ${visibilityAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
