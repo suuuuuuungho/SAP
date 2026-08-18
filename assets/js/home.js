@@ -216,13 +216,13 @@ function legacyRenderVerificationOverviewV2() {
 function verificationOverviewCellHTML(key, category) {
   const labels = { pray: '\uAE30\uB3C4', word: '\uB9D0\uC500', study: '\uACF5\uBD80', worship: '\uC608\uBC30' };
   if (category === 'worship' && !isWorshipDayActive(key)) {
-    return '<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl bg-surface-low text-[11px] font-semibold text-outline">\uD574\uB2F9 \uC5C6\uC74C</span>';
+    return '<span class="inline-flex items-center justify-center w-full min-h-8 sm:min-h-9 rounded-lg sm:rounded-xl px-0.5 text-center text-[9px] sm:text-[11px] leading-tight font-semibold text-outline bg-surface-low">\uD574\uB2F9 \uC5C6\uC74C</span>';
   }
   const verified = !!getMergedProgress(key)[category];
   if (verified) {
-    return `<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl px-2 text-xs font-bold bg-quaternary/10 text-quaternary" aria-label="${key} ${labels[category]} \uC778\uC99D \uC644\uB8CC"><i class="fa-solid fa-check mr-1" aria-hidden="true"></i>\uC644\uB8CC</span>`;
+    return `<span class="inline-flex items-center justify-center w-full min-h-8 sm:min-h-9 rounded-lg sm:rounded-xl px-0.5 sm:px-2 text-center text-[9px] sm:text-xs leading-tight font-bold bg-quaternary/10 text-quaternary" aria-label="${key} ${labels[category]} \uC778\uC99D \uC644\uB8CC"><i class="fa-solid fa-check mr-0.5 sm:mr-1 text-[8px] sm:text-xs" aria-hidden="true"></i>\uC644\uB8CC</span>`;
   }
-  return `<button type="button" data-overview-date="${key}" data-overview-category="${category}" class="w-full min-h-9 rounded-xl px-2 text-xs font-bold transition-all bg-error/10 text-error hover:bg-error hover:text-white" aria-label="${key} ${labels[category]} \uBBF8\uC778\uC99D, \uC778\uC99D\uD558\uAE30"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>\uBBF8\uC778\uC99D</button>`;
+  return `<button type="button" data-overview-date="${key}" data-overview-category="${category}" class="inline-flex items-center justify-center w-full min-h-8 sm:min-h-9 rounded-lg sm:rounded-xl px-0.5 sm:px-2 text-center text-[9px] sm:text-xs leading-tight font-bold transition-all bg-error/10 text-error hover:bg-error hover:text-white" aria-label="${key} ${labels[category]} \uBBF8\uC778\uC99D, \uC778\uC99D\uD558\uAE30"><i class="fa-solid fa-plus mr-0.5 sm:mr-1 text-[8px] sm:text-xs" aria-hidden="true"></i>\uBBF8\uC778\uC99D</button>`;
 }
 
 function renderVerificationOverview() {
@@ -239,13 +239,13 @@ function renderVerificationOverview() {
   const categoryLabels = ['\uAE30\uB3C4', '\uB9D0\uC500', '\uACF5\uBD80', '\uC608\uBC30'];
   const completedDays = days.filter((key) => getActiveCategoriesForDate(key).every((category) => getMergedProgress(key)[category])).length;
   if (summary) summary.textContent = `${completedDays} / ${days.length}\uC77C \uC644\uB8CC`;
-  wrap.innerHTML = `<div class="grid grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-2 items-center">
-    <span class="text-[11px] font-bold text-on-surface-variant px-2">\uB0A0\uC9DC</span>
-    ${categoryLabels.map((label) => `<span class="text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
+  wrap.innerHTML = `<div class="grid grid-cols-[54px_repeat(4,minmax(0,1fr))] sm:grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-1 sm:gap-2 items-center w-full">
+    <span class="text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant">\uB0A0\uC9DC</span>
+    ${categoryLabels.map((label) => `<span class="text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
     ${days.map((key) => {
       const date = new Date(`${key}T12:00:00`);
       const selected = key === selectedDateKey;
-      return `<button type="button" data-overview-select-date="${key}" class="text-left rounded-xl px-2 py-2 transition-colors ${selected ? 'bg-primary/10 text-primary' : 'hover:bg-surface-low'}"><span class="block text-xs font-bold">${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-on-surface-variant">${weekdays[date.getDay()]}\uC694\uC77C</span></button>
+      return `<button type="button" data-overview-select-date="${key}" class="text-center rounded-lg sm:rounded-xl px-0.5 sm:px-2 py-1.5 sm:py-2 transition-colors ${selected ? 'bg-primary/10 text-primary' : 'hover:bg-surface-low'}"><span class="block text-[10px] sm:text-xs leading-tight font-bold">${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}</span><span class="block text-[9px] sm:text-[10px] leading-tight text-on-surface-variant">${weekdays[date.getDay()]}\uC694\uC77C</span></button>
         ${['pray', 'word', 'study', 'worship'].map((category) => verificationOverviewCellHTML(key, category)).join('')}`;
     }).join('')}
   </div>`;
