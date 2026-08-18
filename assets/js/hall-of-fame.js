@@ -39,10 +39,21 @@ function hofDefaultTab() {
 function hofGrowthPeriod() {
   const now = new Date();
   const localToday = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  if (localToday < HOF_PROGRAM_START) return { week: 1, elapsed: 1 };
+  if (localToday < HOF_PROGRAM_START) return { week: 1, elapsed: 1, beforeStart: true, afterEnd: false };
   const clamped = localToday > HOF_PROGRAM_END ? HOF_PROGRAM_END : localToday;
   const diffDays = Math.floor((new Date(`${clamped}T12:00:00`) - new Date(`${HOF_PROGRAM_START}T12:00:00`)) / 86400000);
-  return { week: Math.max(1, Math.min(4, Math.floor(diffDays / 7) + 1)), elapsed: Math.max(1, Math.min(5, (diffDays % 7) + 1)) };
+  return { week: Math.max(1, Math.min(4, Math.floor(diffDays / 7) + 1)), elapsed: Math.max(1, Math.min(5, (diffDays % 7) + 1)), beforeStart: false, afterEnd: localToday > HOF_PROGRAM_END };
+}
+
+function hofPeriodForActiveTab(currentPeriod) {
+  if (hofActiveTab === 'total') return { ...currentPeriod, isFuture: false };
+  const selectedWeek = Number(hofActiveTab);
+  const isFuture = currentPeriod.beforeStart || (!currentPeriod.afterEnd && selectedWeek > currentPeriod.week);
+  return {
+    week: selectedWeek,
+    elapsed: selectedWeek === currentPeriod.week ? currentPeriod.elapsed : 5,
+    isFuture
+  };
 }
 
 function hofEscape(value) {
@@ -91,9 +102,13 @@ function hofRankingRows(rows, category) {
   }).join('');
 }
 
-function renderHofRankings(rows) {
+function renderHofRankings(rows, period) {
   const wrap = document.getElementById('hof-ranking-grid');
   if (!wrap) return;
+  if (period.isFuture) {
+    wrap.innerHTML = `<div class="glass-card rounded-[1.5rem] p-10 text-center lg:col-span-2"><i class="fa-regular fa-calendar-xmark text-3xl text-on-surface-variant mb-3"></i><p class="font-bold">Week ${period.week}는 아직 시작 전이에요</p><p class="text-xs text-on-surface-variant mt-1">해당 주차가 시작되면 랭킹이 표시됩니다.</p></div>`;
+    return;
+  }
   wrap.innerHTML = ['total', 'pray', 'study', 'word'].map((category) => {
     const meta = HOF_RANKING_META[category];
     return `
@@ -133,8 +148,14 @@ function hofGrowthRows(rows, category, comparison) {
 function renderHofGrowth(rows, period) {
   const wrap = document.getElementById('hof-growth-grid');
   const periodEl = document.getElementById('hof-growth-period');
-  if (periodEl) periodEl.innerHTML = `<i class="fa-regular fa-calendar mr-1.5 text-primary"></i>Week ${period.week} · ${period.elapsed}일차 기준`;
+  if (periodEl) periodEl.innerHTML = period.isFuture
+    ? `<i class="fa-regular fa-calendar mr-1.5 text-primary"></i>Week ${period.week} · 시작 전`
+    : `<i class="fa-regular fa-calendar mr-1.5 text-primary"></i>Week ${period.week} · ${period.elapsed}일차 기준`;
   if (!wrap) return;
+  if (period.isFuture) {
+    wrap.innerHTML = `<div class="glass-card rounded-[1.5rem] p-10 text-center xl:col-span-2"><i class="fa-solid fa-hourglass-start text-3xl text-on-surface-variant mb-3"></i><p class="font-bold">아직 성장률을 집계하지 않아요</p><p class="text-xs text-on-surface-variant mt-1">Week ${period.week}가 시작된 뒤 성장 랭킹이 표시됩니다.</p></div>`;
+    return;
+  }
   if (period.week <= 1) {
     wrap.innerHTML = '<div class="glass-card rounded-[1.5rem] p-10 text-center xl:col-span-2"><i class="fa-solid fa-seedling text-3xl text-quaternary mb-3"></i><p class="font-bold">성장 데이터를 쌓는 중이에요</p><p class="text-xs text-on-surface-variant mt-1">Week 2부터 지난주 및 첫 주 대비 성장 랭킹이 표시됩니다.</p></div>';
     return;
@@ -152,13 +173,14 @@ function renderHofGrowth(rows, period) {
 }
 
 async function loadHofGrowthRows(period) {
-  if (period.week <= 1) return [];
+  if (period.isFuture || period.week <= 1) return [];
   const { data, error } = await window.supabaseClient.rpc('get_hof_growth_rankings', { week_no: period.week, elapsed_weekdays: period.elapsed });
   if (error) { console.error('[hall-of-fame] growth rankings', error); return []; }
   return data || [];
 }
 
-async function loadHofTabRows(tab) {
+async function loadHofTabRows(tab, period) {
+  if (period.isFuture) return [];
   const { data, error } = tab === 'total'
     ? await window.supabaseClient.rpc('get_home_rankings')
     : await window.supabaseClient.rpc('get_home_rankings_by_week', { week_no: Number(tab) });
@@ -167,12 +189,13 @@ async function loadHofTabRows(tab) {
 }
 
 async function refreshHofActiveTab() {
-  const growthPeriod = hofGrowthPeriod();
-  const [rows, growthRows] = await Promise.all([loadHofTabRows(hofActiveTab), loadHofGrowthRows(growthPeriod)]);
+  const currentPeriod = hofGrowthPeriod();
+  const growthPeriod = hofPeriodForActiveTab(currentPeriod);
+  const [rows, growthRows] = await Promise.all([loadHofTabRows(hofActiveTab, growthPeriod), loadHofGrowthRows(growthPeriod)]);
   const profileIds = [...new Set([...rows, ...growthRows].map((row) => row.user_id))];
   hofProfiles = window.getPublicProfileCards ? await window.getPublicProfileCards(profileIds) : {};
   hofAvatarUrls = Object.fromEntries(Object.entries(hofProfiles).map(([id, profile]) => [id, profile.avatarUrl || '']));
-  renderHofRankings(rows);
+  renderHofRankings(rows, growthPeriod);
   renderHofGrowth(growthRows, growthPeriod);
   const refreshed = document.getElementById('hof-last-refreshed');
   if (refreshed) refreshed.textContent = `${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 업데이트`;
