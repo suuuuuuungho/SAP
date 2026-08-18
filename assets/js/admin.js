@@ -546,7 +546,7 @@ async function loadCommentTable() {
 function commentTableCellHTML(userId, dateKey) {
   const key = commentCellKey(userId, dateKey);
   if (!commentTableWordMap[key]) return '<span class="text-outline-variant">–</span>';
-  if (commentTableThreadCounts[key]) return '<span class="inline-flex w-6 h-6 rounded-full bg-quaternary/15 text-quaternary items-center justify-center" title="댓글 완료"><i class="fa-solid fa-check text-[11px]"></i></span>';
+  if (commentTableThreadCounts[key]) return `<button type="button" data-comment-jump-user="${userId}" data-comment-jump-date="${dateKey}" class="inline-flex w-6 h-6 rounded-full bg-quaternary/15 text-quaternary hover:bg-quaternary hover:text-white items-center justify-center transition-colors" title="댓글 보기"><i class="fa-solid fa-check text-[11px]"></i></button>`;
   return `<button type="button" data-comment-jump-user="${userId}" data-comment-jump-date="${dateKey}" class="inline-flex w-6 h-6 rounded-full bg-error/10 text-error hover:bg-error hover:text-white items-center justify-center transition-colors" title="댓글 달기"><i class="fa-solid fa-comment-dots text-[11px]"></i></button>`;
 }
 
