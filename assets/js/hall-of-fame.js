@@ -146,20 +146,19 @@ function hofGrowthRows(rows, category, comparison) {
 }
 
 function renderHofGrowth(rows, period) {
+  const section = document.getElementById('hof-growth-section');
   const wrap = document.getElementById('hof-growth-grid');
   const periodEl = document.getElementById('hof-growth-period');
+  const canShowGrowth = !period.isFuture && period.week > 1;
+  if (section) section.classList.toggle('hidden', !canShowGrowth);
+  if (!canShowGrowth) {
+    if (wrap) wrap.innerHTML = '';
+    return;
+  }
   if (periodEl) periodEl.innerHTML = period.isFuture
     ? `<i class="fa-regular fa-calendar mr-1.5 text-primary"></i>Week ${period.week} · 시작 전`
     : `<i class="fa-regular fa-calendar mr-1.5 text-primary"></i>Week ${period.week} · ${period.elapsed}일차 기준`;
   if (!wrap) return;
-  if (period.isFuture) {
-    wrap.innerHTML = `<div class="glass-card rounded-[1.5rem] p-10 text-center xl:col-span-2"><i class="fa-solid fa-hourglass-start text-3xl text-on-surface-variant mb-3"></i><p class="font-bold">아직 성장률을 집계하지 않아요</p><p class="text-xs text-on-surface-variant mt-1">Week ${period.week}가 시작된 뒤 성장 랭킹이 표시됩니다.</p></div>`;
-    return;
-  }
-  if (period.week <= 1) {
-    wrap.innerHTML = '<div class="glass-card rounded-[1.5rem] p-10 text-center xl:col-span-2"><i class="fa-solid fa-seedling text-3xl text-quaternary mb-3"></i><p class="font-bold">성장 데이터를 쌓는 중이에요</p><p class="text-xs text-on-surface-variant mt-1">Week 2부터 지난주 및 첫 주 대비 성장 랭킹이 표시됩니다.</p></div>';
-    return;
-  }
   wrap.innerHTML = HOF_GROWTH_CATEGORIES.map((category) => {
     const meta = HOF_GROWTH_META[category];
     return `<article class="glass-card rounded-[1.5rem] p-4 sm:p-5 overflow-hidden">
@@ -202,8 +201,15 @@ async function refreshHofActiveTab() {
 }
 
 function applyHofTabStyles() {
+  const currentPeriod = hofGrowthPeriod();
   document.querySelectorAll('[data-hof-tab]').forEach((btn) => {
     const active = btn.dataset.hofTab === hofActiveTab;
+    const selectedWeek = Number(btn.dataset.hofTab);
+    const isFutureWeek = Number.isFinite(selectedWeek) && !currentPeriod.afterEnd && selectedWeek > currentPeriod.week;
+    btn.disabled = isFutureWeek;
+    btn.setAttribute('aria-disabled', String(isFutureWeek));
+    btn.classList.toggle('opacity-35', isFutureWeek);
+    btn.classList.toggle('cursor-not-allowed', isFutureWeek);
     btn.classList.toggle('nav-pill-active', active);
     btn.classList.toggle('text-on-surface-variant', !active);
   });
@@ -212,7 +218,7 @@ function applyHofTabStyles() {
 function wireHofTabs() {
   document.querySelectorAll('[data-hof-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (btn.dataset.hofTab === hofActiveTab) return;
+      if (btn.disabled || btn.dataset.hofTab === hofActiveTab) return;
       hofActiveTab = btn.dataset.hofTab;
       applyHofTabStyles();
       refreshHofActiveTab();
