@@ -5,6 +5,7 @@ let adminUsers = [];
 let adminEditingMessageId = null;
 let adminMessages = [];
 const ADMIN_REPORT_PUBLIC_SITE_URL = 'https://suuuuuuungho.github.io/SAP/';
+const ADMIN_MESSAGE_SENDER_ROLES = new Set(['admin', 'teacher', 'pastor', 'department_head', 'secretary']);
 
 const ADMIN_FEATURE_STRUCTURE = [
   { key: 'board', title: 'Board', description: '전체 이용자가 보는 소식 탭', icon: 'fa-solid fa-clipboard-list', children: [
@@ -84,7 +85,7 @@ async function adminLoadUsers() {
   adminUsers = data || [];
   const select = document.getElementById('admin-message-recipient');
   if (!select) return;
-  select.innerHTML = '<option value="">전체 가입자</option>' + adminUsers.map((user) =>
+  select.innerHTML = '<option value="">받는 사람을 선택하세요</option>' + adminUsers.map((user) =>
     `<option value="${user.id}">${adminEscape(user.name)} (@${adminEscape(user.username)})</option>`
   ).join('');
 }
@@ -101,13 +102,20 @@ async function adminLoadMessages() {
   adminMessages = data || [];
   const wrap = document.getElementById('admin-message-list');
   if (!wrap) return;
-  wrap.innerHTML = adminMessages.length ? adminMessages.map((message) => `
+  const now = new Date();
+  wrap.innerHTML = adminMessages.length ? adminMessages.map((message) => {
+    const startsAt = new Date(message.starts_at || message.created_at);
+    const expiresAt = message.expires_at ? new Date(message.expires_at) : null;
+    const timingLabel = startsAt > now ? '예약' : expiresAt && expiresAt <= now ? '종료' : '게시 중';
+    const timingClass = startsAt > now ? 'bg-secondary/10 text-secondary' : expiresAt && expiresAt <= now ? 'bg-surface-container text-on-surface-variant' : 'bg-quaternary/10 text-quaternary';
+    return `
     <article class="glass-card rounded-2xl p-4 ${message.is_active ? '' : 'opacity-50'}" data-message-id="${message.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p class="text-[11px] font-bold text-secondary mb-1">${adminEscape(adminRecipientLabel(message.recipient_user_id))}</p>
+          <div class="flex flex-wrap items-center gap-1.5 mb-1"><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}">${message.recipient_user_id ? '개인 메시지' : '전체 공지'}</span><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${timingClass}">${timingLabel}</span></div>
+          <p class="text-[11px] font-bold text-secondary mb-1">${adminEscape(adminRecipientLabel(message.recipient_user_id))} · ${adminEscape(adminMessageSenderLabel(message.sender_user_id || message.created_by))} 선생님</p>
           <p class="text-sm whitespace-pre-wrap">${adminEscape(message.body)}</p>
-          <p class="text-[10px] text-on-surface-variant mt-2">${new Date(message.created_at).toLocaleString('ko-KR')}${message.expires_at ? ` · ${new Date(message.expires_at).toLocaleString('ko-KR')}까지` : ''}</p>
+          <p class="text-[10px] text-on-surface-variant mt-2">${startsAt.toLocaleString('ko-KR')}부터${message.expires_at ? ` · ${expiresAt.toLocaleString('ko-KR')}까지` : ''} · 문자 ${message.sms_status === 'scheduled' ? '예약됨' : message.sms_status === 'sent' ? '발송 접수' : message.sms_status === 'partial' ? '일부 실패' : '미접수'}</p>
         </div>
         <div class="flex gap-1 flex-shrink-0">
           <button type="button" data-action="edit" class="icon-glass w-8 h-8 rounded-full" aria-label="수정"><i class="fa-solid fa-pen text-xs"></i></button>
@@ -115,7 +123,8 @@ async function adminLoadMessages() {
           <button type="button" data-action="delete" class="icon-glass w-8 h-8 rounded-full text-error" aria-label="삭제"><i class="fa-solid fa-trash text-xs"></i></button>
         </div>
       </div>
-    </article>`).join('') : '<p class="text-sm text-on-surface-variant">등록된 메시지가 없습니다.</p>';
+    </article>`;
+  }).join('') : '<p class="text-sm text-on-surface-variant">등록된 메시지가 없습니다.</p>';
 }
 
 function adminDateTimeLocalValue(isoValue) {
@@ -135,6 +144,10 @@ function adminResetMessageForm() {
   const form = document.getElementById('admin-message-form');
   if (form) form.reset();
   adminEditingMessageId = null;
+  adminSetMessageAudience('global');
+  const starts = document.getElementById('admin-message-starts');
+  if (starts) starts.value = adminDateTimeLocalValue(new Date().toISOString());
+  adminRenderMessageSenders();
   const submit = document.getElementById('admin-message-submit');
   const cancel = document.getElementById('admin-message-edit-cancel');
   if (submit) submit.textContent = 'Board Message 전송';
@@ -145,9 +158,12 @@ function adminStartMessageEdit(messageId) {
   const message = adminMessages.find((item) => item.id === messageId);
   if (!message) return;
   adminEditingMessageId = message.id;
+  adminSetMessageAudience(message.recipient_user_id ? 'personal' : 'global');
   document.getElementById('admin-message-recipient').value = message.recipient_user_id || '';
   document.getElementById('admin-message-body').value = message.body || '';
+  document.getElementById('admin-message-starts').value = adminDateTimeLocalValue(message.starts_at || message.created_at);
   document.getElementById('admin-message-expires').value = adminDateTimeLocalValue(message.expires_at);
+  adminRenderMessageSenders(message.sender_user_id || message.created_by);
   document.getElementById('admin-message-submit').textContent = '변경 저장';
   document.getElementById('admin-message-edit-cancel').classList.remove('hidden');
   document.getElementById('admin-message-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -174,67 +190,105 @@ async function adminLoadVerses() {
 function adminWireMessageForm() {
   const form = document.getElementById('admin-message-form');
   if (!form) return;
+  document.querySelectorAll('input[name="admin-message-audience"]').forEach((input) => input.addEventListener('change', () => adminSetMessageAudience(input.value)));
+  adminResetMessageForm();
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const body = document.getElementById('admin-message-body').value.trim();
-    const recipient = document.getElementById('admin-message-recipient').value || null;
+    const audience = adminMessageAudienceValue();
+    const recipient = audience === 'personal' ? document.getElementById('admin-message-recipient').value || null : null;
+    const senderId = document.querySelector('input[name="admin-message-sender"]:checked')?.value || '';
+    const startsValue = document.getElementById('admin-message-starts').value;
     const expiresValue = document.getElementById('admin-message-expires').value;
+    const startsAt = startsValue ? new Date(startsValue) : null;
+    const expiresAt = expiresValue ? new Date(expiresValue) : null;
+    if (audience === 'personal' && !recipient) { adminShowStatus('개인 메시지를 받을 사람을 선택해주세요.', true); return; }
+    if (!senderId) { adminShowStatus('문자 발신자를 선택해주세요.', true); return; }
+    if (!startsAt || Number.isNaN(startsAt.getTime())) { adminShowStatus('시작 시각을 확인해주세요.', true); return; }
+    if (expiresAt && expiresAt <= startsAt) { adminShowStatus('종료 시각은 시작 시각보다 늦어야 합니다.', true); return; }
+    const sixMonthsLater = new Date(); sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    if (startsAt > sixMonthsLater) { adminShowStatus('문자 예약은 현재부터 최대 6개월 이내로 설정해주세요.', true); return; }
     const payload = {
       recipient_user_id: recipient,
       body,
-      expires_at: expiresValue ? new Date(expiresValue).toISOString() : null
+      starts_at: startsAt.toISOString(),
+      expires_at: expiresAt ? expiresAt.toISOString() : null,
+      sender_user_id: senderId
     };
     const wasEditing = !!adminEditingMessageId;
+    const previousMessage = wasEditing ? adminMessages.find((message) => message.id === adminEditingMessageId) : null;
     const submitButton = document.getElementById('admin-message-submit');
     const originalLabel = submitButton?.textContent || 'Board Message 전송';
     if (submitButton) submitButton.disabled = true;
+    if (previousMessage && new Date(previousMessage.starts_at || previousMessage.created_at) > new Date() && Array.isArray(previousMessage.sms_group_ids) && previousMessage.sms_group_ids.length) {
+      const cancelled = await adminCancelBoardMessageSms(previousMessage);
+      if (!cancelled) { adminShowStatus('기존 예약 문자를 취소하지 못해 수정을 중단했습니다.', true); if (submitButton) submitButton.disabled = false; return; }
+    }
     const result = adminEditingMessageId
-      ? await window.supabaseClient.from('home_messages').update(payload).eq('id', adminEditingMessageId)
-      : await window.supabaseClient.from('home_messages').insert({ ...payload, created_by: adminCurrentUserId });
+      ? await window.supabaseClient.from('home_messages').update(payload).eq('id', adminEditingMessageId).select('*').single()
+      : await window.supabaseClient.from('home_messages').insert({ ...payload, created_by: adminCurrentUserId }).select('*').single();
     if (result.error) {
       adminShowStatus('메시지를 저장하지 못했습니다.', true);
       console.error('[admin] save message', result.error);
       if (submitButton) submitButton.disabled = false;
       return;
     }
+    const savedMessage = result.data;
     adminResetMessageForm();
     await adminLoadMessages();
-    if (wasEditing) {
-      adminShowStatus('메시지를 수정했습니다.');
+    if (wasEditing && startsAt <= new Date()) {
+      adminShowStatus('게시 중인 메시지를 수정했습니다. 이미 발송된 문자는 다시 보내지 않습니다.');
       if (submitButton) submitButton.disabled = false;
     } else {
-      await adminSendBoardMessageSms(recipient, body, submitButton, originalLabel);
+      await adminSendBoardMessageSms(savedMessage.id, recipient, body, startsAt.toISOString(), senderId, audience, submitButton, originalLabel);
     }
   });
   document.getElementById('admin-message-edit-cancel')?.addEventListener('click', adminResetMessageForm);
 }
 
-async function adminSendBoardMessageSms(recipientId, body, submitButton, originalLabel) {
+async function adminCancelBoardMessageSms(message) {
+  const groupIds = Array.isArray(message?.sms_group_ids) ? message.sms_group_ids.filter(Boolean) : [];
+  if (!groupIds.length) return true;
+  const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board_cancel', groupIds } });
+  if (error || !data?.ok) { console.error('[admin] cancel board sms', error || data); return false; }
+  await window.supabaseClient.from('home_messages').update({ sms_group_ids: [], sms_status: 'cancelled' }).eq('id', message.id);
+  return true;
+}
+
+async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, senderId, audience, submitButton, originalLabel) {
   const restoreButton = () => { if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalLabel; } };
   const targets = recipientId
     ? adminMembers.filter((member) => member.id === recipientId)
-    : adminMembers.filter((member) => member.app_role === 'student' && member.is_active);
+    : adminMembers.filter((member) => member.is_active);
   const withPhone = targets.filter((member) => String(member.phone || '').replace(/\D/g, '').length >= 10);
   const missingPhoneCount = targets.length - withPhone.length;
   if (!withPhone.length) {
     adminShowStatus(`메시지를 전송했습니다.${targets.length ? ` (연락처 미등록으로 문자는 못 보냄: ${missingPhoneCount}명)` : ''}`, targets.length > 0);
+    await window.supabaseClient.from('home_messages').update({ sms_group_ids: [], sms_status: 'no_phone' }).eq('id', messageId);
     restoreButton();
     return;
   }
-  const today = new Date().toISOString().slice(0, 10);
-  if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 0/${withPhone.length}`;
+  const startDate = new Date(startsAt);
+  const localStart = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000);
+  const targetDate = localStart.toISOString().slice(0, 10);
+  const isScheduled = startDate.getTime() > Date.now() + 60000;
+  if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 0/${withPhone.length}`;
   let cursor = 0; let success = 0; let failed = 0;
+  const groupIds = [];
   const worker = async () => {
     while (cursor < withPhone.length) {
       const target = withPhone[cursor++];
-      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board', userId: target.id, messageBody: body, date: today } });
-      if (!error && data?.ok) success += 1; else failed += 1;
-      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 ${success + failed}/${withPhone.length}`;
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board', userId: target.id, messageBody: body, date: targetDate, scheduledAt: startsAt, senderId, audienceType: audience } });
+      if (!error && data?.ok) { success += 1; if (data.groupId) groupIds.push(data.groupId); } else failed += 1;
+      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 ${success + failed}/${withPhone.length}`;
     }
   };
   await Promise.all(Array.from({ length: Math.min(5, withPhone.length) }, worker));
+  const smsStatus = failed ? (success ? 'partial' : 'failed') : isScheduled ? 'scheduled' : 'sent';
+  await window.supabaseClient.from('home_messages').update({ sms_group_ids: groupIds, sms_status: smsStatus }).eq('id', messageId);
   restoreButton();
-  adminShowStatus(`메시지를 전송했습니다. 문자 발송: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
+  adminShowStatus(`메시지를 저장했습니다. 문자 ${isScheduled ? '예약' : '발송 접수'}: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
+  await adminLoadMessages();
   await adminLoadSmsLogs();
 }
 
@@ -246,16 +300,29 @@ function adminWireMessageList() {
     const article = event.target.closest('[data-message-id]');
     if (!button || !article) return;
     const id = article.dataset.messageId;
+    const message = adminMessages.find((item) => item.id === id);
     if (button.dataset.action === 'edit') {
       adminStartMessageEdit(id);
       return;
     }
     if (button.dataset.action === 'delete') {
+      if (message && new Date(message.starts_at || message.created_at) > new Date() && !(await adminCancelBoardMessageSms(message))) {
+        adminShowStatus('예약 문자를 취소하지 못해 메시지 삭제를 중단했습니다.', true);
+        return;
+      }
       await window.supabaseClient.from('home_messages').delete().eq('id', id);
       if (adminEditingMessageId === id) adminResetMessageForm();
     } else {
       const currentlyActive = !article.classList.contains('opacity-50');
+      const futureMessage = message && new Date(message.starts_at || message.created_at) > new Date();
+      if (currentlyActive && futureMessage && !(await adminCancelBoardMessageSms(message))) {
+        adminShowStatus('예약 문자를 취소하지 못해 비활성화를 중단했습니다.', true);
+        return;
+      }
       await window.supabaseClient.from('home_messages').update({ is_active: !currentlyActive }).eq('id', id);
+      if (!currentlyActive && futureMessage) {
+        await adminSendBoardMessageSms(message.id, message.recipient_user_id, message.body, message.starts_at, message.sender_user_id || message.created_by, message.recipient_user_id ? 'personal' : 'global', null, '');
+      }
     }
     await adminLoadMessages();
   });
@@ -461,6 +528,41 @@ function commentPhotoHTML(record) {
     return `<div class="aspect-[4/3] rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
   return `<div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+}
+
+function adminMessageSenderLabel(userId) {
+  const member = adminMembers.find((item) => item.id === userId);
+  return member?.name || '관리자';
+}
+
+function adminMessageAudienceValue() {
+  return document.querySelector('input[name="admin-message-audience"]:checked')?.value === 'personal' ? 'personal' : 'global';
+}
+
+function adminSetMessageAudience(audience) {
+  const value = audience === 'personal' ? 'personal' : 'global';
+  const input = document.querySelector(`input[name="admin-message-audience"][value="${value}"]`);
+  if (input) input.checked = true;
+  const recipientWrap = document.getElementById('admin-message-recipient-wrap');
+  const recipient = document.getElementById('admin-message-recipient');
+  recipientWrap?.classList.toggle('hidden', value !== 'personal');
+  if (recipient) {
+    recipient.required = value === 'personal';
+    recipient.disabled = value !== 'personal';
+    if (value !== 'personal') recipient.value = '';
+  }
+}
+
+function adminRenderMessageSenders(selectedId = null) {
+  const wrap = document.getElementById('admin-message-senders');
+  if (!wrap) return;
+  const managers = adminMembers.filter((member) => member.is_active && ADMIN_MESSAGE_SENDER_ROLES.has(member.app_role));
+  const fallbackId = selectedId || (managers.some((member) => member.id === adminCurrentUserId) ? adminCurrentUserId : managers[0]?.id);
+  wrap.innerHTML = managers.length ? managers.map((member) => `<label class="glass-card rounded-2xl px-3 py-2.5 flex items-center gap-3 cursor-pointer">
+    <input type="radio" name="admin-message-sender" value="${member.id}" class="text-primary" ${member.id === fallbackId ? 'checked' : ''} required>
+    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape((member.name || '?')[0])}</span>
+    <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(member.name)}</span><span class="block text-[10px] text-on-surface-variant">${adminEscape(adminRoleLabel(member.app_role))}</span></span>
+  </label>`).join('') : '<p class="text-xs text-error">활성 관리자 계정을 찾을 수 없습니다.</p>';
 }
 
 function commentProfileAvatarHTML(user, sizeClass = 'w-12 h-12') {
@@ -772,6 +874,8 @@ async function adminLoadMembers() {
     ? await window.getProfileAvatarUrls(adminMembers.map((member) => member.id))
     : {};
   adminRenderMembers();
+  adminRenderMessageSenders(document.querySelector('input[name="admin-message-sender"]:checked')?.value || null);
+  await adminLoadMessages();
 }
 
 function adminRenderMembers() {

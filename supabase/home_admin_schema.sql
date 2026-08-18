@@ -25,7 +25,11 @@ create table if not exists public.home_messages (
   recipient_user_id uuid references auth.users(id) on delete cascade, -- null이면 전체 공지
   body text not null check (char_length(body) between 1 and 500),
   is_active boolean not null default true,
+  starts_at timestamptz not null default now(),
   expires_at timestamptz,
+  sender_user_id uuid references auth.users(id) on delete set null,
+  sms_group_ids jsonb not null default '[]'::jsonb,
+  sms_status text not null default 'not_requested',
   created_by uuid not null references auth.users(id) on delete restrict,
   created_at timestamptz not null default now()
 );
@@ -42,6 +46,7 @@ create policy "home_messages_read_target"
     public.is_app_admin(auth.uid())
     or (
       is_active = true
+      and starts_at <= now()
       and (expires_at is null or expires_at > now())
       and (recipient_user_id is null or recipient_user_id = auth.uid())
     )

@@ -27,7 +27,7 @@ function renderPublicHomeMessages(messages) {
     <article class="glass-card rounded-2xl p-4 border-l-4 ${message.recipient_user_id ? 'border-secondary' : 'border-primary'}">
       <div class="flex items-center gap-2 mb-2">
         <span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary-container/40 text-secondary' : 'bg-primary-container/20 text-primary'}">${message.recipient_user_id ? 'FOR YOU' : 'NOTICE'}</span>
-        <time class="text-[10px] text-on-surface-variant">${new Date(message.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time>
+        <time class="text-[10px] text-on-surface-variant">${new Date(message.starts_at || message.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time>
       </div>
       <p class="text-sm leading-6 whitespace-pre-wrap">${publicHomeEscape(message.body)}</p>
     </article>`).join('');
@@ -45,7 +45,7 @@ async function loadPublicHome() {
   // 다건 .or() 체이닝은 PostgREST에서 조건이 하나만 반영될 수 있어(검증 어려움),
   // is_active만 서버에서 걸러 넉넉히 가져온 뒤 나머지 조건(만료·수신자)은 클라이언트에서 확정 필터링한다.
   const [messageRes, verseRes] = await Promise.all([
-    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, expires_at, is_active').eq('is_active', true).order('created_at', { ascending: false }).limit(200),
+    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, starts_at, expires_at, is_active').eq('is_active', true).order('starts_at', { ascending: false }).limit(200),
     window.supabaseClient.from('home_bible_verses').select('id, reference, verse_text, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
@@ -56,6 +56,7 @@ async function loadPublicHome() {
   const visibleMessages = (messageRes.data || [])
     .filter((message) =>
       message.is_active !== false
+      && (!message.starts_at || new Date(message.starts_at) <= now)
       && (!message.expires_at || new Date(message.expires_at) > now)
       && (!message.recipient_user_id || message.recipient_user_id === publicHomeCurrentUserId)
     )

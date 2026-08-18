@@ -14,6 +14,17 @@ async function hmac(secret: string, value: string) {
   return Array.from(new Uint8Array(result), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+async function solapiRequest(apiKey: string, apiSecret: string, path: string, method: string, requestBody?: unknown) {
+  const stamp = new Date().toISOString()
+  const salt = crypto.randomUUID()
+  const signature = await hmac(apiSecret, stamp + salt)
+  return fetch(`https://api.solapi.com${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', Authorization: `HMAC-SHA256 apiKey=${apiKey}, date=${stamp}, salt=${salt}, signature=${signature}` },
+    body: requestBody === undefined ? undefined : JSON.stringify(requestBody),
+  })
+}
+
 function buildParentReportMessage(studentName: string, reportUrl: string): string {
   return [
     `${studentName} 학부모님, 안녕하세요.`,
@@ -51,17 +62,38 @@ Deno.serve(async (req) => {
   const { data: authData } = await viewer.auth.getUser()
 
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode === 'report' ? 'report' : body.mode === 'board' ? 'board' : 'missing'
+  const mode = body.mode === 'report' ? 'report' : body.mode === 'board' ? 'board' : body.mode === 'board_cancel' ? 'board_cancel' : 'missing'
   const userId = String(body.userId || '')
   const date = String(body.date || '')
   const missing = Array.isArray(body.missing) ? body.missing.map(String).filter(Boolean) : []
   const reportToken = String(body.reportToken || '')
   const siteUrl = String(body.siteUrl || '')
   const messageText = String(body.messageBody || '').trim()
+  const senderId = String(body.senderId || '')
+  const audienceType = body.audienceType === 'personal' ? 'personal' : 'global'
+  const scheduledAt = String(body.scheduledAt || '')
+  const groupIds = Array.isArray(body.groupIds) ? body.groupIds.map(String).filter((id: string) => /^G4V[A-Za-z0-9]+$/.test(id)) : []
   const admin = createClient(url, service)
+  const apiKey = Deno.env.get('SOLAPI_API_KEY')
+  const apiSecret = Deno.env.get('SOLAPI_API_SECRET')
+  const sender = digits(Deno.env.get('SOLAPI_SENDER_NUMBER') || '')
+  if (!apiKey || !apiSecret || !sender) return json({ ok: false, message: '솔라피 서버 설정이 필요합니다.' }, 500)
+
+  if (mode === 'board_cancel') {
+    if (!groupIds.length) return json({ ok: true, cancelled: 0 })
+    let cancelled = 0
+    for (const groupId of groupIds) {
+      const unschedule = await solapiRequest(apiKey, apiSecret, `/messages/v4/groups/${encodeURIComponent(groupId)}/schedule`, 'DELETE')
+      if (!unschedule.ok) continue
+      const remove = await solapiRequest(apiKey, apiSecret, `/messages/v4/groups/${encodeURIComponent(groupId)}`, 'DELETE')
+      if (remove.ok) cancelled += 1
+    }
+    return json({ ok: cancelled === groupIds.length, cancelled, requested: groupIds.length }, cancelled === groupIds.length ? 200 : 409)
+  }
+
   const { data: member } = await admin.from('profiles').select('name,phone,parent_phone,grade_class').eq('id', userId).maybeSingle()
   const to = digits(mode === 'report' ? member?.parent_phone || '' : member?.phone || '')
-  const logItems = mode === 'report' ? ['개인 리포트'] : mode === 'board' ? ['Board Message'] : missing
+  const logItems = mode === 'report' ? ['개인 리포트'] : mode === 'board' ? [audienceType === 'personal' ? 'Board 개인 메시지' : 'Board 전체 공지'] : missing
   const writeLog = async (status: 'success' | 'failed', errorMessage: string | null = null) => {
     if (!member || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !logItems.length) return
     const { error: logError } = await admin.from('admin_sms_logs').insert({
@@ -100,30 +132,40 @@ Deno.serve(async (req) => {
     return json({ ok: false, message: '메시지 내용을 확인해주세요.' })
   }
 
-  const apiKey = Deno.env.get('SOLAPI_API_KEY')
-  const apiSecret = Deno.env.get('SOLAPI_API_SECRET')
-  const sender = digits(Deno.env.get('SOLAPI_SENDER_NUMBER') || '')
-  if (!apiKey || !apiSecret || !sender) {
-    await writeLog('failed', '솔라피 서버 설정 누락')
-    return json({ ok: false, message: '솔라피 서버 설정이 필요합니다.' }, 500)
+  let boardSenderName = ''
+  let boardScheduledDate: string | null = null
+  if (mode === 'board') {
+    const { data: selectedSender } = await admin.from('profiles').select('name,app_role,is_admin,is_active').eq('id', senderId).maybeSingle()
+    const allowedSender = selectedSender && selectedSender.is_active !== false && (selectedSender.is_admin || ['admin', 'teacher', 'pastor', 'department_head', 'secretary'].includes(selectedSender.app_role))
+    if (!allowedSender) {
+      await writeLog('failed', '발신 관리자 확인 오류')
+      return json({ ok: false, message: '발신 관리자를 확인해주세요.' }, 400)
+    }
+    const parsedScheduledAt = new Date(scheduledAt)
+    const maxScheduledAt = new Date(); maxScheduledAt.setMonth(maxScheduledAt.getMonth() + 6)
+    if (Number.isNaN(parsedScheduledAt.getTime()) || parsedScheduledAt > maxScheduledAt) {
+      await writeLog('failed', '예약 시각 오류')
+      return json({ ok: false, message: '예약 시각은 현재부터 6개월 이내로 설정해주세요.' }, 400)
+    }
+    boardSenderName = selectedSender.name
+    boardScheduledDate = parsedScheduledAt.toISOString()
   }
-  const stamp = new Date().toISOString()
-  const salt = crypto.randomUUID()
-  const signature = await hmac(apiSecret, stamp + salt)
-  const response = await fetch('https://api.solapi.com/messages/v4/send', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `HMAC-SHA256 apiKey=${apiKey}, date=${stamp}, salt=${salt}, signature=${signature}` },
-    body: JSON.stringify({ message: { to, from: sender, text: mode === 'report'
+
+  const message = { to, from: sender, text: mode === 'report'
       ? buildParentReportMessage(member.name, parsedReportUrl!.href)
       : mode === 'board'
-      ? `[SAP] ${messageText}\n\n-권세계 선생님-`
-      : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` } }),
-  })
+      ? `[SAP ${audienceType === 'personal' ? '개인 메시지' : '전체 공지'}] ${messageText}\n\n-${boardSenderName} 선생님-`
+      : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` }
+  const requestPayload: Record<string, unknown> = { messages: [message], showMessageList: true }
+  if (mode === 'board' && boardScheduledDate) requestPayload.scheduledDate = boardScheduledDate
+  const response = await solapiRequest(apiKey, apiSecret, '/messages/v4/send-many/detail', 'POST', requestPayload)
   if (!response.ok) {
     const detail = await response.text()
     console.error('[admin-send-sms]', response.status, detail)
     await writeLog('failed', `솔라피 응답 오류 (${response.status})`)
     return json({ ok: false, message: '문자 발송에 실패했습니다.' }, 502)
   }
+  const responseBody = await response.json().catch(() => ({}))
   await writeLog('success')
-  return json({ ok: true })
+  return json({ ok: true, groupId: responseBody?.groupInfo?.groupId || null, scheduledAt: responseBody?.groupInfo?.scheduledDate || boardScheduledDate })
 })
