@@ -776,12 +776,12 @@ function renderCommentTable() {
   const wrap = document.getElementById('comment-table');
   if (!wrap) return;
   if (!commentUsers.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">표시할 학생이 없습니다.</p>'; return; }
-  const headerCells = commentDays.map((day) => `<th class="px-2 py-2 text-center text-[10px] font-bold text-on-surface-variant whitespace-nowrap">${galleryDateParts(day).short}</th>`).join('');
+  const headerCells = commentDays.map((day) => `<th class="sticky top-0 z-20 bg-white px-2 py-2 text-center text-[10px] font-bold text-on-surface-variant whitespace-nowrap">${galleryDateParts(day).short}</th>`).join('');
   const rows = commentUsers.map((user) => `<tr>
     <td class="sticky left-0 bg-white px-3 py-2 text-xs font-bold whitespace-nowrap border-r border-outline-variant/30">${galleryEscape(user.name)}</td>
     ${commentDays.map((day) => `<td class="px-2 py-2 text-center">${commentTableCellHTML(user.id, day)}</td>`).join('')}
   </tr>`).join('');
-  wrap.innerHTML = `<table class="border-collapse w-full"><thead><tr><th class="sticky left-0 bg-white px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant border-r border-outline-variant/30">학생</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`;
+  wrap.innerHTML = `<table class="border-collapse w-full"><thead><tr><th class="sticky top-0 left-0 z-30 bg-white px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant border-r border-outline-variant/30">학생</th>${headerCells}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function loadCommentDay() {
