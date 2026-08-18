@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
   let boardSenderName = ''
   let boardScheduledDate: string | null = null
   if (mode === 'board') {
-    const { data: selectedSender } = await admin.from('profiles').select('name,app_role,is_admin,is_active').eq('id', senderId).maybeSingle()
+    const { data: selectedSender } = await admin.from('profiles').select('name,username,app_role,is_admin,is_active').eq('id', senderId).maybeSingle()
     const allowedSender = selectedSender && selectedSender.is_active !== false && (selectedSender.is_admin || ['admin', 'teacher', 'pastor', 'department_head', 'secretary'].includes(selectedSender.app_role))
     if (!allowedSender) {
       await writeLog('failed', '발신 관리자 확인 오류')
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
       await writeLog('failed', '예약 시각 오류')
       return json({ ok: false, message: '예약 시각은 현재부터 6개월 이내로 설정해주세요.' }, 400)
     }
-    boardSenderName = selectedSender.name
+    boardSenderName = String(selectedSender.name || selectedSender.username || '관리자').trim()
     boardScheduledDate = parsedScheduledAt.toISOString()
   }
 

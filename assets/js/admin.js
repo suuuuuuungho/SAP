@@ -553,16 +553,23 @@ function adminSetMessageAudience(audience) {
   }
 }
 
+function adminMessageSenderName(member) {
+  return String(member?.name || '').trim() || String(member?.username || '').trim() || '관리자';
+}
+
 function adminRenderMessageSenders(selectedId = null) {
   const wrap = document.getElementById('admin-message-senders');
   if (!wrap) return;
   const managers = adminMembers.filter((member) => member.is_active && ADMIN_MESSAGE_SENDER_ROLES.has(member.app_role));
   const fallbackId = selectedId || (managers.some((member) => member.id === adminCurrentUserId) ? adminCurrentUserId : managers[0]?.id);
-  wrap.innerHTML = managers.length ? managers.map((member) => `<label class="glass-card rounded-2xl px-3 py-2.5 flex items-center gap-3 cursor-pointer">
+  wrap.innerHTML = managers.length ? managers.map((member) => {
+    const senderName = adminMessageSenderName(member);
+    return `<label class="glass-card rounded-2xl px-3 py-2.5 flex items-center gap-3 cursor-pointer">
     <input type="radio" name="admin-message-sender" value="${member.id}" class="text-primary" ${member.id === fallbackId ? 'checked' : ''} required>
-    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape((member.name || '?')[0])}</span>
-    <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(member.name)}</span><span class="block text-[10px] text-on-surface-variant">${adminEscape(adminRoleLabel(member.app_role))}</span></span>
-  </label>`).join('') : '<p class="text-xs text-error">활성 관리자 계정을 찾을 수 없습니다.</p>';
+    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape(senderName[0])}</span>
+    <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(senderName)} 선생님</span><span class="block text-[10px] text-on-surface-variant">회원가입 이름 · ${adminEscape(adminRoleLabel(member.app_role))}</span></span>
+  </label>`;
+  }).join('') : '<p class="text-xs text-error">활성 관리자 계정을 찾을 수 없습니다.</p>';
 }
 
 function commentProfileAvatarHTML(user, sizeClass = 'w-12 h-12') {
