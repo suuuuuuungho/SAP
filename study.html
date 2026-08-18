@@ -12,20 +12,22 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <!-- Header + 모드 스위처 -->
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-    <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Study</h1>
-    <div class="glass-panel rounded-full p-1 flex text-sm font-semibold" id="study-mode-tabs">
-      <button type="button" id="study-mode-list" data-mode="list" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">목록</button>
-      <button type="button" id="study-mode-flashcard" data-mode="flashcard" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">암기카드</button>
-      <button type="button" id="study-mode-quiz" data-mode="quiz" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">퀴즈</button>
+  <div class="sticky top-0 z-30 -mx-2 px-2 pt-1 pb-2 mb-6 bg-surface/95 backdrop-blur-xl rounded-b-2xl">
+    <!-- Header + 모드 스위처 -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Study</h1>
+      <div class="glass-panel rounded-full p-1 flex text-sm font-semibold" id="study-mode-tabs">
+        <button type="button" id="study-mode-list" data-mode="list" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">목록</button>
+        <button type="button" id="study-mode-flashcard" data-mode="flashcard" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">암기카드</button>
+        <button type="button" id="study-mode-quiz" data-mode="quiz" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">퀴즈</button>
+      </div>
     </div>
-  </div>
 
-  <!-- Lv.1 전용 단어장 + Day 선택 -->
-  <div class="flex items-center justify-between gap-3 mb-6">
-    <span class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold nav-pill-active whitespace-nowrap">Lv.1</span>
-    <select id="study-day-selector" class="glass-input rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold flex-shrink-0"></select>
+    <!-- Lv.1 전용 단어장 + Day 선택 -->
+    <div class="flex items-center justify-between gap-3">
+      <span class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold nav-pill-active whitespace-nowrap">Lv.1</span>
+      <select id="study-day-selector" class="glass-input rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold flex-shrink-0"></select>
+    </div>
   </div>
 
   <!-- 모드별 콘텐츠가 여기로 스왑됨 -->

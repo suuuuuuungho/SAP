@@ -240,8 +240,8 @@ function renderVerificationOverview() {
   const completedDays = days.filter((key) => getActiveCategoriesForDate(key).every((category) => getMergedProgress(key)[category])).length;
   if (summary) summary.textContent = `${completedDays} / ${days.length}\uC77C \uC644\uB8CC`;
   wrap.innerHTML = `<div class="grid grid-cols-[54px_repeat(4,minmax(0,1fr))] sm:grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-1 sm:gap-2 items-center w-full">
-    <span class="text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant">\uB0A0\uC9DC</span>
-    ${categoryLabels.map((label) => `<span class="text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
+    <span class="sticky top-0 z-20 py-2 rounded-lg text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant bg-white/95 backdrop-blur-xl shadow-sm">\uB0A0\uC9DC</span>
+    ${categoryLabels.map((label) => `<span class="sticky top-0 z-20 py-2 rounded-lg text-[10px] sm:text-[11px] font-bold text-center text-on-surface-variant bg-white/95 backdrop-blur-xl shadow-sm">${label}</span>`).join('')}
     ${days.map((key) => {
       const date = new Date(`${key}T12:00:00`);
       const selected = key === selectedDateKey;

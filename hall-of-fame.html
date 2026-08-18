@@ -12,23 +12,25 @@
 <body class="text-on-surface">
 <div id="app"></div>
 <template id="page-content">
-  <div class="flex flex-wrap items-end justify-between gap-3 mb-8 lg:mb-10">
-    <div>
-      <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Hall of Fame</h1>
-      <p class="text-sm text-on-surface-variant mt-1">기도 · 공부 · 말씀 · 예배 활동 랭킹</p>
+  <div class="sticky top-0 z-30 -mx-2 px-2 pt-1 pb-2 mb-8 lg:mb-10 bg-surface/95 backdrop-blur-xl rounded-b-2xl">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+      <div>
+        <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Hall of Fame</h1>
+        <p class="text-sm text-on-surface-variant mt-1">기도 · 공부 · 말씀 · 예배 활동 랭킹</p>
+      </div>
+      <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
+        <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-quaternary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-quaternary"></span></span>
+        <span id="hof-last-refreshed">실시간 집계</span>
+      </div>
     </div>
-    <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
-      <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-quaternary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-quaternary"></span></span>
-      <span id="hof-last-refreshed">실시간 집계</span>
-    </div>
-  </div>
 
-  <div class="glass-panel rounded-full p-1 flex flex-nowrap text-[11px] sm:text-sm font-semibold mb-8 w-full sm:w-fit" id="hof-tabs">
-    <button type="button" data-hof-tab="1" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week1</button>
-    <button type="button" data-hof-tab="2" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week2</button>
-    <button type="button" data-hof-tab="3" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week3</button>
-    <button type="button" data-hof-tab="4" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week4</button>
-    <button type="button" data-hof-tab="total" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">전체누적</button>
+    <div class="glass-panel rounded-full p-1 flex flex-nowrap text-[11px] sm:text-sm font-semibold w-full sm:w-fit" id="hof-tabs">
+      <button type="button" data-hof-tab="1" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week1</button>
+      <button type="button" data-hof-tab="2" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week2</button>
+      <button type="button" data-hof-tab="3" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week3</button>
+      <button type="button" data-hof-tab="4" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week4</button>
+      <button type="button" data-hof-tab="total" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">전체누적</button>
+    </div>
   </div>
 
   <section class="mb-10 lg:mb-14">
