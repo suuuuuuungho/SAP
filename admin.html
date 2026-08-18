@@ -120,7 +120,15 @@
       </div>
     </section>
 
-    <section data-admin-panel="member" class="admin-panel hidden"><div class="glass-panel rounded-[2rem] p-4 sm:p-6"><div class="flex flex-wrap gap-3 justify-between items-center mb-5"><div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div><div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div></div><div id="admin-member-list" class="flex flex-col gap-3"></div></div></section>
+    <section data-admin-panel="member" class="admin-panel hidden">
+      <div class="glass-panel rounded-[2rem] p-4 sm:p-6">
+        <div class="sticky top-20 md:top-0 z-20 -mx-2 px-2 py-2 mb-3 rounded-2xl bg-white/95 backdrop-blur-xl flex flex-wrap gap-3 justify-between items-center shadow-sm">
+          <div><h2 class="text-2xl font-bold">Member</h2><p class="text-sm text-on-surface-variant">회원 정보, 권한, 상태를 관리합니다.</p></div>
+          <div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div>
+        </div>
+        <div id="admin-member-list" class="flex flex-col gap-3"></div>
+      </div>
+    </section>
 
     <section data-admin-panel="dashboard" class="admin-panel hidden">
       <div class="flex justify-end mb-5"><label class="text-xs text-on-surface-variant">기준일<input id="admin-dashboard-date" type="date" value="2026-08-10" min="2026-08-10" max="2026-09-06" class="glass-input rounded-xl px-3 py-2 text-sm block mt-1"></label></div>
@@ -133,6 +141,7 @@
       <section class="glass-panel rounded-[2rem] p-4 sm:p-6">
         <div class="flex items-center justify-between gap-3 mb-4"><div><h3 class="text-lg font-bold">문자 발송 현황</h3><p class="text-xs text-on-surface-variant mt-1">최근 발송 결과를 확인합니다.</p></div><button id="admin-sms-log-refresh" type="button" class="icon-glass w-9 h-9 rounded-full text-sky-500" aria-label="발송 현황 새로고침"><i class="fa-solid fa-rotate"></i></button></div>
         <div id="admin-sms-log-list" class="flex flex-col gap-2"></div>
+        <nav id="admin-sms-log-pagination" class="flex flex-wrap items-center justify-center gap-2 mt-4" aria-label="문자 발송 현황 페이지"></nav>
       </section>
     </section>
 
@@ -143,7 +152,7 @@
           <select id="admin-stat-role" class="glass-input rounded-full px-4 py-2 text-sm"><option value="student" selected>학생</option><option value="teacher">교사</option><option value="pastor">목사님</option><option value="department_head">부장님</option><option value="secretary">총무님</option><option value="admin">Admin</option><option value="all">전체 권한</option></select>
           <button id="admin-stat-refresh" type="button" class="icon-glass w-10 h-10 rounded-full text-primary" aria-label="통계 새로고침"><i class="fa-solid fa-rotate text-sm"></i></button>
         </div>
-        <div class="overflow-x-auto"><div id="admin-stat-list" class="min-w-[900px]"></div></div>
+        <div id="admin-stat-list" class="w-full"></div>
       </section>
     </section>
   </div>
@@ -191,7 +200,7 @@
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=48"></script>
+<script src="assets/js/admin.js?v=49"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

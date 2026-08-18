@@ -327,7 +327,7 @@ async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, 
   restoreButton();
   adminShowStatus(`메시지를 저장했습니다. 문자 ${isScheduled ? '예약' : '발송 접수'}: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
   await adminLoadMessages();
-  await adminLoadSmsLogs();
+  await adminLoadSmsLogs(true);
 }
 
 function adminWireMessageList() {
@@ -432,8 +432,10 @@ let adminDashboardRows = [];
 let adminActiveTab = 'board';
 let adminFullAccess = false;
 let adminCommentTabAccess = false;
-const ADMIN_DASHBOARD_PAGE_SIZE = 20;
+const ADMIN_DASHBOARD_PAGE_SIZE = 10;
 let adminDashboardPage = 1;
+const ADMIN_SMS_LOG_PAGE_SIZE = 15;
+let adminSmsLogPage = 1;
 let adminStatRows = [];
 
 function adminRoleBadge(member) {
@@ -1134,8 +1136,8 @@ function adminRenderDashboard() {
   const wrap = document.getElementById('admin-dashboard-list');
   const empty = '<p class="text-sm text-on-surface-variant py-10 text-center">학생이 없습니다.</p>';
   const mobileCards = pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="glass-card rounded-2xl p-3" data-dashboard-user="${row.user_id}"><div class="flex items-center justify-between gap-3 mb-3"><div class="min-w-0"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p><p class="text-[10px] text-on-surface-variant truncate">@${adminEscape(row.username)}</p></div>${adminDashboardActionsHTML(missing, true)}</div><div class="grid grid-cols-4 gap-1">${adminDashboardMobileStatus('기도',row.pray_done,row.pray_minutes)}${adminDashboardMobileStatus('말씀',row.word_done,row.word_minutes)}${adminDashboardMobileStatus('공부',row.study_done,row.study_minutes)}${adminDashboardMobileStatus('예배',row.worship_done,row.worship_minutes,worshipRequired)}</div></article>`; }).join('');
-  const desktopRows = pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div><p class="text-sm font-bold">${adminEscape(row.name)}</p><p class="text-[10px] text-on-surface-variant">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}${adminDashboardActionsHTML(missing)}</article>`; }).join('');
-  wrap.innerHTML = pageRows.length ? `<div class="xl:hidden flex flex-col gap-3">${mobileCards}</div><div class="hidden xl:block overflow-x-auto"><div class="min-w-[1100px]"><div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(110px,1fr))_240px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>학생</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>관리</span></div>${desktopRows}</div></div>` : empty;
+  const desktopRows = pageRows.map((row) => { const missing = adminDashboardMissing(row, worshipRequired); return `<article class="grid grid-cols-[minmax(150px,1.45fr)_repeat(4,minmax(68px,.8fr))_132px] gap-2 items-center glass-card rounded-2xl px-3 py-3 mb-2" data-dashboard-user="${row.user_id}"><div class="min-w-0"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p><p class="text-[10px] text-on-surface-variant truncate">@${adminEscape(row.username)}</p></div>${adminDoneCell(row.pray_done,row.pray_minutes,'pray')}${adminDoneCell(row.word_done,row.word_minutes,'word')}${adminDoneCell(row.study_done,row.study_minutes,'study')}${adminDoneCell(row.worship_done,row.worship_minutes,'worship',worshipRequired)}${adminDashboardActionsHTML(missing)}</article>`; }).join('');
+  wrap.innerHTML = pageRows.length ? `<div class="xl:hidden flex flex-col gap-3">${mobileCards}</div><div class="hidden xl:block max-h-[70vh] overflow-y-auto scrollbar-hide rounded-2xl"><div class="sticky top-0 z-20 grid grid-cols-[minmax(150px,1.45fr)_repeat(4,minmax(68px,.8fr))_132px] gap-2 px-3 py-3 mb-2 text-[10px] font-bold tracking-wider text-on-surface-variant bg-white/95 backdrop-blur-xl shadow-sm rounded-xl"><span>학생</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>관리</span></div>${desktopRows}</div>` : empty;
   wrap.querySelectorAll('[data-sms]').forEach((button) => button.addEventListener('click', () => adminSendMissingSms(button.closest('[data-dashboard-user]').dataset.dashboardUser, button.dataset.missing)));
   wrap.querySelectorAll('[data-report-view]').forEach((button) => button.addEventListener('click', () => adminOpenStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser)));
   wrap.querySelectorAll('[data-report-sms]').forEach((button) => button.addEventListener('click', () => adminSendStudentReport(button.closest('[data-dashboard-user]').dataset.dashboardUser, button)));
@@ -1192,7 +1194,7 @@ async function adminSendStudentReport(userId, button) {
     const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'report', userId, reportToken: report.token, siteUrl, date: document.getElementById('admin-dashboard-date').value } });
     if (error || !data?.ok) throw new Error(data?.message || '문자를 보내지 못했습니다.');
     adminShowStatus(`${studentName} 학생의 학부모에게 리포트 링크를 보냈습니다.`);
-    await adminLoadSmsLogs();
+    await adminLoadSmsLogs(true);
   } catch (error) {
     adminShowStatus(error.message || '리포트 링크를 보내지 못했습니다.', true);
   } finally {
@@ -1234,7 +1236,7 @@ async function adminSendBulkStudentReports() {
   await Promise.all(Array.from({ length: Math.min(3, targets.length) }, worker));
   if (button) { button.disabled = false; button.innerHTML = original; }
   adminShowStatus(`리포트 일괄 발송 완료: 성공 ${success}명 · 실패 ${failed}명${missingPhoneCount ? ` · 연락처 미입력 ${missingPhoneCount}명` : ''}`, failed > 0);
-  await adminLoadSmsLogs();
+  await adminLoadSmsLogs(true);
 }
 
 async function adminExportStudentReportLinks() {
@@ -1294,7 +1296,7 @@ async function adminSendMissingSms(userId, missing) {
   if (!confirm(`${studentName} 학생에게 미인증 안내 문자를 보낼까요?\n현재 미인증: ${missing}`)) return;
   const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { userId, date: document.getElementById('admin-dashboard-date').value, missing: missing.split(', ') } });
   if (error || !data?.ok) adminShowStatus(data?.message || '문자를 보내지 못했습니다.', true); else adminShowStatus(`${studentName} 학생에게 문자를 보냈습니다.`);
-  await adminLoadSmsLogs();
+  await adminLoadSmsLogs(true);
 }
 
 async function adminSendBulkMissingSms() {
@@ -1318,19 +1320,35 @@ async function adminSendBulkMissingSms() {
   await Promise.all(Array.from({ length: Math.min(5, targets.length) }, worker));
   if (button) { button.disabled = false; button.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>미인증 내역 알림 문자 발송'; }
   adminShowStatus(`일괄 발송 완료: 성공 ${success}명 · 실패 ${failed}명`, failed > 0);
-  await adminLoadSmsLogs();
+  await adminLoadSmsLogs(true);
 }
 
-async function adminLoadSmsLogs() {
+function adminRenderSmsLogPagination(total) {
+  const wrap = document.getElementById('admin-sms-log-pagination');
+  if (!wrap) return;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_SMS_LOG_PAGE_SIZE));
+  adminSmsLogPage = Math.min(adminSmsLogPage, totalPages);
+  const start = total ? (adminSmsLogPage - 1) * ADMIN_SMS_LOG_PAGE_SIZE + 1 : 0;
+  const end = Math.min(adminSmsLogPage * ADMIN_SMS_LOG_PAGE_SIZE, total);
+  wrap.innerHTML = `<span class="text-xs text-on-surface-variant mr-2">${start}-${end} / ${total}명</span><button type="button" data-sms-log-page="${adminSmsLogPage - 1}" class="icon-glass w-9 h-9 rounded-full" ${adminSmsLogPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button><span class="text-xs font-bold min-w-12 text-center">${adminSmsLogPage} / ${totalPages}</span><button type="button" data-sms-log-page="${adminSmsLogPage + 1}" class="icon-glass w-9 h-9 rounded-full" ${adminSmsLogPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+}
+
+async function adminLoadSmsLogs(resetPage = false) {
   const wrap = document.getElementById('admin-sms-log-list');
   if (!wrap) return;
-  const { data, error } = await window.supabaseClient.from('admin_sms_logs').select('*').order('created_at', { ascending: false }).limit(100);
-  if (error) { wrap.innerHTML = '<p class="text-xs text-on-surface-variant py-4 text-center">문자 로그 스키마를 적용하면 발송 현황이 표시됩니다.</p>'; return; }
+  if (resetPage) adminSmsLogPage = 1;
+  const from = (adminSmsLogPage - 1) * ADMIN_SMS_LOG_PAGE_SIZE;
+  const { data, error, count } = await window.supabaseClient.from('admin_sms_logs').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, from + ADMIN_SMS_LOG_PAGE_SIZE - 1);
+  if (error) { wrap.innerHTML = '<p class="text-xs text-on-surface-variant py-4 text-center">문자 로그 스키마를 적용하면 발송 현황이 표시됩니다.</p>'; adminRenderSmsLogPagination(0); return; }
+  const total = Number(count) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_SMS_LOG_PAGE_SIZE));
+  if (adminSmsLogPage > totalPages) { adminSmsLogPage = totalPages; return adminLoadSmsLogs(); }
   wrap.innerHTML = (data || []).map((log) => {
     const items = log.missing_items || [];
     const detail = items.includes('개인 리포트') ? '개인 리포트 링크' : `미인증 ${items.join(', ')}`;
     return `<article class="glass-card rounded-2xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center gap-3"><span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${log.status === 'success' ? 'bg-sky-100 text-sky-500' : 'bg-error-container text-error'}"><i class="fa-solid ${log.status === 'success' ? 'fa-check' : 'fa-xmark'} text-xs"></i></span><div class="min-w-0 flex-1"><p class="text-sm font-bold">${adminEscape(log.target_name || '학생')} <span class="font-normal text-on-surface-variant">· ${adminEscape(log.grade_class || '-')}</span></p><p class="text-xs text-on-surface-variant truncate">${adminEscape(log.target_date || '')} · ${adminEscape(detail)}${log.error_message ? ` · ${adminEscape(log.error_message)}` : ''}</p></div><time class="text-[10px] text-on-surface-variant whitespace-nowrap">${new Date(log.created_at).toLocaleString('ko-KR')}</time></article>`;
   }).join('') || '<p class="text-xs text-on-surface-variant py-4 text-center">아직 문자 발송 기록이 없습니다.</p>';
+  adminRenderSmsLogPagination(total);
 }
 
 async function adminLoadAllStats() {
@@ -1353,9 +1371,12 @@ function adminRenderAllStats() {
 
   const wrap = document.getElementById('admin-stat-list');
   if (!wrap) return;
-  const header = '<div class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(100px,1fr))_minmax(115px,1fr)_90px] gap-3 px-3 pb-3 text-[10px] font-bold tracking-wider text-on-surface-variant"><span>Member</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>총 시간</span><span>300분 달성</span></div>';
-  const rows = filtered.map((row) => `<article class="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(100px,1fr))_minmax(115px,1fr)_90px] gap-3 items-center glass-card rounded-2xl px-3 py-3 mb-2 ${row.is_active ? '' : 'opacity-50'}"><div class="min-w-0"><div class="flex items-center gap-1.5"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p>${adminRoleBadge(row)}</div><p class="text-[10px] text-on-surface-variant truncate">@${adminEscape(row.username)} · ${adminEscape(row.grade_class || '학년/반 미지정')} · ${row.is_active ? '활성' : '비활성'} · ${adminEscape(adminRoleLabel(row.app_role))}</p></div><span class="text-xs font-semibold">${adminFormatMinutes(row.pray_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.word_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.study_minutes)}</span><span class="text-xs font-semibold">${adminFormatMinutes(row.worship_minutes)}</span><span class="text-sm font-bold text-primary">${adminFormatMinutes(row.total_minutes)}</span><span class="text-xs font-bold">${Number(row.goal_days) || 0}일</span></article>`).join('') || '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 Member가 없습니다.</p>';
-  wrap.innerHTML = header + rows;
+  if (!filtered.length) { wrap.innerHTML = '<p class="text-sm text-on-surface-variant py-10 text-center">조건에 맞는 Member가 없습니다.</p>'; return; }
+  const mobileMetric = (label, value, strong = false) => `<div class="min-w-0 text-center rounded-xl bg-white/70 px-1 py-2"><p class="text-[9px] text-on-surface-variant leading-none mb-1.5">${label}</p><p class="text-[10px] sm:text-xs font-bold truncate ${strong ? 'text-primary' : ''}">${value}</p></div>`;
+  const mobileRows = filtered.map((row) => `<article class="glass-card rounded-2xl p-3 ${row.is_active ? '' : 'opacity-50'}"><div class="min-w-0 mb-3"><div class="flex items-center gap-1.5"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p>${adminRoleBadge(row)}</div><p class="text-[10px] text-on-surface-variant truncate">@${adminEscape(row.username)} · ${adminEscape(row.grade_class || '학년/반 미지정')} · ${row.is_active ? '활성' : '비활성'}</p></div><div class="grid grid-cols-4 gap-1 mb-1">${mobileMetric('기도',adminFormatMinutes(row.pray_minutes))}${mobileMetric('말씀',adminFormatMinutes(row.word_minutes))}${mobileMetric('공부',adminFormatMinutes(row.study_minutes))}${mobileMetric('예배',adminFormatMinutes(row.worship_minutes))}</div><div class="grid grid-cols-2 gap-1">${mobileMetric('총 시간',adminFormatMinutes(row.total_minutes),true)}${mobileMetric('300분 달성',`${Number(row.goal_days) || 0}일`)}</div></article>`).join('');
+  const desktopRows = filtered.map((row) => `<article class="grid grid-cols-[minmax(145px,1.5fr)_repeat(4,minmax(58px,.72fr))_minmax(74px,.85fr)_68px] gap-2 items-center glass-card rounded-2xl px-3 py-3 mb-2 ${row.is_active ? '' : 'opacity-50'}"><div class="min-w-0"><div class="flex items-center gap-1.5"><p class="text-sm font-bold truncate">${adminEscape(row.name)}</p>${adminRoleBadge(row)}</div><p class="text-[9px] text-on-surface-variant truncate">@${adminEscape(row.username)} · ${adminEscape(row.grade_class || '미지정')} · ${adminEscape(adminRoleLabel(row.app_role))}</p></div><span class="text-[11px] font-semibold truncate">${adminFormatMinutes(row.pray_minutes)}</span><span class="text-[11px] font-semibold truncate">${adminFormatMinutes(row.word_minutes)}</span><span class="text-[11px] font-semibold truncate">${adminFormatMinutes(row.study_minutes)}</span><span class="text-[11px] font-semibold truncate">${adminFormatMinutes(row.worship_minutes)}</span><span class="text-xs font-bold text-primary truncate">${adminFormatMinutes(row.total_minutes)}</span><span class="text-xs font-bold">${Number(row.goal_days) || 0}일</span></article>`).join('');
+  const header = '<div class="sticky top-0 z-20 grid grid-cols-[minmax(145px,1.5fr)_repeat(4,minmax(58px,.72fr))_minmax(74px,.85fr)_68px] gap-2 px-3 py-3 mb-2 text-[9px] font-bold tracking-wide text-on-surface-variant bg-white/95 backdrop-blur-xl shadow-sm rounded-xl"><span>Member</span><span>기도</span><span>말씀</span><span>공부</span><span>예배</span><span>총 시간</span><span>300분</span></div>';
+  wrap.innerHTML = `<div class="lg:hidden flex flex-col gap-3">${mobileRows}</div><div class="hidden lg:block max-h-[70vh] overflow-y-auto scrollbar-hide rounded-2xl">${header}${desktopRows}</div>`;
 }
 
 function adminWireConsole() {
@@ -1371,7 +1392,13 @@ function adminWireConsole() {
   document.getElementById('admin-dashboard-bulk-sms')?.addEventListener('click', adminSendBulkMissingSms);
   document.getElementById('admin-dashboard-bulk-report')?.addEventListener('click', adminSendBulkStudentReports);
   document.getElementById('admin-dashboard-export-excel')?.addEventListener('click', adminExportStudentReportLinks);
-  document.getElementById('admin-sms-log-refresh')?.addEventListener('click', adminLoadSmsLogs);
+  document.getElementById('admin-sms-log-refresh')?.addEventListener('click', () => adminLoadSmsLogs(true));
+  document.getElementById('admin-sms-log-pagination')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-sms-log-page]');
+    if (!button || button.disabled) return;
+    adminSmsLogPage = Number(button.dataset.smsLogPage);
+    adminLoadSmsLogs();
+  });
   document.getElementById('admin-stat-search')?.addEventListener('input', adminRenderAllStats);
   document.getElementById('admin-stat-role')?.addEventListener('change', adminRenderAllStats);
   document.getElementById('admin-stat-refresh')?.addEventListener('click', adminLoadAllStats);
