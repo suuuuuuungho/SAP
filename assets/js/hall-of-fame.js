@@ -46,13 +46,14 @@ function hofGrowthPeriod() {
 }
 
 function hofPeriodForActiveTab(currentPeriod) {
-  if (hofActiveTab === 'total') return { ...currentPeriod, isFuture: false };
+  if (hofActiveTab === 'total') return { ...currentPeriod, isFuture: false, showGrowth: false };
   const selectedWeek = Number(hofActiveTab);
   const isFuture = currentPeriod.beforeStart || (!currentPeriod.afterEnd && selectedWeek > currentPeriod.week);
   return {
     week: selectedWeek,
     elapsed: selectedWeek === currentPeriod.week ? currentPeriod.elapsed : 5,
-    isFuture
+    isFuture,
+    showGrowth: true
   };
 }
 
@@ -149,7 +150,7 @@ function renderHofGrowth(rows, period) {
   const section = document.getElementById('hof-growth-section');
   const wrap = document.getElementById('hof-growth-grid');
   const periodEl = document.getElementById('hof-growth-period');
-  const canShowGrowth = !period.isFuture && period.week > 1;
+  const canShowGrowth = period.showGrowth !== false && !period.isFuture && period.week > 1;
   if (section) section.classList.toggle('hidden', !canShowGrowth);
   if (!canShowGrowth) {
     if (wrap) wrap.innerHTML = '';
@@ -172,7 +173,7 @@ function renderHofGrowth(rows, period) {
 }
 
 async function loadHofGrowthRows(period) {
-  if (period.isFuture || period.week <= 1) return [];
+  if (period.showGrowth === false || period.isFuture || period.week <= 1) return [];
   const { data, error } = await window.supabaseClient.rpc('get_hof_growth_rankings', { week_no: period.week, elapsed_weekdays: period.elapsed });
   if (error) { console.error('[hall-of-fame] growth rankings', error); return []; }
   return data || [];
