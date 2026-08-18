@@ -4,6 +4,10 @@ let adminCurrentUserId = null;
 let adminUsers = [];
 let adminEditingMessageId = null;
 let adminMessages = [];
+const ADMIN_MESSAGE_PAGE_SIZE = 5;
+let adminMessageHistoryFilter = 'global';
+let adminMessageHistoryPage = 1;
+let adminMessageHistoryCount = 0;
 const ADMIN_REPORT_PUBLIC_SITE_URL = 'https://suuuuuuungho.github.io/SAP/';
 const ADMIN_MESSAGE_SENDER_ROLES = new Set(['admin', 'teacher', 'pastor', 'department_head', 'secretary']);
 
@@ -97,8 +101,21 @@ function adminRecipientLabel(userId) {
 }
 
 async function adminLoadMessages() {
-  const { data, error } = await window.supabaseClient.from('home_messages').select('*').order('created_at', { ascending: false }).limit(50);
+  const from = (adminMessageHistoryPage - 1) * ADMIN_MESSAGE_PAGE_SIZE;
+  const to = from + ADMIN_MESSAGE_PAGE_SIZE - 1;
+  let query = window.supabaseClient.from('home_messages').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+  query = adminMessageHistoryFilter === 'personal'
+    ? query.not('recipient_user_id', 'is', null)
+    : query.is('recipient_user_id', null);
+  const { data, error, count } = await query.range(from, to);
   if (error) { console.error('[admin] messages', error); return; }
+  adminMessageHistoryCount = count || 0;
+  const totalPages = Math.max(1, Math.ceil(adminMessageHistoryCount / ADMIN_MESSAGE_PAGE_SIZE));
+  if (adminMessageHistoryPage > totalPages) {
+    adminMessageHistoryPage = totalPages;
+    await adminLoadMessages();
+    return;
+  }
   adminMessages = data || [];
   const wrap = document.getElementById('admin-message-list');
   if (!wrap) return;
@@ -124,7 +141,26 @@ async function adminLoadMessages() {
         </div>
       </div>
     </article>`;
-  }).join('') : '<p class="text-sm text-on-surface-variant">등록된 메시지가 없습니다.</p>';
+  }).join('') : `<p class="text-sm text-on-surface-variant py-8 text-center">등록된 ${adminMessageHistoryFilter === 'personal' ? '개인 공지' : '전체 공지'}가 없습니다.</p>`;
+  adminRenderMessageHistoryControls();
+}
+
+function adminRenderMessageHistoryControls() {
+  document.querySelectorAll('[data-message-history-filter]').forEach((button) => {
+    const active = button.dataset.messageHistoryFilter === adminMessageHistoryFilter;
+    button.classList.toggle('nav-pill-active', active);
+    button.classList.toggle('text-on-surface-variant', !active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  const count = document.getElementById('admin-message-history-count');
+  if (count) count.textContent = `총 ${adminMessageHistoryCount}개`;
+  const pagination = document.getElementById('admin-message-pagination');
+  if (!pagination) return;
+  const totalPages = Math.max(1, Math.ceil(adminMessageHistoryCount / ADMIN_MESSAGE_PAGE_SIZE));
+  pagination.innerHTML = `
+    <button type="button" data-message-history-page="prev" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="이전 페이지" ${adminMessageHistoryPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>
+    <span class="text-xs font-bold text-on-surface-variant">${adminMessageHistoryPage} / ${totalPages}</span>
+    <button type="button" data-message-history-page="next" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="다음 페이지" ${adminMessageHistoryPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
 }
 
 function adminDateTimeLocalValue(isoValue) {
@@ -234,6 +270,8 @@ function adminWireMessageForm() {
       return;
     }
     const savedMessage = result.data;
+    adminMessageHistoryFilter = audience;
+    adminMessageHistoryPage = 1;
     adminResetMessageForm();
     await adminLoadMessages();
     if (wasEditing && startsAt <= new Date()) {
@@ -295,6 +333,19 @@ async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, 
 function adminWireMessageList() {
   const wrap = document.getElementById('admin-message-list');
   if (!wrap) return;
+  document.getElementById('admin-message-history-tabs')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-message-history-filter]');
+    if (!button || button.dataset.messageHistoryFilter === adminMessageHistoryFilter) return;
+    adminMessageHistoryFilter = button.dataset.messageHistoryFilter === 'personal' ? 'personal' : 'global';
+    adminMessageHistoryPage = 1;
+    await adminLoadMessages();
+  });
+  document.getElementById('admin-message-pagination')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-message-history-page]');
+    if (!button || button.disabled) return;
+    adminMessageHistoryPage += button.dataset.messageHistoryPage === 'next' ? 1 : -1;
+    await adminLoadMessages();
+  });
   wrap.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-action]');
     const article = event.target.closest('[data-message-id]');
@@ -311,6 +362,7 @@ function adminWireMessageList() {
         return;
       }
       await window.supabaseClient.from('home_messages').delete().eq('id', id);
+      if (adminMessages.length === 1 && adminMessageHistoryPage > 1) adminMessageHistoryPage -= 1;
       if (adminEditingMessageId === id) adminResetMessageForm();
     } else {
       const currentlyActive = !article.classList.contains('opacity-50');

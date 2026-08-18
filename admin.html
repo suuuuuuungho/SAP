@@ -53,7 +53,15 @@
           <button id="admin-message-edit-cancel" class="hidden glass-card rounded-full px-5 py-2.5 text-sm text-on-surface-variant" type="button">취소</button>
         </div>
       </form>
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div id="admin-message-history-tabs" class="glass-card rounded-full p-1 grid grid-cols-2 text-xs font-bold flex-1" role="tablist" aria-label="Board Message 이력 유형">
+          <button type="button" data-message-history-filter="global" class="rounded-full px-3 py-2 nav-pill-active" role="tab">전체 공지</button>
+          <button type="button" data-message-history-filter="personal" class="rounded-full px-3 py-2 text-on-surface-variant" role="tab">개인 공지</button>
+        </div>
+        <span id="admin-message-history-count" class="text-[11px] text-on-surface-variant whitespace-nowrap"></span>
+      </div>
       <div id="admin-message-list" class="flex flex-col gap-3"></div>
+      <nav id="admin-message-pagination" class="flex items-center justify-center gap-3 mt-5" aria-label="Board Message 이력 페이지"></nav>
       </section><section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-5">Home 상단에 게시할 말씀입니다</h2>
       <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
@@ -183,7 +191,7 @@
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=46"></script>
+<script src="assets/js/admin.js?v=47"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
