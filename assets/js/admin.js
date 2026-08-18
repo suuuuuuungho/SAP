@@ -408,12 +408,18 @@ const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'gallery-manage', 'control
 
 function adminWireTabs() {
   const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
-  const selectTab = (tab) => {
+  const selectTab = (tab, historyMode = 'push') => {
     let nextTab = validTabs.includes(tab) ? tab : 'board';
     if (ADMIN_FULL_ONLY_TABS.has(nextTab) && !adminFullAccess) nextTab = 'board';
     if (nextTab === 'comment' && !adminCommentTabAccess) nextTab = 'board';
     adminActiveTab = nextTab;
-    window.history.replaceState(null, '', `#${adminActiveTab}`);
+    const nextUrl = `#${adminActiveTab}`;
+    const nextState = { ...(window.history.state || {}), sapOverlay: null, adminTab: adminActiveTab };
+    if (historyMode === 'push' && window.location.hash !== nextUrl) {
+      if (window.history.state?.sapOverlay) window.history.replaceState(nextState, '', nextUrl);
+      else window.history.pushState(nextState, '', nextUrl);
+    }
+    if (historyMode === 'replace') window.history.replaceState(nextState, '', nextUrl);
     document.querySelectorAll('[data-admin-tab]').forEach((item) => item.classList.toggle('nav-pill-active', item.dataset.adminTab === adminActiveTab));
     const panelId = ADMIN_PANEL_FOR_TAB[adminActiveTab] || adminActiveTab;
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== panelId));
@@ -427,8 +433,9 @@ function adminWireTabs() {
     document.getElementById('sidebar-overlay')?.classList.add('hidden', 'opacity-0');
     document.body.style.overflow = '';
   };
-  document.querySelectorAll('[data-admin-tab]').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.adminTab)));
-  selectTab(window.location.hash.replace('#', '') || 'board');
+  document.querySelectorAll('[data-admin-tab]').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.adminTab, 'push')));
+  window.addEventListener('popstate', () => selectTab(window.location.hash.replace('#', '') || 'board', 'none'));
+  selectTab(window.location.hash.replace('#', '') || 'board', 'replace');
 }
 
 async function adminLoadFeatures() {

@@ -973,7 +973,13 @@ async function onPrayWordSaved() {
 
 async function onGalleryPrayWordSaved() {
   await onPrayWordSaved();
-  if (galleryReturnType) window.location.href = `gallery.html?date=${encodeURIComponent(selectedDateKey)}&type=${encodeURIComponent(galleryReturnType)}`;
+  if (!galleryReturnType) return;
+  const cameFromGallery = document.referrer.includes('/gallery.html');
+  if (cameFromGallery && window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  window.location.replace(`gallery.html?date=${encodeURIComponent(selectedDateKey)}&type=${encodeURIComponent(galleryReturnType)}`);
 }
 
 async function initHomeWidgets() {

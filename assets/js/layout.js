@@ -16,6 +16,89 @@ const NAV_ITEMS = [
   { id: 'admin', label: 'Admin', href: 'admin.html', icon: 'fa-solid fa-sliders', adminOnly: true }
 ];
 
+// 브라우저 뒤로가기는 현재 페이지의 가장 위 모달/드로어를 먼저 닫는다.
+// 각 기능이 제각각 history를 조작하지 않도록 공통 MutationObserver에서 열림/닫힘을 추적한다.
+const APP_OVERLAY_SELECTOR = '[id$="-modal"], #photo-lightbox, #sidebar-menu';
+let appHistoryOverlayStack = [];
+let appHistoryApplyingPop = false;
+
+function appOverlayIsOpen(element) {
+  if (!element) return false;
+  if (element.id === 'sidebar-menu') return !element.classList.contains(OFFCANVAS_HIDDEN);
+  return !element.classList.contains('hidden');
+}
+
+function appVisibleOverlayIds() {
+  return [...document.querySelectorAll(APP_OVERLAY_SELECTOR)].filter(appOverlayIsOpen).map((element) => element.id);
+}
+
+function appCloseOverlayFromHistory(id) {
+  const element = document.getElementById(id);
+  if (!element || !appOverlayIsOpen(element)) return;
+  const baseId = id.replace(/-modal$/, '');
+  const closeControl = document.getElementById(`${id}-close`)
+    || document.getElementById(`${baseId}-close`)
+    || element.querySelector('[data-close-modal], [data-admin-gallery-edit-close], [id$="-overlay"]');
+  if (closeControl) {
+    closeControl.click();
+    return;
+  }
+  if (id === 'sidebar-menu') {
+    document.getElementById('menu-close')?.click();
+    return;
+  }
+  element.classList.add('hidden');
+  element.classList.remove('flex');
+  document.body.style.overflow = '';
+}
+
+function wireAppHistory() {
+  const pageKey = `${window.location.pathname}${window.location.search}`;
+  const currentState = window.history.state || {};
+  if (currentState.sapPageKey !== pageKey) {
+    window.history.replaceState({ ...currentState, sapPageKey: pageKey, sapOverlay: null }, '', window.location.href);
+  }
+  appHistoryOverlayStack = appVisibleOverlayIds();
+
+  const syncOverlays = () => {
+    const visible = appVisibleOverlayIds();
+    if (appHistoryApplyingPop) {
+      appHistoryOverlayStack = visible;
+      return;
+    }
+    const opened = visible.filter((id) => !appHistoryOverlayStack.includes(id));
+    const closed = appHistoryOverlayStack.filter((id) => !visible.includes(id));
+    const currentOverlay = window.history.state?.sapOverlay;
+    // 선택 모달 -> 실제 입력 모달처럼 한 화면이 다른 화면으로 즉시 교체될 때는
+    // 히스토리 한 칸을 교체해, 닫힌 중간 모달이 뒤로가기에 다시 끼어들지 않게 한다.
+    if (opened.length && closed.includes(currentOverlay)) {
+      const [replacement, ...additional] = opened;
+      window.history.replaceState({ ...(window.history.state || {}), sapPageKey: pageKey, sapOverlay: replacement }, '', window.location.href);
+      additional.forEach((id) => window.history.pushState({ ...(window.history.state || {}), sapPageKey: pageKey, sapOverlay: id }, '', window.location.href));
+    } else {
+      opened.forEach((id) => {
+        window.history.pushState({ ...(window.history.state || {}), sapPageKey: pageKey, sapOverlay: id }, '', window.location.href);
+      });
+      if (closed.includes(currentOverlay)) window.history.back();
+    }
+    appHistoryOverlayStack = visible;
+  };
+
+  const observer = new MutationObserver(syncOverlays);
+  observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  window.addEventListener('popstate', (event) => {
+    const targetOverlay = event.state?.sapPageKey === pageKey ? event.state?.sapOverlay : null;
+    const visible = appVisibleOverlayIds();
+    const overlaysToClose = visible.filter((id) => id !== targetOverlay).reverse();
+    if (!overlaysToClose.length) return;
+    appHistoryApplyingPop = true;
+    overlaysToClose.forEach(appCloseOverlayFromHistory);
+    appHistoryOverlayStack = appVisibleOverlayIds();
+    setTimeout(() => { appHistoryApplyingPop = false; }, 0);
+  });
+}
+
 const ADMIN_NAV_GROUPS = [
   [
     { id: 'board', label: 'Board', icon: 'fa-solid fa-clipboard-list' },
@@ -196,6 +279,13 @@ function wireMobileMenu() {
   menuToggleBtn.addEventListener('click', openMenu);
   menuCloseBtn.addEventListener('click', closeMenu);
   sidebarOverlay.addEventListener('click', closeMenu);
+  sidebarMenu.addEventListener('click', (event) => {
+    if (!event.target.closest('a[href]')) return;
+    if (window.history.state?.sapOverlay === 'sidebar-menu') {
+      window.history.replaceState({ ...(window.history.state || {}), sapOverlay: null }, '', window.location.href);
+    }
+    closeMenu();
+  });
 }
 
 async function applyFeatureFlags(activePage) {
@@ -246,6 +336,7 @@ function renderApp({ activePage }) {
   appRoot.innerHTML = renderShell(activePage);
   appRoot.querySelector('#page-main > div').appendChild(template.content.cloneNode(true));
   wireMobileMenu();
+  wireAppHistory();
 
   if (window.initAuthUI) window.initAuthUI();
   if (window.initHomeWidgets) window.initHomeWidgets();

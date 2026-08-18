@@ -239,13 +239,13 @@
 
     if (data.session) {
       showStatus('가입이 완료되었습니다. Home으로 이동합니다...', false);
-      setTimeout(() => { window.location.href = 'home.html'; }, 1000);
+      setTimeout(() => { window.location.replace('home.html'); }, 1000);
     } else {
       // Supabase 프로젝트의 Authentication -> Sign In / Providers -> Email에서
       // "Confirm email"이 꺼져 있으면 signUp() 직후 세션이 바로 오므로 이 분기는 타지 않는다.
       // 혹시 이 분기를 타면 그 설정이 다시 켜졌다는 뜻이므로 로그인 페이지로 안내한다.
       showStatus('가입이 완료되었습니다. 로그인 페이지에서 로그인해주세요.', false);
-      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      setTimeout(() => { window.location.replace('login.html'); }, 1500);
     }
   });
 </script>

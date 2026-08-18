@@ -118,7 +118,7 @@
     if (error) {
       showStatus('아이디 또는 비밀번호가 올바르지 않습니다.', true);
     } else {
-      window.location.href = await dashboardDestination(loginData.user.id);
+      window.location.replace(await dashboardDestination(loginData.user.id));
     }
   });
 
@@ -126,7 +126,7 @@
   (async () => {
     if (!window.supabaseClient) return;
     const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (session) window.location.href = await dashboardDestination(session.user.id);
+    if (session) window.location.replace(await dashboardDestination(session.user.id));
   })();
 </script>
 </body>

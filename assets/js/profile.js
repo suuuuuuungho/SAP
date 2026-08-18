@@ -193,7 +193,7 @@ function wireDeleteAccount() {
       return;
     }
     await window.supabaseClient.auth.signOut();
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
   });
 }
 

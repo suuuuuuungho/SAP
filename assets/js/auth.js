@@ -97,7 +97,7 @@ async function initAuthUI() {
     button.onclick = session?.user ? async () => {
       button.disabled = true;
       await window.supabaseClient.auth.signOut();
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
     } : null;
   });
 }
