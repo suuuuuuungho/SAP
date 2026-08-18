@@ -20,7 +20,8 @@ const ADMIN_NAV_GROUPS = [
   [
     { id: 'board', label: 'Board', icon: 'fa-solid fa-clipboard-list' },
     { id: 'gallery', label: 'Gallery', icon: 'fa-regular fa-images' },
-    { id: 'comment', label: 'Comment', icon: 'fa-regular fa-comment-dots', tier: 'comment' }
+    { id: 'comment', label: 'Comment', icon: 'fa-regular fa-comment-dots', tier: 'comment' },
+    { id: 'hall-of-fame', label: 'Hall of Fame', icon: 'fa-solid fa-trophy', href: 'hall-of-fame.html' }
   ],
   [
     { id: 'board-manage', label: 'Board manage', icon: 'fa-solid fa-bullhorn', full: true },
@@ -66,7 +67,10 @@ function adminNavTierAttr(item) {
 
 function adminNavFull() {
   const active = window.location.hash.replace('#', '') || 'board';
-  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="flex items-center gap-2 px-3 pt-5 pb-2"><span class="h-px bg-outline-variant/60 flex-1"></span><span class="text-[9px] font-bold tracking-[.16em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/60 flex-1"></span></div>' : ''}${group.map((item) => `
+  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="flex items-center gap-2 px-3 pt-5 pb-2"><span class="h-px bg-outline-variant/60 flex-1"></span><span class="text-[9px] font-bold tracking-[.16em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/60 flex-1"></span></div>' : ''}${group.map((item) => item.href ? `
+    <a href="${item.href}" ${adminNavTierAttr(item)} class="hidden flex w-full items-center gap-3 px-4 py-2.5 rounded-full text-on-surface hover:bg-white/40 font-medium text-sm transition-all duration-200 text-left">
+      <i class="${item.icon} w-4 text-center"></i><span>${item.label}</span>
+    </a>` : `
     <button type="button" ${adminNavTierAttr(item)} data-admin-tab="${item.id}" class="hidden flex w-full items-center gap-3 px-4 py-2.5 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40'} font-medium text-sm transition-all duration-200 text-left">
       <i class="${item.icon} w-4 text-center"></i><span>${item.label}</span>
     </button>`).join('')}`).join('');
@@ -74,7 +78,10 @@ function adminNavFull() {
 
 function adminNavIcon() {
   const active = window.location.hash.replace('#', '') || 'board';
-  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="h-px bg-outline-variant/60 mx-2 my-2"></div>' : ''}${group.map((item) => `
+  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="h-px bg-outline-variant/60 mx-2 my-2"></div>' : ''}${group.map((item) => item.href ? `
+    <a href="${item.href}" aria-label="${item.label}" ${adminNavTierAttr(item)} class="hidden flex nav-icon-item w-12 h-12 rounded-full text-on-surface-variant hover:bg-white/40 items-center justify-center mx-auto transition-all relative">
+      <i class="${item.icon} text-lg"></i><div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
+    </a>` : `
     <button type="button" aria-label="${item.label}" ${adminNavTierAttr(item)} data-admin-tab="${item.id}" class="hidden flex nav-icon-item w-12 h-12 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40'} items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i><div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </button>`).join('')}`).join('');
