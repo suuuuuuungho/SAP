@@ -11,12 +11,11 @@ const HOF_RANKING_META = {
 
 const HOF_PROGRAM_START = '2026-08-10';
 const HOF_PROGRAM_END = '2026-09-06';
-const HOF_GROWTH_CATEGORIES = ['pray', 'word', 'study', 'worship'];
+const HOF_GROWTH_CATEGORIES = ['pray', 'word', 'study'];
 const HOF_GROWTH_META = {
   pray: { title: 'Prayer', ko: '기도', icon: 'fa-solid fa-hands-praying', gradient: 'from-pink-500 to-rose-400', tint: 'bg-pink-500/10 text-pink-600' },
   word: { title: 'Word', ko: '말씀', icon: 'fa-solid fa-book-bible', gradient: 'from-violet-500 to-indigo-400', tint: 'bg-violet-500/10 text-violet-600' },
-  study: { title: 'Study', ko: '공부', icon: 'fa-solid fa-book-open', gradient: 'from-orange-500 to-amber-400', tint: 'bg-orange-500/10 text-orange-600' },
-  worship: { title: 'Worship', ko: '예배', icon: 'fa-solid fa-church', gradient: 'from-emerald-500 to-teal-400', tint: 'bg-emerald-500/10 text-emerald-600' }
+  study: { title: 'Study', ko: '공부', icon: 'fa-solid fa-book-open', gradient: 'from-orange-500 to-amber-400', tint: 'bg-orange-500/10 text-orange-600' }
 };
 
 let hofCurrentUserId = null;
@@ -123,7 +122,7 @@ function hofGrowthRows(rows, category, comparison) {
     return `<div class="relative py-3 ${index ? 'border-t border-outline-variant/30' : ''} ${isMe ? 'bg-primary/5 -mx-2 px-2 rounded-xl' : ''}">
       <div class="flex items-center gap-2.5 relative z-10">
         <span class="w-6 text-center text-sm font-bold">${medal}</span>${hofAvatar(row.user_id, row.name)}
-        <div class="min-w-0 flex-1"><p class="text-xs font-bold truncate">${hofEscape(row.name)}${isMe ? ' <span class="text-[9px] text-primary">ME</span>' : ''}</p><p class="text-[10px] text-on-surface-variant">${hofFormatMinutes(row.baseline_minutes)} → ${hofFormatMinutes(row.current_minutes)}</p></div>
+        <div class="min-w-0 flex-1"><p class="text-xs font-bold truncate">${hofEscape(row.name)}${isMe ? ' <span class="text-[9px] text-primary">ME</span>' : ''}</p></div>
         <div class="text-right"><p class="text-sm font-black text-quaternary">+${rate.toLocaleString('ko-KR')}%</p><i class="fa-solid fa-arrow-trend-up text-[10px] text-quaternary"></i></div>
       </div>
       <div class="ml-[4.625rem] mt-2 h-1.5 rounded-full bg-surface-container overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r ${HOF_GROWTH_META[category].gradient}" style="width:${width}%"></div></div>

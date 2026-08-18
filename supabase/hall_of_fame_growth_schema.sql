@@ -102,7 +102,7 @@ ranked as (
 select r.comparison_type, r.category, r.rank_no, r.user_id, r.username, r.name,
        r.baseline_minutes, r.current_minutes, r.growth_rate
 from ranked r
-where r.rank_no <= 5
+where r.rank_no <= 5 and r.category in ('pray', 'word', 'study')
 order by case r.category when 'pray' then 1 when 'word' then 2 when 'study' then 3 else 4 end,
          case r.comparison_type when 'previous' then 1 else 2 end,
          r.rank_no;
