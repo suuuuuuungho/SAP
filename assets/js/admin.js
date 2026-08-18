@@ -539,7 +539,7 @@ function commentPhotoHTML(record) {
 
 function adminMessageSenderLabel(userId) {
   const member = adminMembers.find((item) => item.id === userId);
-  return member?.name || '관리자';
+  return String(member?.name || '').trim() || '이름 미등록';
 }
 
 function adminMessageAudienceValue() {
@@ -561,20 +561,22 @@ function adminSetMessageAudience(audience) {
 }
 
 function adminMessageSenderName(member) {
-  return String(member?.name || '').trim() || String(member?.username || '').trim() || '관리자';
+  return String(member?.name || '').trim();
 }
 
 function adminRenderMessageSenders(selectedId = null) {
   const wrap = document.getElementById('admin-message-senders');
   if (!wrap) return;
   const managers = adminMembers.filter((member) => member.is_active && ADMIN_MESSAGE_SENDER_ROLES.has(member.app_role));
-  const fallbackId = selectedId || (managers.some((member) => member.id === adminCurrentUserId) ? adminCurrentUserId : managers[0]?.id);
+  const selectableManagers = managers.filter((member) => adminMessageSenderName(member));
+  const fallbackId = selectedId || (selectableManagers.some((member) => member.id === adminCurrentUserId) ? adminCurrentUserId : selectableManagers[0]?.id);
   wrap.innerHTML = managers.length ? managers.map((member) => {
     const senderName = adminMessageSenderName(member);
-    return `<label class="glass-card rounded-2xl px-3 py-2.5 flex items-center gap-3 cursor-pointer">
-    <input type="radio" name="admin-message-sender" value="${member.id}" class="text-primary" ${member.id === fallbackId ? 'checked' : ''} required>
-    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape(senderName[0])}</span>
-    <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(senderName)} 선생님</span><span class="block text-[10px] text-on-surface-variant">회원가입 이름 · ${adminEscape(adminRoleLabel(member.app_role))}</span></span>
+    const hasSignupName = !!senderName;
+    return `<label class="glass-card rounded-2xl px-3 py-2.5 flex items-center gap-3 ${hasSignupName ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}">
+    <input type="radio" name="admin-message-sender" value="${member.id}" class="text-primary" ${hasSignupName && member.id === fallbackId ? 'checked' : ''} ${hasSignupName ? 'required' : 'disabled'}>
+    <span class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-secondary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden">${adminMemberAvatarUrls[member.id] ? `<img src="${adminEscape(adminMemberAvatarUrls[member.id])}" alt="" class="w-full h-full object-cover">` : adminEscape(senderName[0] || '?')}</span>
+    <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(senderName || '이름 미등록')}${hasSignupName ? ' 선생님' : ''}</span><span class="block text-[10px] text-on-surface-variant">${hasSignupName ? '회원가입 이름' : 'Member에서 이름을 먼저 등록하세요'} · ${adminEscape(adminRoleLabel(member.app_role))}</span></span>
   </label>`;
   }).join('') : '<p class="text-xs text-error">활성 관리자 계정을 찾을 수 없습니다.</p>';
 }
