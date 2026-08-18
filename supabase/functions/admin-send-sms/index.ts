@@ -49,16 +49,17 @@ Deno.serve(async (req) => {
   const { data: authData } = await viewer.auth.getUser()
 
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode === 'report' ? 'report' : 'missing'
+  const mode = body.mode === 'report' ? 'report' : body.mode === 'board' ? 'board' : 'missing'
   const userId = String(body.userId || '')
   const date = String(body.date || '')
   const missing = Array.isArray(body.missing) ? body.missing.map(String).filter(Boolean) : []
   const reportToken = String(body.reportToken || '')
   const siteUrl = String(body.siteUrl || '')
+  const messageText = String(body.messageBody || '').trim()
   const admin = createClient(url, service)
   const { data: member } = await admin.from('profiles').select('name,phone,parent_phone,grade_class').eq('id', userId).maybeSingle()
   const to = digits(mode === 'report' ? member?.parent_phone || '' : member?.phone || '')
-  const logItems = mode === 'report' ? ['개인 리포트'] : missing
+  const logItems = mode === 'report' ? ['개인 리포트'] : mode === 'board' ? ['Board Message'] : missing
   const writeLog = async (status: 'success' | 'failed', errorMessage: string | null = null) => {
     if (!member || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !logItems.length) return
     const { error: logError } = await admin.from('admin_sms_logs').insert({
@@ -92,6 +93,10 @@ Deno.serve(async (req) => {
     await writeLog('failed', '리포트 링크 생성 오류')
     return json({ ok: false, message: '리포트 링크를 만들지 못했습니다. Admin 페이지를 새로고침한 후 다시 시도해주세요.' })
   }
+  if (mode === 'board' && !messageText) {
+    await writeLog('failed', '메시지 내용 누락')
+    return json({ ok: false, message: '메시지 내용을 확인해주세요.' })
+  }
 
   const apiKey = Deno.env.get('SOLAPI_API_KEY')
   const apiSecret = Deno.env.get('SOLAPI_API_SECRET')
@@ -107,6 +112,8 @@ Deno.serve(async (req) => {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `HMAC-SHA256 apiKey=${apiKey}, date=${stamp}, salt=${salt}, signature=${signature}` },
     body: JSON.stringify({ message: { to, from: sender, text: mode === 'report'
       ? buildParentReportMessage(member.name, parsedReportUrl!.href)
+      : mode === 'board'
+      ? `[SAP] ${messageText}`
       : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` } }),
   })
   if (!response.ok) {

@@ -184,16 +184,58 @@ function adminWireMessageForm() {
       body,
       expires_at: expiresValue ? new Date(expiresValue).toISOString() : null
     };
+    const wasEditing = !!adminEditingMessageId;
+    const submitButton = document.getElementById('admin-message-submit');
+    const originalLabel = submitButton?.textContent || 'Board Message 전송';
+    if (submitButton) submitButton.disabled = true;
     const result = adminEditingMessageId
       ? await window.supabaseClient.from('home_messages').update(payload).eq('id', adminEditingMessageId)
       : await window.supabaseClient.from('home_messages').insert({ ...payload, created_by: adminCurrentUserId });
-    if (result.error) { adminShowStatus('메시지를 저장하지 못했습니다.', true); console.error('[admin] save message', result.error); return; }
-    const wasEditing = !!adminEditingMessageId;
+    if (result.error) {
+      adminShowStatus('메시지를 저장하지 못했습니다.', true);
+      console.error('[admin] save message', result.error);
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
     adminResetMessageForm();
-    adminShowStatus(wasEditing ? '메시지를 수정했습니다.' : '메시지를 전송했습니다.');
     await adminLoadMessages();
+    if (wasEditing) {
+      adminShowStatus('메시지를 수정했습니다.');
+      if (submitButton) submitButton.disabled = false;
+    } else {
+      await adminSendBoardMessageSms(recipient, body, submitButton, originalLabel);
+    }
   });
   document.getElementById('admin-message-edit-cancel')?.addEventListener('click', adminResetMessageForm);
+}
+
+async function adminSendBoardMessageSms(recipientId, body, submitButton, originalLabel) {
+  const restoreButton = () => { if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalLabel; } };
+  const targets = recipientId
+    ? adminMembers.filter((member) => member.id === recipientId)
+    : adminMembers.filter((member) => member.app_role === 'student' && member.is_active);
+  const withPhone = targets.filter((member) => String(member.phone || '').replace(/\D/g, '').length >= 10);
+  const missingPhoneCount = targets.length - withPhone.length;
+  if (!withPhone.length) {
+    adminShowStatus(`메시지를 전송했습니다.${targets.length ? ` (연락처 미등록으로 문자는 못 보냄: ${missingPhoneCount}명)` : ''}`, targets.length > 0);
+    restoreButton();
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 0/${withPhone.length}`;
+  let cursor = 0; let success = 0; let failed = 0;
+  const worker = async () => {
+    while (cursor < withPhone.length) {
+      const target = withPhone[cursor++];
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board', userId: target.id, messageBody: body, date: today } });
+      if (!error && data?.ok) success += 1; else failed += 1;
+      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 ${success + failed}/${withPhone.length}`;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(5, withPhone.length) }, worker));
+  restoreButton();
+  adminShowStatus(`메시지를 전송했습니다. 문자 발송: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
+  await adminLoadSmsLogs();
 }
 
 function adminWireMessageList() {
