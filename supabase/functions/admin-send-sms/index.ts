@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({ message: { to, from: sender, text: mode === 'report'
       ? buildParentReportMessage(member.name, parsedReportUrl!.href)
       : mode === 'board'
-      ? `[SAP] ${messageText}`
+      ? `[SAP] ${messageText}\n\n-권세계 선생님-`
       : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` } }),
   })
   if (!response.ok) {
