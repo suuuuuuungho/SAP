@@ -5,6 +5,8 @@
 
 const DAILY_GOAL_MINUTES = 300;
 const WORD_VERIFIED_MINUTES = 60; // 말씀 has no natural duration input, so a verified 말씀 is a flat 60분.
+const VERIFICATION_PERIOD_START = '2026-08-10';
+const VERIFICATION_PERIOD_END = '2026-09-06';
 
 let selectedDateKey = todayKey();
 let galleryReturnType = null;
@@ -92,6 +94,172 @@ function getActiveCategoriesForDate(key) {
   const categories = ['pray', 'word', 'study'];
   if (isWorshipDayActive(key)) categories.push('worship');
   return categories;
+}
+
+function getVerificationPeriodDays() {
+  const days = [];
+  const cursor = new Date(`${VERIFICATION_PERIOD_START}T12:00:00`);
+  const end = new Date(`${VERIFICATION_PERIOD_END}T12:00:00`);
+  while (cursor <= end) {
+    if (cursor.getDay() >= 1 && cursor.getDay() <= 5) days.push(dateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+async function loadVerificationPeriodStatus() {
+  const userId = await getCurrentUserId();
+  const days = getVerificationPeriodDays();
+  const [prayResult, wordResult, studyResult, worshipResult] = await Promise.all([
+    window.supabaseClient.from('pray_records').select('record_date,entries').eq('user_id', userId).in('record_date', days),
+    window.supabaseClient.from('word_records').select('record_date,verses,photo_path,photo_unavailable').eq('user_id', userId).in('record_date', days),
+    window.supabaseClient.from('study_records').select('record_date,sessions').eq('user_id', userId).in('record_date', days),
+    window.supabaseClient.from('worship_records').select('record_date,status,minutes').eq('user_id', userId).in('record_date', days)
+  ]);
+  const failed = [prayResult, wordResult, studyResult, worshipResult].find((result) => result.error);
+  if (failed) {
+    console.error('[home] loadVerificationPeriodStatus', failed.error);
+    await refreshDailyStatus(selectedDateKey);
+    return;
+  }
+  const prayMap = Object.fromEntries((prayResult.data || []).map((row) => [row.record_date, row]));
+  const wordMap = Object.fromEntries((wordResult.data || []).map((row) => [row.record_date, row]));
+  const studyMap = Object.fromEntries((studyResult.data || []).map((row) => [row.record_date, row]));
+  const worshipMap = Object.fromEntries((worshipResult.data || []).map((row) => [row.record_date, row]));
+  days.forEach((key) => {
+    const pray = prayMap[key];
+    const word = wordMap[key];
+    const study = studyMap[key];
+    const worship = worshipMap[key];
+    const entries = Array.isArray(pray?.entries) ? pray.entries : [];
+    const verses = Array.isArray(word?.verses) ? word.verses : [];
+    const sessions = Array.isArray(study?.sessions) ? study.sessions : [];
+    dailyStatus[key] = {
+      pray: { entries, verified: entries.length > 0 },
+      word: { verses, photoPath: word?.photo_path || null, photoUnavailable: !!word?.photo_unavailable, verified: verses.length > 0 },
+      study: { sessions, verified: sessions.length > 0 },
+      worship: { status: worship?.status || null, minutes: worship?.minutes || 0, verified: worship?.status === 'attended' || worship?.status === 'home' }
+    };
+  });
+  if (!days.includes(selectedDateKey)) await refreshDailyStatus(selectedDateKey);
+}
+
+function legacyVerificationOverviewCellHTML(key, category) {
+  if (category === 'worship' && !isWorshipDayActive(key)) {
+    return '<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl bg-surface-low text-[11px] font-semibold text-outline">해당 없음</span>';
+  }
+  const verified = !!getMergedProgress(key)[category];
+  const label = { pray: '기도', word: '말씀', study: '공부', worship: '예배' }[category];
+  return `<button type="button" data-overview-date="${key}" data-overview-category="${category}" class="w-full min-h-9 rounded-xl px-2 text-xs font-bold transition-all ${verified ? 'bg-quaternary/10 text-quaternary hover:bg-quaternary/20' : 'bg-error/10 text-error hover:bg-error hover:text-white'}" aria-label="${key} ${label} ${verified ? '인증 완료' : '미인증, 인증하기'}">
+    <i class="fa-solid ${verified ? 'fa-check' : 'fa-plus'} mr-1" aria-hidden="true"></i>${verified ? '완료' : '미인증'}
+  </button>`;
+}
+
+function legacyRenderVerificationOverview() {
+  const wrap = document.getElementById('verification-overview');
+  const summary = document.getElementById('verification-overview-summary');
+  if (!wrap) return;
+  const days = getVerificationPeriodDays();
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'];
+  const completedDays = days.filter((key) => getActiveCategoriesForDate(key).every((category) => getMergedProgress(key)[category])).length;
+  if (summary) summary.textContent = `${completedDays} / ${days.length}일 완료`;
+  wrap.innerHTML = `<div class="grid grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-2 items-center">
+    <span class="text-[11px] font-bold text-on-surface-variant px-2">날짜</span>
+    ${['기도', '말씀', '공부', '예배'].map((label) => `<span class="text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
+    ${days.map((key) => {
+      const date = new Date(`${key}T12:00:00`);
+      const selected = key === selectedDateKey;
+      return `<button type="button" data-overview-select-date="${key}" class="text-left rounded-xl px-2 py-2 transition-colors ${selected ? 'bg-primary/10 text-primary' : 'hover:bg-surface-low'}"><span class="block text-xs font-bold">${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-on-surface-variant">${weekday[date.getDay()]}요일</span></button>
+        ${['pray', 'word', 'study', 'worship'].map((category) => verificationOverviewCellHTML(key, category)).join('')}`;
+    }).join('')}
+  </div>`;
+}
+
+// 인증 현황 표의 최종 렌더러. 완료 셀은 상태만 표시하고 미인증 셀만 인증 버튼으로 동작한다.
+function legacyVerificationOverviewCellHTMLV2(key, category) {
+  if (category === 'worship' && !isWorshipDayActive(key)) {
+    return '<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl bg-surface-low text-[11px] font-semibold text-outline">해당 없음</span>';
+  }
+  const verified = !!getMergedProgress(key)[category];
+  const label = { pray: '기도', word: '말씀', study: '공부', worship: '예배' }[category];
+  if (verified) {
+    return `<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl px-2 text-xs font-bold bg-quaternary/10 text-quaternary" aria-label="${key} ${label} 인증 완료"><i class="fa-solid fa-check mr-1" aria-hidden="true"></i>완료</span>`;
+  }
+  return `<button type="button" data-overview-date="${key}" data-overview-category="${category}" class="w-full min-h-9 rounded-xl px-2 text-xs font-bold transition-all bg-error/10 text-error hover:bg-error hover:text-white" aria-label="${key} ${label} 미인증, 인증하기"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>미인증</button>`;
+}
+
+function legacyRenderVerificationOverviewV2() {
+  const wrap = document.getElementById('verification-overview');
+  const summary = document.getElementById('verification-overview-summary');
+  if (!wrap) return;
+  const section = wrap.closest('section');
+  const heading = section?.querySelector('h2');
+  const description = heading?.nextElementSibling;
+  if (heading) heading.textContent = '인증 현황';
+  if (description) description.textContent = '미인증 항목을 누르면 해당 날짜의 인증 화면이 바로 열립니다.';
+  const days = getVerificationPeriodDays();
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'];
+  const completedDays = days.filter((key) => getActiveCategoriesForDate(key).every((category) => getMergedProgress(key)[category])).length;
+  if (summary) summary.textContent = `${completedDays} / ${days.length}일 완료`;
+  wrap.innerHTML = `<div class="grid grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-2 items-center">
+    <span class="text-[11px] font-bold text-on-surface-variant px-2">날짜</span>
+    ${['기도', '말씀', '공부', '예배'].map((label) => `<span class="text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
+    ${days.map((key) => {
+      const date = new Date(`${key}T12:00:00`);
+      const selected = key === selectedDateKey;
+      return `<button type="button" data-overview-select-date="${key}" class="text-left rounded-xl px-2 py-2 transition-colors ${selected ? 'bg-primary/10 text-primary' : 'hover:bg-surface-low'}"><span class="block text-xs font-bold">${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-on-surface-variant">${weekday[date.getDay()]}요일</span></button>
+        ${['pray', 'word', 'study', 'worship'].map((category) => verificationOverviewCellHTML(key, category)).join('')}`;
+    }).join('')}
+  </div>`;
+}
+
+function verificationOverviewCellHTML(key, category) {
+  const labels = { pray: '\uAE30\uB3C4', word: '\uB9D0\uC500', study: '\uACF5\uBD80', worship: '\uC608\uBC30' };
+  if (category === 'worship' && !isWorshipDayActive(key)) {
+    return '<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl bg-surface-low text-[11px] font-semibold text-outline">\uD574\uB2F9 \uC5C6\uC74C</span>';
+  }
+  const verified = !!getMergedProgress(key)[category];
+  if (verified) {
+    return `<span class="inline-flex items-center justify-center w-full min-h-9 rounded-xl px-2 text-xs font-bold bg-quaternary/10 text-quaternary" aria-label="${key} ${labels[category]} \uC778\uC99D \uC644\uB8CC"><i class="fa-solid fa-check mr-1" aria-hidden="true"></i>\uC644\uB8CC</span>`;
+  }
+  return `<button type="button" data-overview-date="${key}" data-overview-category="${category}" class="w-full min-h-9 rounded-xl px-2 text-xs font-bold transition-all bg-error/10 text-error hover:bg-error hover:text-white" aria-label="${key} ${labels[category]} \uBBF8\uC778\uC99D, \uC778\uC99D\uD558\uAE30"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>\uBBF8\uC778\uC99D</button>`;
+}
+
+function renderVerificationOverview() {
+  const wrap = document.getElementById('verification-overview');
+  const summary = document.getElementById('verification-overview-summary');
+  if (!wrap) return;
+  const section = wrap.closest('section');
+  const heading = section?.querySelector('h2');
+  const description = heading?.nextElementSibling;
+  if (heading) heading.textContent = '\uC778\uC99D \uD604\uD669';
+  if (description) description.textContent = '\uBBF8\uC778\uC99D \uD56D\uBAA9\uC744 \uB204\uB974\uBA74 \uD574\uB2F9 \uB0A0\uC9DC\uC758 \uC778\uC99D \uD654\uBA74\uC774 \uBC14\uB85C \uC5F4\uB9BD\uB2C8\uB2E4.';
+  const days = getVerificationPeriodDays();
+  const weekdays = ['\uC77C', '\uC6D4', '\uD654', '\uC218', '\uBAA9', '\uAE08', '\uD1A0'];
+  const categoryLabels = ['\uAE30\uB3C4', '\uB9D0\uC500', '\uACF5\uBD80', '\uC608\uBC30'];
+  const completedDays = days.filter((key) => getActiveCategoriesForDate(key).every((category) => getMergedProgress(key)[category])).length;
+  if (summary) summary.textContent = `${completedDays} / ${days.length}\uC77C \uC644\uB8CC`;
+  wrap.innerHTML = `<div class="grid grid-cols-[110px_repeat(4,minmax(105px,1fr))] gap-2 items-center">
+    <span class="text-[11px] font-bold text-on-surface-variant px-2">\uB0A0\uC9DC</span>
+    ${categoryLabels.map((label) => `<span class="text-[11px] font-bold text-center text-on-surface-variant">${label}</span>`).join('')}
+    ${days.map((key) => {
+      const date = new Date(`${key}T12:00:00`);
+      const selected = key === selectedDateKey;
+      return `<button type="button" data-overview-select-date="${key}" class="text-left rounded-xl px-2 py-2 transition-colors ${selected ? 'bg-primary/10 text-primary' : 'hover:bg-surface-low'}"><span class="block text-xs font-bold">${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-on-surface-variant">${weekdays[date.getDay()]}\uC694\uC77C</span></button>
+        ${['pray', 'word', 'study', 'worship'].map((category) => verificationOverviewCellHTML(key, category)).join('')}`;
+    }).join('')}
+  </div>`;
+}
+
+async function openVerificationFromOverview(key, category) {
+  await selectDate(key);
+  if (category === 'pray') openPrayModal(key, onPrayWordSaved);
+  if (category === 'word') openWordModal(key, onPrayWordSaved);
+  if (category === 'study') {
+    if (getMergedProgress(key).study) openStudyHistoryModal();
+    else openStudyAddModal();
+  }
+  if (category === 'worship') openWorshipModal();
 }
 
 // Same checkmark icon everywhere — colored gradient when verified, neutral glass when not.
@@ -251,6 +419,7 @@ async function saveStudySessionsAndRefresh(sessions) {
   renderStudyWidgetSummary();
   renderDailyGoals();
   renderStudyHistoryModal();
+  renderVerificationOverview();
 }
 
 async function removeStudySession(index) {
@@ -566,6 +735,7 @@ function renderAllForSelectedDate() {
   renderSelectedDateLabel();
   renderCalendarStrip();
   renderMonthlyCalendar();
+  renderVerificationOverview();
 }
 
 async function selectDate(key) {
@@ -761,6 +931,7 @@ async function recordWorship(status) {
   renderVerificationState();
   renderWorshipWidgetSummary();
   renderDailyGoals();
+  renderVerificationOverview();
   closeWorshipModal();
 }
 
@@ -772,6 +943,7 @@ async function resetWorship() {
   renderVerificationState();
   renderWorshipWidgetSummary();
   renderDailyGoals();
+  renderVerificationOverview();
   closeWorshipModal();
 }
 
@@ -796,6 +968,7 @@ async function onPrayWordSaved() {
   renderPrayWidgetSummary();
   renderWordWidgetSummary();
   renderDailyGoals();
+  renderVerificationOverview();
 }
 
 async function onGalleryPrayWordSaved() {
@@ -813,6 +986,16 @@ async function initHomeWidgets() {
   wireCalendarSelection();
   wirePrayModalStatic();
   wireWordModalStatic();
+
+  document.getElementById('verification-overview')?.addEventListener('click', (event) => {
+    const categoryButton = event.target.closest('[data-overview-category]');
+    if (categoryButton) {
+      openVerificationFromOverview(categoryButton.dataset.overviewDate, categoryButton.dataset.overviewCategory);
+      return;
+    }
+    const dateButton = event.target.closest('[data-overview-select-date]');
+    if (dateButton) selectDate(dateButton.dataset.overviewSelectDate);
+  });
 
   const dateResetBtn = document.getElementById('selected-date-reset');
   if (dateResetBtn) dateResetBtn.addEventListener('click', () => selectDate(todayKey()));
@@ -917,7 +1100,7 @@ async function initHomeWidgets() {
   }
 
   // 버튼 wiring은 전부 즉시 끝내고, 4개 카테고리 최초 데이터만 비동기로 불러온 뒤 첫 렌더를 한다.
-  await refreshDailyStatus(selectedDateKey);
+  await loadVerificationPeriodStatus();
   renderAllForSelectedDate();
   if (galleryReturnType === 'pray') openPrayModal(selectedDateKey, onGalleryPrayWordSaved);
   if (galleryReturnType === 'word') openWordModal(selectedDateKey, onGalleryPrayWordSaved);
