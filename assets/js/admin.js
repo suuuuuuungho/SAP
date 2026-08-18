@@ -435,6 +435,7 @@ let commentViewMode = 'list';
 let commentTableWordMap = {};
 let commentTableThreadCounts = {};
 let commentTableLoaded = false;
+let commentProfileUserId = null;
 
 function commentCellKey(userId, dateKey) { return `${userId}|${dateKey}`; }
 
@@ -460,6 +461,101 @@ function commentPhotoHTML(record) {
     return `<div class="aspect-[4/3] rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
   return `<div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+}
+
+function commentProfileAvatarHTML(user, sizeClass = 'w-12 h-12') {
+  const avatarUrl = commentAvatarUrls[user?.id];
+  if (avatarUrl) {
+    return `<div class="${sizeClass} rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${galleryEscape(avatarUrl)}" alt="${galleryEscape(user?.name || '')} 프로필 사진" class="w-full h-full object-cover"></div>`;
+  }
+  return `<div class="${sizeClass} rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold flex-shrink-0">${galleryEscape((user?.name || '?').charAt(0))}</div>`;
+}
+
+function commentProfilePhotoHTML(record) {
+  if (record.photo_unavailable || !record.photo_path) {
+    return `<div class="aspect-square bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-3xl mb-2 opacity-40"></i><p class="text-xs">사진 없이 인증했어요</p></div>`;
+  }
+  return `<div class="aspect-square bg-surface-container overflow-hidden"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+}
+
+function commentProfileCommentHTML(comment, profiles) {
+  const profile = profiles[comment.author_id];
+  const avatar = profile?.avatarUrl
+    ? `<img src="${galleryEscape(profile.avatarUrl)}" alt="" class="w-full h-full object-cover">`
+    : galleryEscape((profile?.name || profile?.username || '?').charAt(0));
+  return `<div class="flex items-start gap-2.5">
+    <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0">${avatar}</div>
+    <div class="min-w-0 flex-1"><p class="text-xs leading-5 break-words"><span class="font-bold mr-1">${galleryEscape(profile?.username || profile?.name || 'member')}</span>${galleryEscape(comment.body)}</p><p class="text-[10px] text-on-surface-variant mt-0.5">${galleryRelativeTime(comment.created_at)}</p></div>
+  </div>`;
+}
+
+function commentProfilePostHTML(record, comments, profiles, user) {
+  const summary = formatWordSummary(Array.isArray(record.verses) ? record.verses : []) || '말씀 묵상 인증';
+  const date = galleryDateParts(record.record_date);
+  return `<article class="bg-white border-y sm:border border-outline-variant sm:rounded-[1.5rem] overflow-hidden">
+    <header class="flex items-center gap-3 px-4 py-3">
+      ${commentProfileAvatarHTML(user, 'w-9 h-9')}
+      <div class="min-w-0 flex-1"><p class="text-sm font-bold truncate">${galleryEscape(user.name)}</p><p class="text-[10px] text-on-surface-variant">${galleryEscape(record.record_date)} · ${galleryEscape(date.full)}</p></div>
+      <i class="fa-solid fa-book-bible text-secondary text-sm" aria-hidden="true"></i>
+    </header>
+    ${commentProfilePhotoHTML(record)}
+    <div class="px-4 py-4">
+      <p class="text-sm leading-6"><span class="font-bold mr-2">@${galleryEscape(user.username)}</span>${galleryEscape(summary)}</p>
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mt-2">${galleryEscape(date.short)}</p>
+      <div class="mt-4 pt-4 border-t border-outline-variant/60">
+        <p class="text-xs font-bold mb-3"><i class="fa-regular fa-comment mr-1.5"></i>Comments <span class="text-on-surface-variant font-medium">${comments.length}</span></p>
+        ${comments.length ? `<div class="flex flex-col gap-3">${comments.map((comment) => commentProfileCommentHTML(comment, profiles)).join('')}</div>` : '<p class="text-xs text-on-surface-variant">아직 댓글이 없습니다.</p>'}
+      </div>
+    </div>
+  </article>`;
+}
+
+async function openCommentProfile(userId) {
+  const user = commentUsers.find((item) => item.id === userId);
+  const modal = document.getElementById('comment-profile-modal');
+  const content = document.getElementById('comment-profile-content');
+  if (!user || !modal || !content) return;
+  commentProfileUserId = userId;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  document.body.style.overflow = 'hidden';
+  content.innerHTML = '<div class="min-h-full flex items-center justify-center"><p class="text-sm text-on-surface-variant"><i class="fa-solid fa-spinner fa-spin mr-2"></i>기록을 불러오는 중</p></div>';
+
+  const [recordsResult, commentsResult] = await Promise.all([
+    window.supabaseClient.from('word_records').select('user_id,record_date,verses,photo_path,photo_unavailable,admin_hidden').eq('user_id', userId).gte('record_date', GALLERY_START_DATE).lte('record_date', GALLERY_END_DATE).order('record_date', { ascending: false }),
+    window.supabaseClient.from('post_comments').select('*').eq('post_owner_id', userId).eq('post_type', 'word').gte('post_date', GALLERY_START_DATE).lte('post_date', GALLERY_END_DATE).order('created_at', { ascending: true })
+  ]);
+  if (commentProfileUserId !== userId) return;
+  if (recordsResult.error || commentsResult.error) {
+    console.error('[comment-profile]', recordsResult.error || commentsResult.error);
+    content.innerHTML = '<div class="min-h-full flex items-center justify-center px-6 text-center"><p class="text-sm text-error">프로필 기록을 불러오지 못했습니다.</p></div>';
+    return;
+  }
+
+  const records = (recordsResult.data || []).filter((record) => Array.isArray(record.verses) && record.verses.length > 0);
+  const comments = commentsResult.data || [];
+  const profiles = window.getPublicProfileCards ? await window.getPublicProfileCards(comments.map((comment) => comment.author_id)) : {};
+  if (commentProfileUserId !== userId) return;
+  const commentsByDate = {};
+  comments.forEach((comment) => { (commentsByDate[comment.post_date] ||= []).push(comment); });
+  content.innerHTML = `<section class="bg-white px-5 py-6 border-b border-outline-variant">
+    <div class="flex items-center gap-5 max-w-lg mx-auto">
+      ${commentProfileAvatarHTML(user, 'w-20 h-20 sm:w-24 sm:h-24')}
+      <div class="min-w-0 flex-1"><h2 id="comment-profile-name" class="text-xl font-bold truncate">${galleryEscape(user.name)}</h2><p class="text-sm text-on-surface-variant truncate">@${galleryEscape(user.username)}</p><div class="mt-3"><span class="text-base font-bold">${records.length}</span><span class="text-xs text-on-surface-variant ml-1">Posts</span></div></div>
+    </div>
+  </section>
+  <div class="max-w-xl mx-auto sm:px-5 py-5 flex flex-col gap-5">
+    ${records.length ? records.map((record) => commentProfilePostHTML(record, commentsByDate[record.record_date] || [], profiles, user)).join('') : '<div class="py-20 text-center text-on-surface-variant"><i class="fa-regular fa-images text-3xl mb-3 opacity-40"></i><p class="text-sm">아직 말씀 묵상 기록이 없습니다.</p></div>'}
+  </div>`;
+  content.scrollTop = 0;
+}
+
+function closeCommentProfile() {
+  const modal = document.getElementById('comment-profile-modal');
+  modal?.classList.add('hidden');
+  modal?.classList.remove('flex');
+  commentProfileUserId = null;
+  document.body.style.overflow = '';
 }
 
 function commentDayMeta() {
@@ -495,7 +591,7 @@ function renderCommentList() {
       : (galleryEscape(user.name).charAt(0) || '?');
     return `<article class="glass-card rounded-2xl p-4" data-comment-user="${user.id}">
       <div class="flex flex-wrap items-center gap-2 mb-3">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold flex-shrink-0 overflow-hidden">${avatar}</div>
+        <button type="button" data-comment-profile-user="${user.id}" class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold flex-shrink-0 overflow-hidden ring-offset-2 hover:ring-2 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary transition-shadow" aria-label="${galleryEscape(user.name)}님의 기록 보기" title="기존 기록 보기">${avatar}</button>
         <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${galleryEscape(user.name)}</p><p class="text-[11px] text-on-surface-variant truncate">@${galleryEscape(user.username)}</p></div>
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${verified ? 'text-secondary bg-secondary/10' : 'text-on-surface-variant bg-surface-container'}">${verified ? '인증완료' : '미인증'}</span>
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${threads.length ? 'text-primary bg-primary/10' : 'text-on-surface-variant bg-surface-container'}">${threads.length ? `댓글 ${threads.length}개` : '댓글 없음'}</span>
@@ -622,6 +718,17 @@ function wireCommentControls() {
     commentSelectedPage = Number(button.dataset.commentPage);
     renderCommentList();
     document.getElementById('comment-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('comment-list')?.addEventListener('click', (event) => {
+    const profileButton = event.target.closest('[data-comment-profile-user]');
+    if (profileButton) openCommentProfile(profileButton.dataset.commentProfileUser);
+  });
+  document.getElementById('comment-profile-overlay')?.addEventListener('click', closeCommentProfile);
+  document.getElementById('comment-profile-back')?.addEventListener('click', closeCommentProfile);
+  document.getElementById('comment-profile-close')?.addEventListener('click', closeCommentProfile);
+  document.addEventListener('keydown', (event) => {
+    const modal = document.getElementById('comment-profile-modal');
+    if (event.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeCommentProfile();
   });
   document.getElementById('comment-list')?.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-comment-form]');
