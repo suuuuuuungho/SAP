@@ -585,9 +585,12 @@ function commentProfileCommentHTML(comment, profiles) {
   const avatar = profile?.avatarUrl
     ? `<img src="${galleryEscape(profile.avatarUrl)}" alt="" class="w-full h-full object-cover">`
     : galleryEscape((profile?.name || profile?.username || '?').charAt(0));
-  return `<div class="flex items-start gap-2.5">
+  const editControl = commentCanWrite && comment.author_id === adminCurrentUserId
+    ? `<button type="button" data-profile-comment-edit="${comment.id}" data-profile-comment-body="${galleryEscape(comment.body)}" class="ml-2 font-semibold hover:text-primary">수정</button>`
+    : '';
+  return `<div class="flex items-start gap-2.5" data-profile-comment-id="${comment.id}">
     <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0">${avatar}</div>
-    <div class="min-w-0 flex-1"><p class="text-xs leading-5 break-words"><span class="font-bold mr-1">${galleryEscape(profile?.username || profile?.name || 'member')}</span>${galleryEscape(comment.body)}</p><p class="text-[10px] text-on-surface-variant mt-0.5">${galleryRelativeTime(comment.created_at)}</p></div>
+    <div class="min-w-0 flex-1"><p class="text-xs leading-5 break-words"><span class="font-bold mr-1">${galleryEscape(profile?.username || profile?.name || 'member')}</span>${galleryEscape(comment.body)}</p><p class="text-[10px] text-on-surface-variant mt-0.5">${galleryRelativeTime(comment.created_at)}${editControl}</p></div>
   </div>`;
 }
 
@@ -607,6 +610,11 @@ function commentProfilePostHTML(record, comments, profiles, user) {
       <div class="mt-4 pt-4 border-t border-outline-variant/60">
         <p class="text-xs font-bold mb-3"><i class="fa-regular fa-comment mr-1.5"></i>Comments <span class="text-on-surface-variant font-medium">${comments.length}</span></p>
         ${comments.length ? `<div class="flex flex-col gap-3">${comments.map((comment) => commentProfileCommentHTML(comment, profiles)).join('')}</div>` : '<p class="text-xs text-on-surface-variant">아직 댓글이 없습니다.</p>'}
+        ${commentCanWrite ? `<form data-profile-comment-form data-profile-owner="${record.user_id}" data-profile-date="${record.record_date}" class="flex items-center gap-2 mt-4">
+          <button type="button" data-profile-comment-cancel class="hidden text-xs text-on-surface-variant px-1">취소</button>
+          <input type="text" data-profile-comment-input required maxlength="300" autocomplete="off" placeholder="댓글 달기..." class="glass-input flex-1 rounded-full px-4 py-2.5 text-sm">
+          <button type="submit" data-profile-comment-submit class="text-primary font-bold text-sm px-2 disabled:opacity-40">게시</button>
+        </form>` : ''}
       </div>
     </div>
   </article>`;
@@ -828,6 +836,60 @@ function wireCommentControls() {
   document.getElementById('comment-profile-overlay')?.addEventListener('click', closeCommentProfile);
   document.getElementById('comment-profile-back')?.addEventListener('click', closeCommentProfile);
   document.getElementById('comment-profile-close')?.addEventListener('click', closeCommentProfile);
+  document.getElementById('comment-profile-content')?.addEventListener('click', (event) => {
+    const editButton = event.target.closest('[data-profile-comment-edit]');
+    const cancelButton = event.target.closest('[data-profile-comment-cancel]');
+    if (editButton) {
+      const article = editButton.closest('article');
+      const form = article?.querySelector('[data-profile-comment-form]');
+      const input = form?.querySelector('[data-profile-comment-input]');
+      if (!form || !input) return;
+      form.dataset.editingCommentId = editButton.dataset.profileCommentEdit;
+      input.value = editButton.dataset.profileCommentBody || '';
+      input.focus();
+      form.querySelector('[data-profile-comment-submit]').textContent = '수정';
+      form.querySelector('[data-profile-comment-cancel]').classList.remove('hidden');
+      return;
+    }
+    if (cancelButton) {
+      const form = cancelButton.closest('[data-profile-comment-form]');
+      if (!form) return;
+      delete form.dataset.editingCommentId;
+      form.querySelector('[data-profile-comment-input]').value = '';
+      form.querySelector('[data-profile-comment-submit]').textContent = '게시';
+      cancelButton.classList.add('hidden');
+    }
+  });
+  document.getElementById('comment-profile-content')?.addEventListener('submit', async (event) => {
+    const form = event.target.closest('[data-profile-comment-form]');
+    if (!form) return;
+    event.preventDefault();
+    if (!commentCanWrite || !commentProfileUserId) return;
+    const input = form.querySelector('[data-profile-comment-input]');
+    const submit = form.querySelector('[data-profile-comment-submit]');
+    const body = input.value.trim();
+    if (!body) return;
+    submit.disabled = true;
+    const editingId = form.dataset.editingCommentId;
+    const result = editingId
+      ? await window.supabaseClient.from('post_comments').update({ body }).eq('id', editingId).eq('author_id', adminCurrentUserId)
+      : await window.supabaseClient.from('post_comments').insert({
+          post_owner_id: form.dataset.profileOwner,
+          post_date: form.dataset.profileDate,
+          post_type: 'word',
+          author_id: adminCurrentUserId,
+          body
+        });
+    submit.disabled = false;
+    if (result.error) {
+      console.error('[comment-profile] save comment', result.error);
+      adminShowStatus(editingId ? '댓글을 수정하지 못했습니다.' : '댓글을 저장하지 못했습니다.', true);
+      return;
+    }
+    const activeUserId = commentProfileUserId;
+    await openCommentProfile(activeUserId);
+    adminShowStatus(editingId ? '댓글을 수정했습니다.' : '댓글을 저장했습니다.');
+  });
   document.addEventListener('keydown', (event) => {
     const modal = document.getElementById('comment-profile-modal');
     if (event.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeCommentProfile();
