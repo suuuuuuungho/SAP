@@ -1,7 +1,7 @@
 // Hall of Fame: 전체누적 랭킹(원래 Board에 있던 것을 이쪽으로 옮김) + 주차별(Week1~4) 랭킹.
 // 원본 개인 기록은 읽지 않고 SECURITY DEFINER RPC의 집계 결과만 사용한다.
 
-const HOF_REFRESH_MS = 30000;
+const HOF_REFRESH_MS = 5 * 60 * 1000;
 const HOF_RANKING_META = {
   total: { title: 'Overall', description: '기도 · 공부 · 말씀 · 예배 합산', icon: 'fa-solid fa-trophy', accent: 'text-primary' },
   pray: { title: 'Prayer', description: '누적 기도 시간', icon: 'fa-solid fa-hands-praying', accent: 'text-primary' },
@@ -74,7 +74,7 @@ function hofFormatMinutes(minutes) {
 function hofAvatar(userId, name) {
   const photoUrl = hofAvatarUrls[userId];
   if (photoUrl) {
-    return `<div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${hofEscape(photoUrl)}" alt="" class="w-full h-full object-cover"></div>`;
+    return `<div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${hofEscape(photoUrl)}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover"></div>`;
   }
   const initial = hofEscape((name || '?').charAt(0));
   return `<div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold text-sm flex-shrink-0">${initial}</div>`;

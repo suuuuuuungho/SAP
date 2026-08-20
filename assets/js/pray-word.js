@@ -40,15 +40,21 @@ function fileExtension(file) {
 }
 
 async function uploadPrayPhoto(userId, dateKey, index, file) {
-  const path = `pray/${userId}/${dateKey}/${index}-${Date.now()}.${fileExtension(file)}`;
-  const { error } = await window.supabaseClient.storage.from(VERIFICATION_PHOTOS_BUCKET).upload(path, file, { upsert: true });
+  const uploadFile = window.optimizeImageForUpload
+    ? await window.optimizeImageForUpload(file, { maxDimension: 1600, quality: 0.8 })
+    : file;
+  const path = `pray/${userId}/${dateKey}/${index}-${Date.now()}.${fileExtension(uploadFile)}`;
+  const { error } = await window.supabaseClient.storage.from(VERIFICATION_PHOTOS_BUCKET).upload(path, uploadFile, { upsert: true, contentType: uploadFile.type, cacheControl: '31536000' });
   if (error) throw error;
   return path;
 }
 
 async function uploadWordPhoto(userId, dateKey, file) {
-  const path = `word/${userId}/${dateKey}-${Date.now()}.${fileExtension(file)}`;
-  const { error } = await window.supabaseClient.storage.from(VERIFICATION_PHOTOS_BUCKET).upload(path, file, { upsert: true });
+  const uploadFile = window.optimizeImageForUpload
+    ? await window.optimizeImageForUpload(file, { maxDimension: 1600, quality: 0.8 })
+    : file;
+  const path = `word/${userId}/${dateKey}-${Date.now()}.${fileExtension(uploadFile)}`;
+  const { error } = await window.supabaseClient.storage.from(VERIFICATION_PHOTOS_BUCKET).upload(path, uploadFile, { upsert: true, contentType: uploadFile.type, cacheControl: '31536000' });
   if (error) throw error;
   return path;
 }

@@ -76,10 +76,15 @@ function wireProfilePhoto() {
 
     button.disabled = true;
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>업로드 중...';
-    const path = `${profileUser.id}/avatar`;
+    const uploadFile = window.optimizeImageForUpload
+      ? await window.optimizeImageForUpload(file, { maxDimension: 512, quality: 0.78 })
+      : file;
+    const extension = uploadFile.type === 'image/webp' ? 'webp' : (uploadFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const previousPath = profileData.avatar_path;
+    const path = `${profileUser.id}/avatar-${Date.now()}.${extension}`;
     const { error: uploadError } = await window.supabaseClient.storage
       .from(PROFILE_AVATAR_BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+      .upload(path, uploadFile, { upsert: false, contentType: uploadFile.type, cacheControl: '31536000' });
 
     if (uploadError) {
       setProfileStatus(status, '사진을 저장하지 못했습니다. 프로필 스키마를 먼저 실행해주세요.', true);
@@ -89,6 +94,11 @@ function wireProfilePhoto() {
         setProfileStatus(status, '프로필 정보를 갱신하지 못했습니다.', true);
       } else {
         profileData.avatar_path = path;
+        if (previousPath && previousPath !== path) {
+          window.supabaseClient.storage.from(PROFILE_AVATAR_BUCKET).remove([previousPath]).then(({ error }) => {
+            if (error) console.warn('[profile] old avatar cleanup', error);
+          });
+        }
         await renderProfileAvatar(path);
         setProfileStatus(status, '프로필 사진이 변경되었습니다.');
         initAuthUI();

@@ -39,7 +39,7 @@ async function fetchAllVocabWords() {
   while (true) {
     const { data, error } = await window.supabaseClient
       .from('vocab_words')
-      .select('*')
+      .select('id,word,meaning,part_of_speech,example_sentences,level,study_day,sort_order')
       .eq('level', STUDY_LEVEL)
       .order('study_day', { ascending: true })
       .order('sort_order', { ascending: true })
@@ -55,7 +55,7 @@ async function fetchAllVocabWords() {
 async function fetchStudyData(userId) {
   const [words, progressRes] = await Promise.all([
     fetchAllVocabWords(),
-    window.supabaseClient.from('vocab_progress').select('*').eq('user_id', userId)
+    window.supabaseClient.from('vocab_progress').select('user_id,word_id,learned,correct_count,incorrect_count,learned_at,updated_at').eq('user_id', userId)
   ]);
   if (progressRes.error) console.error('[study] vocab_progress', progressRes.error);
   return { words, progress: progressRes.data || [] };

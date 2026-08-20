@@ -156,7 +156,7 @@ function galleryMediaHTML(userId, type, view = 'card') {
     return `<div class="${aspectClass} rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
   return `<div class="relative ${aspectClass} rounded-2xl overflow-hidden bg-surface-container" data-gallery-carousel data-carousel-index="0">
-    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img src="${galleryEscape(getPhotoUrl(photo))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}">${window.IS_ADMIN_CONSOLE ? `<button type="button" data-admin-gallery-photo-delete data-admin-gallery-owner="${userId}" data-admin-gallery-type="${type}" data-admin-gallery-photo-path="${galleryEscape(photo)}" class="absolute left-2 top-2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error" aria-label="사진 삭제"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}</div>`).join('')}
+    ${photos.map((photo, index) => `<div class="gallery-carousel-slide absolute inset-0 ${index === 0 ? '' : 'hidden'}" data-carousel-slide="${index}"><img ${index === 0 ? `src="${galleryEscape(getPhotoUrl(photo))}"` : `data-src="${galleryEscape(getPhotoUrl(photo))}"`} loading="lazy" decoding="async" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="${type === 'pray' ? '기도' : '말씀'} 인증 사진 ${index + 1}">${window.IS_ADMIN_CONSOLE ? `<button type="button" data-admin-gallery-photo-delete data-admin-gallery-owner="${userId}" data-admin-gallery-type="${type}" data-admin-gallery-photo-path="${galleryEscape(photo)}" class="absolute left-2 top-2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error" aria-label="사진 삭제"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}</div>`).join('')}
     ${photos.length > 1 ? `
       <button type="button" data-carousel-direction="-1" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="이전 사진"><i class="fa-solid fa-chevron-left text-xs"></i></button>
       <button type="button" data-carousel-direction="1" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center" aria-label="다음 사진"><i class="fa-solid fa-chevron-right text-xs"></i></button>
@@ -191,7 +191,7 @@ function galleryStudentCardHTML(user, type) {
   const record = type === 'pray' ? galleryPrayMap[user.id] : galleryWordMap[user.id];
   const accent = type === 'pray' ? 'text-primary bg-primary/10' : 'text-secondary bg-secondary/10';
   const avatar = galleryAvatarUrls[user.id]
-    ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
+    ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover">`
     : (galleryEscape(user.name).charAt(0) || '?');
   return `
     <article class="glass-card rounded-[1.5rem] p-4 min-w-0" data-gallery-user="${user.id}" data-gallery-type="${type}">
@@ -299,6 +299,8 @@ function moveGalleryCarousel(button) {
   const current = Number(carousel.dataset.carouselIndex || 0);
   const next = (current + direction + slides.length) % slides.length;
   carousel.dataset.carouselIndex = String(next);
+  const nextImage = slides[next].querySelector('img[data-src]');
+  if (nextImage) { nextImage.src = nextImage.dataset.src; delete nextImage.dataset.src; }
   slides.forEach((slide, index) => slide.classList.toggle('hidden', index !== next));
   const counter = carousel.querySelector('[data-carousel-counter]');
   if (counter) counter.textContent = `${next + 1}/${slides.length}`;
@@ -425,7 +427,7 @@ function wirePhotoLightbox() {
 }
 
 function galleryCommentAvatar(profile) {
-  if (profile?.avatarUrl) return `<div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${galleryEscape(profile.avatarUrl)}" alt="" class="w-full h-full object-cover"></div>`;
+  if (profile?.avatarUrl) return `<div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container flex-shrink-0"><img src="${galleryEscape(profile.avatarUrl)}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover"></div>`;
   const initial = galleryEscape((profile?.name || '?').charAt(0));
   return `<div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center font-bold text-sm flex-shrink-0">${initial}</div>`;
 }
@@ -489,7 +491,7 @@ async function openGalleryComments(userId, type) {
   if (label) label.textContent = `${user?.name || ''} · ${type === 'pray' ? '기도' : '말씀묵상'} · ${galleryDateParts(galleryActiveCommentsPost.date).short}`;
   if (preview && user) {
     const avatar = galleryAvatarUrls[user.id]
-      ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" alt="" class="w-full h-full object-cover">`
+      ? `<img src="${galleryEscape(galleryAvatarUrls[user.id])}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover">`
       : (galleryEscape(user.name).charAt(0) || '?');
     preview.innerHTML = `<article>
       <div class="flex items-center gap-3 mb-3">

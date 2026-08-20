@@ -1,7 +1,7 @@
 // Public Home (Board): 로그인한 모든 가입자에게 공지와 오늘의 말씀을 보여준다.
 // 랭킹은 Hall of Fame 탭(hall-of-fame.js)으로 옮겼다.
 
-const HOME_REFRESH_MS = 30000;
+const HOME_REFRESH_MS = 5 * 60 * 1000;
 
 let publicHomeCurrentUserId = null;
 let publicHomeRefreshTimer = null;
@@ -42,24 +42,27 @@ function renderPublicHomeVerse(verse) {
 }
 
 async function loadPublicHome() {
-  // 다건 .or() 체이닝은 PostgREST에서 조건이 하나만 반영될 수 있어(검증 어려움),
-  // is_active만 서버에서 걸러 넉넉히 가져온 뒤 나머지 조건(만료·수신자)은 클라이언트에서 확정 필터링한다.
-  const [messageRes, verseRes] = await Promise.all([
-    window.supabaseClient.from('home_messages').select('id, recipient_user_id, body, created_at, starts_at, expires_at, is_active').eq('is_active', true).order('starts_at', { ascending: false }).limit(200),
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const messageFields = 'id, recipient_user_id, body, created_at, starts_at, expires_at';
+  const baseGlobal = window.supabaseClient.from('home_messages').select(messageFields)
+    .eq('is_active', true).is('recipient_user_id', null).or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`).order('starts_at', { ascending: false }).limit(10);
+  const basePersonal = window.supabaseClient.from('home_messages').select(messageFields)
+    .eq('is_active', true).eq('recipient_user_id', publicHomeCurrentUserId).or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`).order('starts_at', { ascending: false }).limit(10);
+  const [globalRes, personalRes, verseRes] = await Promise.all([
+    baseGlobal,
+    basePersonal,
     window.supabaseClient.from('home_bible_verses').select('id, reference, verse_text, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
 
-  if (messageRes.error) console.error('[public-home] messages', messageRes.error);
+  if (globalRes.error) console.error('[public-home] global messages', globalRes.error);
+  if (personalRes.error) console.error('[public-home] personal messages', personalRes.error);
   if (verseRes.error) console.error('[public-home] verse', verseRes.error);
 
-  const now = new Date();
-  const visibleMessages = (messageRes.data || [])
-    .filter((message) =>
-      message.is_active !== false
-      && (!message.starts_at || new Date(message.starts_at) <= now)
-      && (!message.expires_at || new Date(message.expires_at) > now)
-      && (!message.recipient_user_id || message.recipient_user_id === publicHomeCurrentUserId)
-    )
+  const visibleMessages = [...(globalRes.data || []), ...(personalRes.data || [])]
+    .sort((a, b) => new Date(b.starts_at || b.created_at) - new Date(a.starts_at || a.created_at))
     .slice(0, 10);
   renderPublicHomeMessages(visibleMessages);
   renderPublicHomeVerse(verseRes.data || null);

@@ -58,7 +58,7 @@ function reportVerseDetails(verses) {
 function reportPhotosHTML(paths, alt) {
   const photos = paths.filter(Boolean);
   if (!photos.length) return '<div class="rounded-2xl bg-surface-container h-36 flex items-center justify-center text-xs text-on-surface-variant">첨부 사진 없음</div>';
-  return `<div class="grid ${photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2">${photos.map((path) => `<a href="${reportEscape(reportPhotoUrl(path))}" target="_blank" rel="noopener" class="block rounded-2xl overflow-hidden bg-surface-container aspect-[4/3]"><img src="${reportEscape(reportPhotoUrl(path))}" alt="${reportEscape(alt)}" class="w-full h-full object-contain"></a>`).join('')}</div>`;
+  return `<div class="grid ${photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2">${photos.map((path) => `<a href="${reportEscape(reportPhotoUrl(path))}" target="_blank" rel="noopener" class="block rounded-2xl overflow-hidden bg-surface-container aspect-[4/3]"><img src="${reportEscape(reportPhotoUrl(path))}" loading="lazy" decoding="async" alt="${reportEscape(alt)}" class="w-full h-full object-contain"></a>`).join('')}</div>`;
 }
 
 function renderReportStatistics(days) {

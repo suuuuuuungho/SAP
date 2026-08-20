@@ -588,7 +588,7 @@ function commentPhotoHTML(record) {
     const message = record && Array.isArray(record.verses) && record.verses.length ? '사진 없이 인증했어요' : '아직 인증 사진이 없어요';
     return `<div class="aspect-[4/3] rounded-2xl bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-2xl mb-2 opacity-50"></i><p class="text-xs">${message}</p></div>`;
   }
-  return `<div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+  return `<div class="aspect-[4/3] rounded-2xl overflow-hidden bg-surface-container"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" loading="lazy" decoding="async" data-gallery-photo class="w-full h-full object-contain bg-surface-container cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
 }
 
 function adminMessageSenderLabel(userId) {
@@ -647,7 +647,7 @@ function commentProfilePhotoHTML(record) {
   if (record.photo_unavailable || !record.photo_path) {
     return `<div class="aspect-square bg-surface-container flex flex-col items-center justify-center text-on-surface-variant"><i class="fa-regular fa-image text-3xl mb-2 opacity-40"></i><p class="text-xs">사진 없이 인증했어요</p></div>`;
   }
-  return `<div class="aspect-square bg-surface-container overflow-hidden"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" data-gallery-photo class="w-full h-full object-contain cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
+  return `<div class="aspect-square bg-surface-container overflow-hidden"><img src="${galleryEscape(getPhotoUrl(record.photo_path))}" loading="lazy" decoding="async" data-gallery-photo class="w-full h-full object-contain cursor-zoom-in" alt="말씀 묵상 인증 사진"></div>`;
 }
 
 function commentProfileCommentHTML(comment, profiles) {
