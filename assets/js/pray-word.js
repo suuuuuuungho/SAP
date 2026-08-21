@@ -26,6 +26,7 @@ const WORD_READING_START = '2026-08-10';
 const WORD_READING_END = '2026-09-06';
 let wordPhotoOcrToken = 0;
 let wordPhotoOcrMismatch = false;
+let wordPhotoProcessedFile = null;
 
 function buildWordReadingDays() {
   const result = [];
@@ -73,13 +74,24 @@ function setWordOcrCaution(message) {
   }
 }
 
-async function runWordPhotoOcr(file) {
+function setWordOcrStatus(message) {
   const statusEl = document.getElementById('word-photo-ocr-status');
+  const textEl = document.getElementById('word-photo-ocr-status-text');
+  if (!statusEl) return;
+  if (message) {
+    if (textEl) textEl.textContent = message;
+    statusEl.classList.remove('hidden');
+  } else {
+    statusEl.classList.add('hidden');
+  }
+}
+
+async function runWordPhotoOcr(file) {
   setWordOcrCaution('');
   const token = ++wordPhotoOcrToken;
   const chapters = expectedWordChapters(wordModalDateKey);
   if (!chapters || !window.Tesseract) return;
-  if (statusEl) statusEl.classList.remove('hidden');
+  setWordOcrStatus('본문 인식 중...');
   try {
     const { data } = await window.Tesseract.recognize(file, 'kor+eng');
     if (token !== wordPhotoOcrToken) return;
@@ -90,7 +102,76 @@ async function runWordPhotoOcr(file) {
   } catch (err) {
     console.error('[pray-word] word photo ocr', err);
   } finally {
-    if (token === wordPhotoOcrToken && statusEl) statusEl.classList.add('hidden');
+    if (token === wordPhotoOcrToken) setWordOcrStatus('');
+  }
+}
+
+// 휴대폰으로 찍은 원본 사진을 흑백 + 대비 강조("스캔" 느낌)로 자동 보정한다.
+// 미리보기/OCR/실제 업로드 모두 이 보정된 파일을 사용해 글자를 더 또렷하게 만든다.
+async function scanEnhanceImage(file) {
+  if (!file || !String(file.type || '').startsWith('image/')) return file;
+  if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+
+  const maxDimension = 1800;
+  let source = null;
+  let objectUrl = '';
+  try {
+    if ('createImageBitmap' in window) {
+      try {
+        source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      } catch (_) {
+        source = await createImageBitmap(file);
+      }
+    } else {
+      objectUrl = URL.createObjectURL(file);
+      source = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = objectUrl;
+      });
+    }
+
+    const width = source.width || source.naturalWidth;
+    const height = source.height || source.naturalHeight;
+    if (!width || !height) return file;
+    const scale = Math.min(1, maxDimension / Math.max(width, height));
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(source, 0, 0, targetWidth, targetHeight);
+
+    const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
+    const pixels = imageData.data;
+    const lumas = new Float32Array(targetWidth * targetHeight);
+    let min = 255;
+    let max = 0;
+    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+      const luma = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+      lumas[p] = luma;
+      if (luma < min) min = luma;
+      if (luma > max) max = luma;
+    }
+    const range = max - min;
+    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+      const stretched = range > 10 ? ((lumas[p] - min) * 255) / range : lumas[p];
+      pixels[i] = pixels[i + 1] = pixels[i + 2] = stretched;
+    }
+    context.putImageData(imageData, 0, 0);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) return file;
+    const baseName = String(file.name || 'photo').replace(/\.[^.]+$/, '');
+    return new File([blob], `${baseName}-scan.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+  } catch (error) {
+    console.warn('[pray-word] scan enhance failed, using original photo', error);
+    return file;
+  } finally {
+    if (source && typeof source.close === 'function') source.close();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
 
@@ -610,12 +691,13 @@ function wireWordPhotoPreview() {
     preview.src = '';
     wrap.classList.add('hidden');
     input.value = '';
+    wordPhotoProcessedFile = null;
     wordPhotoOcrToken += 1;
     setWordOcrCaution('');
-    document.getElementById('word-photo-ocr-status')?.classList.add('hidden');
+    setWordOcrStatus('');
   }
 
-  input.addEventListener('change', () => {
+  input.addEventListener('change', async () => {
     if (hint) hint.classList.add('hidden');
     const file = input.files && input.files[0];
     if (!file) {
@@ -623,12 +705,21 @@ function wireWordPhotoPreview() {
       return;
     }
     delete wrap.dataset.existingPhotoPath;
+    const token = ++wordPhotoOcrToken;
+    wordPhotoProcessedFile = null;
+    setWordOcrCaution('');
+    setWordOcrStatus('스캔 보정 중...');
+
+    const processed = await scanEnhanceImage(file);
+    if (token !== wordPhotoOcrToken) return;
+    wordPhotoProcessedFile = processed;
+
     if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(processed);
     preview.src = url;
     preview.dataset.objectUrl = url;
     wrap.classList.remove('hidden');
-    runWordPhotoOcr(file);
+    runWordPhotoOcr(processed);
   });
 
   if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
@@ -709,9 +800,10 @@ async function openWordModal(dateKey, onSaved) {
   if (photoWrap) { photoWrap.classList.add('hidden'); delete photoWrap.dataset.existingPhotoPath; }
   if (photoHint) photoHint.classList.add('hidden');
   if (verseHint) verseHint.classList.add('hidden');
+  wordPhotoProcessedFile = null;
   wordPhotoOcrToken += 1;
   setWordOcrCaution('');
-  document.getElementById('word-photo-ocr-status')?.classList.add('hidden');
+  setWordOcrStatus('');
 
   if (record && !record.photo_unavailable && record.photo_path && photoWrap && photoPreview) {
     photoWrap.dataset.existingPhotoPath = record.photo_path;
@@ -792,7 +884,8 @@ async function saveWordModal() {
 
   try {
     const userId = await getCurrentUserId();
-    const photoPath = newFile ? await uploadWordPhoto(userId, dateKey, newFile) : existingPhotoPath;
+    const uploadTarget = newFile ? (wordPhotoProcessedFile || newFile) : null;
+    const photoPath = uploadTarget ? await uploadWordPhoto(userId, dateKey, uploadTarget) : existingPhotoPath;
 
     await saveWordRecord(userId, dateKey, verses, photoPath, false);
 
