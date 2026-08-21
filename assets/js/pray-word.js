@@ -190,6 +190,28 @@ function localBackgroundLuma(lumas, width, height, radius) {
   return boxBlur1D(boxBlur1D(lumas, width, height, radius, true), width, height, radius, false);
 }
 
+// 완전 흑/백으로 이진화하면(특히 작은 글씨에서) 획이 끊기거나 지워져 눈으로도, OCR로도
+// 오히려 인식이 더 안 될 수 있어, 대신 각 픽셀을 "국소 배경 대비 상대값"으로 다시 매핑한다:
+// 배경은 그림자와 무관하게 항상 밝게(bgTarget) 정리되면서도, 옅은 글씨는 회색조
+// 그러데이션으로 남는다. scanEnhanceImage(화면표시용)와 buildOcrHeaderCrop(OCR용)이 공통으로 쓴다.
+function applyLocalContrastNormalize(imageData, width, height) {
+  const pixels = imageData.data;
+  const lumas = new Float32Array(width * height);
+  for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+    lumas[p] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+  }
+  // 반경은 이미지 크기에 비례하되, 글씨 획보다는 충분히 크고(획을 배경으로 착각하지 않게)
+  // 그림자 얼룩보다는 충분히 작게(20~80px 사이) 잡는다.
+  const radius = Math.max(20, Math.min(80, Math.round(Math.max(width, height) / 20)));
+  const background = localBackgroundLuma(lumas, width, height, radius);
+  const bgTarget = 238;
+  const gain = 2.5;
+  for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+    const value = Math.max(0, Math.min(255, bgTarget + (lumas[p] - background[p]) * gain));
+    pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
+  }
+}
+
 // 파일을 캔버스에 그릴 수 있는 소스(ImageBitmap 또는 <img>)로 디코딩한다.
 // scanEnhanceImage와 buildOcrHeaderCrop이 공통으로 사용.
 async function decodeImageSource(file) {
@@ -228,9 +250,10 @@ function releaseImageSource(decoded) {
   if (decoded.objectUrl) URL.revokeObjectURL(decoded.objectUrl);
 }
 
-// OCR 인식용으로 사진 상단 30%(챕터 헤더 "요한복음 N장 묵상 날짜:"가 있는 영역)만 잘라내
-// 화면 표시용보다 더 과감하게 흑/백 이진화한 캔버스를 만든다. 헤더만 잘라 인식하면
-// 전체 사진을 넣을 때보다 글자가 상대적으로 커지고 레이아웃이 단순해져 인식률이 오른다.
+// OCR 인식용으로 사진 상단 30%(챕터 헤더 "요한복음 N장 묵상 날짜:"가 있는 영역)만 잘라낸
+// 캔버스를 만든다. 헤더만 잘라 원본 해상도에 가깝게 인식하면, 사진 전체를 축소해서 넣을 때
+// 작은 숫자가 통째로 누락되던 문제가 줄어든다. 대비 보정은 화면 표시용(scanEnhanceImage)과
+// 동일한 부드러운 방식을 쓴다 — 세게 이진화하면 작은 글씨 획이 끊겨 오히려 인식률이 떨어진다.
 async function buildOcrHeaderCrop(file) {
   let decoded = null;
   try {
@@ -250,18 +273,7 @@ async function buildOcrHeaderCrop(file) {
     context.drawImage(source, 0, 0, width, cropSourceHeight, 0, 0, targetWidth, targetHeight);
 
     const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
-    const pixels = imageData.data;
-    const lumas = new Float32Array(targetWidth * targetHeight);
-    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      lumas[p] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-    }
-    const radius = Math.max(20, Math.min(80, Math.round(Math.max(targetWidth, targetHeight) / 20)));
-    const background = localBackgroundLuma(lumas, targetWidth, targetHeight, radius);
-    const bias = 12; // OCR 전용 크롭이라 화면용보다 더 과감하게 흑/백으로 떨어뜨린다.
-    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      const value = lumas[p] < background[p] - bias ? 0 : 255;
-      pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
-    }
+    applyLocalContrastNormalize(imageData, targetWidth, targetHeight);
     context.putImageData(imageData, 0, 0);
     return canvas;
   } catch (error) {
@@ -272,9 +284,9 @@ async function buildOcrHeaderCrop(file) {
   }
 }
 
-// 휴대폰으로 찍은 원본 사진을 스캐너 앱처럼 순수 흑백(이진화)으로 자동 보정한다.
-// 종이 전체의 밝기 평균이 아니라 각 픽셀 주변의 "국소 배경 밝기"와 비교해서 어둡게 찍힌
-// 그림자 부분도 흰 배경으로, 글씨는 검게 떨어지도록 만든다(적응형 이진화).
+// 휴대폰으로 찍은 원본 사진을 스캐너 느낌의 흑백으로 자동 보정한다. 종이 전체의 밝기
+// 평균이 아니라 각 픽셀 주변의 "국소 배경 밝기"와 비교해 그림자 부분도 흰 배경으로
+// 정리하되, 완전 이진화는 하지 않아 옅은 글씨도 회색조로 남아 보인다(applyLocalContrastNormalize).
 // 미리보기/OCR/실제 업로드 모두 이 보정된 파일을 사용해 글자를 더 또렷하게 만든다.
 async function scanEnhanceImage(file) {
   if (!file || !String(file.type || '').startsWith('image/')) return file;
@@ -296,24 +308,7 @@ async function scanEnhanceImage(file) {
     context.drawImage(source, 0, 0, targetWidth, targetHeight);
 
     const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
-    const pixels = imageData.data;
-    const lumas = new Float32Array(targetWidth * targetHeight);
-    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      lumas[p] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-    }
-    // 반경은 이미지 크기에 비례하되, 글씨 획보다는 충분히 크고(획을 배경으로 착각하지 않게)
-    // 그림자 얼룩보다는 충분히 작게(20~80px 사이) 잡는다.
-    const radius = Math.max(20, Math.min(80, Math.round(Math.max(targetWidth, targetHeight) / 20)));
-    const background = localBackgroundLuma(lumas, targetWidth, targetHeight, radius);
-    // 완전 흑/백으로 이진화하면 연필/옅은 펜 글씨가 지워져 보이지 않을 수 있어,
-    // 대신 각 픽셀을 "국소 배경 대비 상대값"으로 다시 매핑한다: 배경은 그림자와 무관하게
-    // 항상 밝게(bgTarget) 정리되면서도, 옅은 글씨는 회색조 그러데이션으로 남아 눈에 보인다.
-    const bgTarget = 238;
-    const gain = 2.5;
-    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      const value = Math.max(0, Math.min(255, bgTarget + (lumas[p] - background[p]) * gain));
-      pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
-    }
+    applyLocalContrastNormalize(imageData, targetWidth, targetHeight);
     context.putImageData(imageData, 0, 0);
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
