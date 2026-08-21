@@ -133,7 +133,16 @@ Deno.serve(async (req) => {
   }
 
   let boardSenderName = ''
-  let boardScheduledDate: string | null = null
+  let scheduledIso: string | null = null
+  if (mode === 'board' || mode === 'parent') {
+    const parsedScheduledAt = new Date(scheduledAt)
+    const maxScheduledAt = new Date(); maxScheduledAt.setMonth(maxScheduledAt.getMonth() + 6)
+    if (Number.isNaN(parsedScheduledAt.getTime()) || parsedScheduledAt > maxScheduledAt) {
+      await writeLog('failed', '예약 시각 오류')
+      return json({ ok: false, message: '예약 시각은 현재부터 6개월 이내로 설정해주세요.' }, 400)
+    }
+    scheduledIso = parsedScheduledAt.toISOString()
+  }
   if (mode === 'board') {
     const { data: selectedSender } = await admin.from('profiles').select('name,app_role,is_admin,is_active').eq('id', senderId).maybeSingle()
     const allowedSender = selectedSender && selectedSender.is_active !== false && (selectedSender.is_admin || ['admin', 'teacher', 'pastor', 'department_head', 'secretary'].includes(selectedSender.app_role))
@@ -141,18 +150,11 @@ Deno.serve(async (req) => {
       await writeLog('failed', '발신 관리자 확인 오류')
       return json({ ok: false, message: '발신 관리자를 확인해주세요.' }, 400)
     }
-    const parsedScheduledAt = new Date(scheduledAt)
-    const maxScheduledAt = new Date(); maxScheduledAt.setMonth(maxScheduledAt.getMonth() + 6)
-    if (Number.isNaN(parsedScheduledAt.getTime()) || parsedScheduledAt > maxScheduledAt) {
-      await writeLog('failed', '예약 시각 오류')
-      return json({ ok: false, message: '예약 시각은 현재부터 6개월 이내로 설정해주세요.' }, 400)
-    }
     boardSenderName = String(selectedSender.name || '').trim()
     if (!boardSenderName) {
       await writeLog('failed', '발신 관리자 회원가입 이름 누락')
       return json({ ok: false, message: '발신 관리자의 회원가입 이름을 확인해주세요.' }, 400)
     }
-    boardScheduledDate = parsedScheduledAt.toISOString()
   }
 
   const message = { to, from: sender, text: mode === 'report'
@@ -163,7 +165,7 @@ Deno.serve(async (req) => {
       ? `[SAP] ${member.name} 학생 학부모님, ${messageText}`
       : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` }
   const requestPayload: Record<string, unknown> = { messages: [message], showMessageList: true }
-  if (mode === 'board' && boardScheduledDate) requestPayload.scheduledDate = boardScheduledDate
+  if ((mode === 'board' || mode === 'parent') && scheduledIso) requestPayload.scheduledDate = scheduledIso
   const response = await solapiRequest(apiKey, apiSecret, '/messages/v4/send-many/detail', 'POST', requestPayload)
   if (!response.ok) {
     const detail = await response.text()
@@ -173,5 +175,5 @@ Deno.serve(async (req) => {
   }
   const responseBody = await response.json().catch(() => ({}))
   await writeLog('success')
-  return json({ ok: true, groupId: responseBody?.groupInfo?.groupId || null, scheduledAt: responseBody?.groupInfo?.scheduledDate || boardScheduledDate })
+  return json({ ok: true, groupId: responseBody?.groupInfo?.groupId || null, scheduledAt: responseBody?.groupInfo?.scheduledDate || scheduledIso })
 })

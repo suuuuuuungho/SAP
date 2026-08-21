@@ -10,6 +10,10 @@ let adminMessageHistoryPage = 1;
 let adminMessageHistoryCount = 0;
 const ADMIN_REPORT_PUBLIC_SITE_URL = 'https://suuuuuuungho.github.io/SAP/';
 const ADMIN_MESSAGE_SENDER_ROLES = new Set(['admin', 'teacher', 'pastor', 'department_head', 'secretary']);
+let adminParentMessages = [];
+let adminParentMessageHistoryFilter = 'global';
+let adminParentMessageHistoryPage = 1;
+let adminParentMessageHistoryCount = 0;
 
 const ADMIN_FEATURE_STRUCTURE = [
   { key: 'board', title: 'Board', description: '전체 이용자가 보는 소식 탭', icon: 'fa-solid fa-clipboard-list', children: [
@@ -100,6 +104,12 @@ function adminRecipientLabel(userId) {
   return user ? `${user.name} (@${user.username})` : '개별 이용자';
 }
 
+function adminParentRecipientLabel(userId) {
+  if (!userId) return '전체 학부모';
+  const member = adminMembers.find((item) => item.id === userId);
+  return member ? `${member.name} 학생 학부모님` : '학생 학부모님';
+}
+
 async function adminLoadMessages() {
   const from = (adminMessageHistoryPage - 1) * ADMIN_MESSAGE_PAGE_SIZE;
   const to = from + ADMIN_MESSAGE_PAGE_SIZE - 1;
@@ -161,6 +171,117 @@ function adminRenderMessageHistoryControls() {
     <button type="button" data-message-history-page="prev" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="이전 페이지" ${adminMessageHistoryPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>
     <span class="text-xs font-bold text-on-surface-variant">${adminMessageHistoryPage} / ${totalPages}</span>
     <button type="button" data-message-history-page="next" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="다음 페이지" ${adminMessageHistoryPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+}
+
+async function adminLoadParentMessages() {
+  const from = (adminParentMessageHistoryPage - 1) * ADMIN_MESSAGE_PAGE_SIZE;
+  const to = from + ADMIN_MESSAGE_PAGE_SIZE - 1;
+  let query = window.supabaseClient.from('parent_messages').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+  query = adminParentMessageHistoryFilter === 'personal'
+    ? query.not('recipient_user_id', 'is', null)
+    : query.is('recipient_user_id', null);
+  const { data, error, count } = await query.range(from, to);
+  const wrap = document.getElementById('admin-parent-message-list');
+  if (error) { if (wrap) wrap.innerHTML = '<p class="text-sm text-error py-8 text-center">parent_messages_schema.sql을 먼저 실행해주세요.</p>'; return; }
+  adminParentMessageHistoryCount = count || 0;
+  const totalPages = Math.max(1, Math.ceil(adminParentMessageHistoryCount / ADMIN_MESSAGE_PAGE_SIZE));
+  if (adminParentMessageHistoryPage > totalPages) {
+    adminParentMessageHistoryPage = totalPages;
+    await adminLoadParentMessages();
+    return;
+  }
+  adminParentMessages = data || [];
+  if (!wrap) return;
+  const now = new Date();
+  wrap.innerHTML = adminParentMessages.length ? adminParentMessages.map((message) => {
+    const startsAt = new Date(message.starts_at || message.created_at);
+    const scheduled = startsAt > now;
+    const statusLabel = { scheduled: '예약됨', sent: '발송 접수', partial: '일부 실패', failed: '발송 실패', no_phone: '연락처 없음', cancelled: '취소됨', pending: '처리 중' }[message.sms_status] || message.sms_status;
+    return `
+    <article class="glass-card rounded-2xl p-4" data-parent-message-id="${message.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5 mb-1"><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}">${message.recipient_user_id ? '특정 학부모' : '전체 학부모'}</span><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${scheduled ? 'bg-secondary/10 text-secondary' : 'bg-quaternary/10 text-quaternary'}">${scheduled ? '예약' : '발송완료'}</span></div>
+          <p class="text-[11px] font-bold text-secondary mb-1">${adminEscape(adminParentRecipientLabel(message.recipient_user_id))}</p>
+          <p class="text-sm whitespace-pre-wrap">${adminEscape(message.body)}</p>
+          <p class="text-[10px] text-on-surface-variant mt-2">${startsAt.toLocaleString('ko-KR')} · 문자 ${statusLabel}</p>
+        </div>
+        <div class="flex gap-1 flex-shrink-0">
+          ${scheduled ? `<button type="button" data-action="cancel" class="icon-glass w-8 h-8 rounded-full text-secondary" aria-label="예약 취소"><i class="fa-solid fa-ban text-xs"></i></button>` : ''}
+          <button type="button" data-action="delete" class="icon-glass w-8 h-8 rounded-full text-error" aria-label="삭제"><i class="fa-solid fa-trash text-xs"></i></button>
+        </div>
+      </div>
+    </article>`;
+  }).join('') : `<p class="text-sm text-on-surface-variant py-8 text-center">등록된 ${adminParentMessageHistoryFilter === 'personal' ? '특정 학부모' : '전체 학부모'} 메시지가 없습니다.</p>`;
+  adminRenderParentMessageHistoryControls();
+}
+
+function adminRenderParentMessageHistoryControls() {
+  document.querySelectorAll('[data-parent-message-history-filter]').forEach((button) => {
+    const active = button.dataset.parentMessageHistoryFilter === adminParentMessageHistoryFilter;
+    button.classList.toggle('nav-pill-active', active);
+    button.classList.toggle('text-on-surface-variant', !active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  const count = document.getElementById('admin-parent-message-history-count');
+  if (count) count.textContent = `총 ${adminParentMessageHistoryCount}개`;
+  const pagination = document.getElementById('admin-parent-message-pagination');
+  if (!pagination) return;
+  const totalPages = Math.max(1, Math.ceil(adminParentMessageHistoryCount / ADMIN_MESSAGE_PAGE_SIZE));
+  pagination.innerHTML = `
+    <button type="button" data-parent-message-history-page="prev" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="이전 페이지" ${adminParentMessageHistoryPage <= 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>
+    <span class="text-xs font-bold text-on-surface-variant">${adminParentMessageHistoryPage} / ${totalPages}</span>
+    <button type="button" data-parent-message-history-page="next" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="다음 페이지" ${adminParentMessageHistoryPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+}
+
+async function adminCancelParentMessageSms(message) {
+  const groupIds = Array.isArray(message?.sms_group_ids) ? message.sms_group_ids.filter(Boolean) : [];
+  if (!groupIds.length) return true;
+  const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board_cancel', groupIds } });
+  if (error || !data?.ok) { console.error('[admin] cancel parent sms', error || data); return false; }
+  await window.supabaseClient.from('parent_messages').update({ sms_group_ids: [], sms_status: 'cancelled' }).eq('id', message.id);
+  return true;
+}
+
+function adminWireParentMessageList() {
+  const wrap = document.getElementById('admin-parent-message-list');
+  if (!wrap) return;
+  document.getElementById('admin-parent-message-history-tabs')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-parent-message-history-filter]');
+    if (!button || button.dataset.parentMessageHistoryFilter === adminParentMessageHistoryFilter) return;
+    adminParentMessageHistoryFilter = button.dataset.parentMessageHistoryFilter === 'personal' ? 'personal' : 'global';
+    adminParentMessageHistoryPage = 1;
+    await adminLoadParentMessages();
+  });
+  document.getElementById('admin-parent-message-pagination')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-parent-message-history-page]');
+    if (!button || button.disabled) return;
+    adminParentMessageHistoryPage += button.dataset.parentMessageHistoryPage === 'next' ? 1 : -1;
+    await adminLoadParentMessages();
+  });
+  wrap.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-action]');
+    const article = event.target.closest('[data-parent-message-id]');
+    if (!button || !article) return;
+    const id = article.dataset.parentMessageId;
+    const message = adminParentMessages.find((item) => item.id === id);
+    if (!message) return;
+    if (button.dataset.action === 'cancel') {
+      if (!confirm('예약된 학부모 문자 발송을 취소할까요?')) return;
+      if (!(await adminCancelParentMessageSms(message))) { adminShowStatus('예약 문자를 취소하지 못했습니다.', true); return; }
+      await adminLoadParentMessages();
+      return;
+    }
+    if (button.dataset.action === 'delete') {
+      if (new Date(message.starts_at) > new Date() && !(await adminCancelParentMessageSms(message))) {
+        adminShowStatus('예약 문자를 취소하지 못해 삭제를 중단했습니다.', true);
+        return;
+      }
+      await window.supabaseClient.from('parent_messages').delete().eq('id', id);
+      if (adminParentMessages.length === 1 && adminParentMessageHistoryPage > 1) adminParentMessageHistoryPage -= 1;
+      await adminLoadParentMessages();
+    }
+  });
 }
 
 function adminDateTimeLocalValue(isoValue) {
@@ -330,55 +451,90 @@ async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, 
   await adminLoadSmsLogs(true);
 }
 
+function adminResetParentMessageForm() {
+  const form = document.getElementById('admin-parent-message-form');
+  if (form) form.reset();
+  adminSetParentMessageAudience('global');
+  const starts = document.getElementById('admin-parent-message-starts');
+  if (starts) starts.value = adminDateTimeLocalValue(new Date().toISOString());
+}
+
 function adminWireParentMessageForm() {
   const form = document.getElementById('admin-parent-message-form');
   if (!form) return;
   document.querySelectorAll('input[name="admin-parent-message-audience"]').forEach((input) => input.addEventListener('change', () => adminSetParentMessageAudience(input.value)));
-  adminSetParentMessageAudience('global');
+  adminResetParentMessageForm();
   adminRenderParentMessageRecipients();
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const body = document.getElementById('admin-parent-message-body').value.trim();
     const audience = adminParentMessageAudienceValue();
     const recipient = audience === 'personal' ? document.getElementById('admin-parent-message-recipient').value || null : null;
+    const startsValue = document.getElementById('admin-parent-message-starts').value;
+    const startsAt = startsValue ? new Date(startsValue) : null;
     if (audience === 'personal' && !recipient) { adminShowStatus('메시지를 보낼 학생을 선택해주세요.', true); return; }
     if (!body) { adminShowStatus('학부모님께 보낼 메시지를 입력해주세요.', true); return; }
+    if (!startsAt || Number.isNaN(startsAt.getTime())) { adminShowStatus('시작 시각을 확인해주세요.', true); return; }
+    const sixMonthsLater = new Date(); sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    if (startsAt > sixMonthsLater) { adminShowStatus('문자 예약은 현재부터 최대 6개월 이내로 설정해주세요.', true); return; }
+    if (!recipient) {
+      const targetCount = adminMembers.filter((member) => member.app_role === 'student' && member.is_active).length;
+      if (!confirm(`전체 학부모 ${targetCount}명에게 문자를 보낼까요?`)) return;
+    }
     const submitButton = document.getElementById('admin-parent-message-submit');
     const originalLabel = submitButton?.textContent || '학부모님께 문자 발송';
-    await adminSendParentMessageSms(recipient, body, submitButton, originalLabel);
+    if (submitButton) submitButton.disabled = true;
+    const { data: savedMessage, error } = await window.supabaseClient.from('parent_messages')
+      .insert({ recipient_user_id: recipient, body, starts_at: startsAt.toISOString(), created_by: adminCurrentUserId })
+      .select('*').single();
+    if (error) {
+      adminShowStatus('메시지를 저장하지 못했습니다. parent_messages_schema.sql을 먼저 실행해주세요.', true);
+      console.error('[admin] save parent message', error);
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+    adminParentMessageHistoryFilter = audience;
+    adminParentMessageHistoryPage = 1;
+    adminResetParentMessageForm();
+    await adminSendParentMessageSms(savedMessage.id, recipient, body, startsAt.toISOString(), submitButton, originalLabel);
   });
 }
 
-async function adminSendParentMessageSms(recipientId, body, submitButton, originalLabel) {
+async function adminSendParentMessageSms(messageId, recipientId, body, startsAt, submitButton, originalLabel) {
   const restoreButton = () => { if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalLabel; } };
   const targets = recipientId
     ? adminMembers.filter((member) => member.id === recipientId)
     : adminMembers.filter((member) => member.app_role === 'student' && member.is_active);
-  if (!recipientId && !confirm(`전체 학부모 ${targets.length}명에게 문자를 보낼까요?`)) return;
   const withPhone = targets.filter((member) => String(member.parent_phone || '').replace(/\D/g, '').length >= 10);
   const missingPhoneCount = targets.length - withPhone.length;
   if (!withPhone.length) {
-    adminShowStatus(`학부모 연락처가 등록된 대상이 없어 문자를 보내지 못했습니다.${missingPhoneCount ? ` (연락처 미등록 ${missingPhoneCount}명)` : ''}`, true);
+    adminShowStatus(`메시지를 저장했습니다.${targets.length ? ` (연락처 미등록으로 문자는 못 보냄: ${missingPhoneCount}명)` : ''}`, targets.length > 0);
+    await window.supabaseClient.from('parent_messages').update({ sms_group_ids: [], sms_status: 'no_phone' }).eq('id', messageId);
+    restoreButton();
+    await adminLoadParentMessages();
     return;
   }
-  if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 0/${withPhone.length}`; }
-  const today = adminTodayDateValue();
+  const startDate = new Date(startsAt);
+  const localStart = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000);
+  const targetDate = localStart.toISOString().slice(0, 10);
+  const isScheduled = startDate.getTime() > Date.now() + 60000;
+  if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 0/${withPhone.length}`;
   let cursor = 0; let success = 0; let failed = 0;
+  const groupIds = [];
   const worker = async () => {
     while (cursor < withPhone.length) {
       const target = withPhone[cursor++];
-      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'parent', userId: target.id, messageBody: body, date: today, audienceType: recipientId ? 'personal' : 'global' } });
-      if (!error && data?.ok) success += 1; else failed += 1;
-      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 ${success + failed}/${withPhone.length}`;
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'parent', userId: target.id, messageBody: body, date: targetDate, scheduledAt: startsAt, audienceType: recipientId ? 'personal' : 'global' } });
+      if (!error && data?.ok) { success += 1; if (data.groupId) groupIds.push(data.groupId); } else failed += 1;
+      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 ${success + failed}/${withPhone.length}`;
     }
   };
   await Promise.all(Array.from({ length: Math.min(5, withPhone.length) }, worker));
+  const smsStatus = failed ? (success ? 'partial' : 'failed') : isScheduled ? 'scheduled' : 'sent';
+  await window.supabaseClient.from('parent_messages').update({ sms_group_ids: groupIds, sms_status: smsStatus }).eq('id', messageId);
   restoreButton();
-  adminShowStatus(`학부모 문자 발송: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
-  if (success > 0) {
-    document.getElementById('admin-parent-message-form')?.reset();
-    adminSetParentMessageAudience('global');
-  }
+  adminShowStatus(`학부모 문자 ${isScheduled ? '예약' : '발송 접수'}: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
+  await adminLoadParentMessages();
   await adminLoadSmsLogs(true);
 }
 
@@ -1503,10 +1659,11 @@ async function initAdminWidgets() {
     adminWireVerseForm();
     adminWireVerseList();
     adminWireParentMessageForm();
+    adminWireParentMessageList();
     await adminLoadUsers();
   }
   adminWireConsole();
-  if (adminFullAccess) await Promise.all([adminLoadMessages(), adminLoadVerses(), adminLoadMembers()]);
+  if (adminFullAccess) await Promise.all([adminLoadMessages(), adminLoadVerses(), adminLoadMembers(), adminLoadParentMessages()]);
 }
 
 window.initAdminWidgets = initAdminWidgets;

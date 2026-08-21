@@ -64,12 +64,22 @@
       <nav id="admin-message-pagination" class="flex items-center justify-center gap-3 mt-5" aria-label="Board Message 이력 페이지"></nav>
       </section><section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-1">학부모 메시지</h2><p class="text-xs text-on-surface-variant mb-5">여기 입력한 내용은 학생 Board에는 올라가지 않고, 학부모님 번호로 문자만 발송됩니다.</p>
-      <form id="admin-parent-message-form" class="flex flex-col gap-3">
+      <form id="admin-parent-message-form" class="flex flex-col gap-3 mb-6">
         <fieldset><legend class="text-xs font-bold text-on-surface-variant mb-2">받는 대상</legend><div class="grid grid-cols-2 gap-2"><label class="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="admin-parent-message-audience" value="global" class="text-primary" checked><span class="text-sm font-bold"><i class="fa-solid fa-bullhorn text-primary mr-1.5"></i>전체 학부모</span></label><label class="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="admin-parent-message-audience" value="personal" class="text-secondary"><span class="text-sm font-bold"><i class="fa-solid fa-user text-secondary mr-1.5"></i>특정 학부모</span></label></div></fieldset>
         <label id="admin-parent-message-recipient-wrap" class="hidden text-xs text-on-surface-variant">학생 선택 (해당 학생의 학부모에게 발송)<select id="admin-parent-message-recipient" class="glass-input rounded-2xl px-4 py-2 text-sm w-full mt-1"></select></label>
         <textarea id="admin-parent-message-body" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="500" placeholder="학부모님께 보낼 메시지" required></textarea>
+        <label class="text-xs text-on-surface-variant">시작 시각 <span class="text-primary">· 문자 예약 발송</span><input id="admin-parent-message-starts" type="datetime-local" class="glass-input rounded-xl px-3 py-2 text-sm w-full mt-1" required></label>
         <button id="admin-parent-message-submit" class="pill-btn-primary py-2.5 text-sm" type="submit">학부모님께 문자 발송</button>
       </form>
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div id="admin-parent-message-history-tabs" class="glass-card rounded-full p-1 grid grid-cols-2 text-xs font-bold flex-1" role="tablist" aria-label="학부모 메시지 이력 유형">
+          <button type="button" data-parent-message-history-filter="global" class="rounded-full px-3 py-2 nav-pill-active" role="tab">전체 학부모</button>
+          <button type="button" data-parent-message-history-filter="personal" class="rounded-full px-3 py-2 text-on-surface-variant" role="tab">특정 학부모</button>
+        </div>
+        <span id="admin-parent-message-history-count" class="text-[11px] text-on-surface-variant whitespace-nowrap"></span>
+      </div>
+      <div id="admin-parent-message-list" class="flex flex-col gap-3"></div>
+      <nav id="admin-parent-message-pagination" class="flex items-center justify-center gap-3 mt-5" aria-label="학부모 메시지 이력 페이지"></nav>
       </section>
     </section>
 
@@ -213,7 +223,7 @@
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=28"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=52"></script>
+<script src="assets/js/admin.js?v=53"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
