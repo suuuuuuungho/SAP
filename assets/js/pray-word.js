@@ -207,8 +207,8 @@ async function scanEnhanceImage(file) {
     // 완전 흑/백으로 이진화하면 연필/옅은 펜 글씨가 지워져 보이지 않을 수 있어,
     // 대신 각 픽셀을 "국소 배경 대비 상대값"으로 다시 매핑한다: 배경은 그림자와 무관하게
     // 항상 밝게(bgTarget) 정리되면서도, 옅은 글씨는 회색조 그러데이션으로 남아 눈에 보인다.
-    const bgTarget = 235;
-    const gain = 2.1;
+    const bgTarget = 238;
+    const gain = 2.5;
     for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
       const value = Math.max(0, Math.min(255, bgTarget + (lumas[p] - background[p]) * gain));
       pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
