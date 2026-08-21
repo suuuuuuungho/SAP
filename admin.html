@@ -63,14 +63,6 @@
       <div id="admin-message-list" class="flex flex-col gap-3"></div>
       <nav id="admin-message-pagination" class="flex items-center justify-center gap-3 mt-5" aria-label="Board Message 이력 페이지"></nav>
       </section><section class="glass-panel rounded-[2rem] p-6">
-      <h2 class="text-xl font-bold mb-5">Home 상단에 게시할 말씀입니다</h2>
-      <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
-        <input id="admin-verse-reference" class="glass-input rounded-2xl px-4 py-2 text-sm" maxlength="100" placeholder="예: 빌립보서 4:13" required>
-        <textarea id="admin-verse-text" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="1000" placeholder="성경구절 본문" required></textarea>
-        <button class="pill-btn-primary py-2.5 text-sm" type="submit">말씀 등록</button>
-      </form>
-      <div id="admin-verse-list" class="flex flex-col gap-3"></div>
-      </section><section class="glass-panel rounded-[2rem] p-6">
       <h2 class="text-xl font-bold mb-1">학부모 메시지</h2><p class="text-xs text-on-surface-variant mb-5">여기 입력한 내용은 학생 Board에는 올라가지 않고, 학부모님 번호로 문자만 발송됩니다.</p>
       <form id="admin-parent-message-form" class="flex flex-col gap-3">
         <fieldset><legend class="text-xs font-bold text-on-surface-variant mb-2">받는 대상</legend><div class="grid grid-cols-2 gap-2"><label class="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="admin-parent-message-audience" value="global" class="text-primary" checked><span class="text-sm font-bold"><i class="fa-solid fa-bullhorn text-primary mr-1.5"></i>전체 학부모</span></label><label class="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="admin-parent-message-audience" value="personal" class="text-secondary"><span class="text-sm font-bold"><i class="fa-solid fa-user text-secondary mr-1.5"></i>특정 학부모</span></label></div></fieldset>
@@ -79,6 +71,18 @@
         <button id="admin-parent-message-submit" class="pill-btn-primary py-2.5 text-sm" type="submit">학부모님께 문자 발송</button>
       </form>
       </section>
+    </section>
+
+    <section data-admin-panel="verse" class="admin-panel hidden">
+      <div class="glass-panel rounded-[2rem] p-6 max-w-xl">
+      <h2 class="text-xl font-bold mb-5">Home 상단에 게시할 말씀입니다</h2>
+      <form id="admin-verse-form" class="flex flex-col gap-3 mb-6">
+        <input id="admin-verse-reference" class="glass-input rounded-2xl px-4 py-2 text-sm" maxlength="100" placeholder="예: 빌립보서 4:13" required>
+        <textarea id="admin-verse-text" class="glass-input rounded-2xl px-4 py-3 text-sm min-h-28" maxlength="1000" placeholder="성경구절 본문" required></textarea>
+        <button class="pill-btn-primary py-2.5 text-sm" type="submit">말씀 등록</button>
+      </form>
+      <div id="admin-verse-list" class="flex flex-col gap-3"></div>
+      </div>
     </section>
 
     <section data-admin-panel="gallery" class="admin-panel hidden">
@@ -201,7 +205,7 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=22"></script>
+<script src="assets/js/layout.js?v=23"></script>
 <script src="assets/js/image-utils.js?v=1"></script>
 <script src="assets/js/pray-word.js?v=10"></script>
 <script src="assets/js/profile-avatar.js?v=5"></script>
@@ -209,7 +213,7 @@
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=28"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=51"></script>
+<script src="assets/js/admin.js?v=52"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

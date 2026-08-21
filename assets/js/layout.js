@@ -108,6 +108,7 @@ const ADMIN_NAV_GROUPS = [
   ],
   [
     { id: 'board-manage', label: 'Board manage', icon: 'fa-solid fa-bullhorn', full: true },
+    { id: 'verse', label: 'Bible Verse', icon: 'fa-solid fa-book-bible', full: true },
     { id: 'gallery-manage', label: 'Gallery manage', icon: 'fa-solid fa-photo-film', full: true },
     { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders', full: true },
     { id: 'member', label: 'Member', icon: 'fa-solid fa-users', full: true },

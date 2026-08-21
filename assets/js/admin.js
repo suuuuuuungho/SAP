@@ -510,10 +510,10 @@ function adminRoleLabel(role) {
 }
 
 const ADMIN_PANEL_FOR_TAB = { 'gallery-manage': 'gallery' };
-const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat']);
+const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'verse', 'gallery-manage', 'control', 'member', 'dashboard', 'stat']);
 
 function adminWireTabs() {
-  const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
+  const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'verse', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
   const selectTab = (tab, historyMode = 'push') => {
     let nextTab = validTabs.includes(tab) ? tab : 'board';
     if (ADMIN_FULL_ONLY_TABS.has(nextTab) && !adminFullAccess) nextTab = 'board';
