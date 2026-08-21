@@ -52,15 +52,6 @@ function expectedWordChapterLabel(targetDateKey) {
   return chapters ? `요한복음 ${chapters.join('·')}장` : null;
 }
 
-function wordOcrTextMatchesChapters(text, chapters) {
-  if (!text) return false;
-  // OCR이 숫자를 문자로 잘못 읽는 흔한 오탐(O→0, l/I→1)만 가볍게 보정한 뒤
-  // "숫자+장" 패턴을 전부 뽑아 기대 챕터와 겹치는 게 있는지 확인한다.
-  const normalized = text.replace(/[Oo](?=\d*\s*장)/g, '0').replace(/[lI](?=\d*\s*장)/g, '1');
-  const matches = [...normalized.matchAll(/(\d{1,2})\s*장/g)].map((m) => Number(m[1]));
-  return matches.some((n) => chapters.includes(n));
-}
-
 function setWordOcrCaution(message) {
   const banner = document.getElementById('word-photo-ocr-caution');
   const text = document.getElementById('word-photo-ocr-caution-text');
@@ -86,60 +77,47 @@ function setWordOcrStatus(message) {
   }
 }
 
-// Tesseract 워커는 초기화(언어 데이터 로드)가 다소 걸려서, 사진을 바꿀 때마다 새로 만들지 않고
-// 모듈 전체에서 하나만 만들어 재사용한다.
-let tesseractWorkerPromise = null;
-async function getTesseractWorker() {
-  if (!window.Tesseract) return null;
-  if (!tesseractWorkerPromise) {
-    tesseractWorkerPromise = window.Tesseract.createWorker('kor+eng').catch((err) => {
-      tesseractWorkerPromise = null;
-      throw err;
-    });
-  }
-  return tesseractWorkerPromise;
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',').pop());
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
-async function recognizeWordPhotoText(image, pageSegMode) {
-  const worker = await getTesseractWorker();
-  if (!worker) return window.Tesseract ? (await window.Tesseract.recognize(image, 'kor+eng')).data.text : '';
-  if (pageSegMode) {
-    try {
-      await worker.setParameters({ tessedit_pageseg_mode: pageSegMode });
-    } catch (err) {
-      console.warn('[pray-word] tesseract setParameters failed', err);
-    }
+// 상단 헤더 크롭 캔버스를 Claude Vision에 보내 "요한복음 N장" 숫자를 읽고 기대 챕터와
+// 대조한다. 네트워크/서버 오류로 판정 자체를 못한 경우 null을 반환해 caution을 띄우지
+// 않는다(기존에 Tesseract가 없을 때 조용히 넘어가던 것과 같은 fail-open 방침).
+async function verifyWordPhotoWithLLM(headerCrop, chapters) {
+  if (!headerCrop || !window.supabaseClient) return null;
+  try {
+    const blob = await new Promise((resolve) => headerCrop.toBlob(resolve, 'image/jpeg', 0.85));
+    if (!blob) return null;
+    const imageBase64 = await blobToBase64(blob);
+    const { data, error } = await window.supabaseClient.functions.invoke('verify-word-photo', {
+      body: { imageBase64, mediaType: 'image/jpeg', chapters },
+    });
+    if (error || !data || !data.ok) return null;
+    return !!data.matched;
+  } catch (err) {
+    console.error('[pray-word] verifyWordPhotoWithLLM', err);
+    return null;
   }
-  const { data } = await worker.recognize(image);
-  return data.text;
 }
 
 async function runWordPhotoOcr(file) {
   setWordOcrCaution('');
   const token = ++wordPhotoOcrToken;
   const chapters = expectedWordChapters(wordModalDateKey);
-  if (!chapters || !window.Tesseract) return;
-  setWordOcrStatus('본문 인식 중...');
+  if (!chapters) return;
+  setWordOcrStatus('AI로 사진 확인 중...');
   try {
-    let matched = false;
-
-    // 1차: 챕터 번호가 적힌 상단 30% 헤더만 크롭 + 강한 이진화로 인식 시도(더 빠르고 정확).
     const headerCrop = await buildOcrHeaderCrop(file);
     if (token !== wordPhotoOcrToken) return;
-    if (headerCrop) {
-      const headerText = await recognizeWordPhotoText(headerCrop, window.Tesseract.PSM && window.Tesseract.PSM.SINGLE_BLOCK);
-      if (token !== wordPhotoOcrToken) return;
-      matched = wordOcrTextMatchesChapters(headerText, chapters);
-    }
-
-    // 2차 폴백: 헤더 크롭에서 못 찾았으면 전체 사진으로 한 번 더 시도.
-    if (!matched) {
-      const fullText = await recognizeWordPhotoText(file, window.Tesseract.PSM && window.Tesseract.PSM.AUTO);
-      if (token !== wordPhotoOcrToken) return;
-      matched = wordOcrTextMatchesChapters(fullText, chapters);
-    }
-
-    if (!matched) {
+    const matched = await verifyWordPhotoWithLLM(headerCrop, chapters);
+    if (token !== wordPhotoOcrToken) return;
+    if (matched === false) {
       setWordOcrCaution(`선택하신 날짜(${wordModalDateKey})의 본문은 ${expectedWordChapterLabel(wordModalDateKey)}인데, 스캔한 사진에서 확인하지 못했어요.`);
     }
   } catch (err) {
@@ -250,10 +228,10 @@ function releaseImageSource(decoded) {
   if (decoded.objectUrl) URL.revokeObjectURL(decoded.objectUrl);
 }
 
-// OCR 인식용으로 사진 상단 30%(챕터 헤더 "요한복음 N장 묵상 날짜:"가 있는 영역)만 잘라낸
-// 캔버스를 만든다. 헤더만 잘라 원본 해상도에 가깝게 인식하면, 사진 전체를 축소해서 넣을 때
-// 작은 숫자가 통째로 누락되던 문제가 줄어든다. 대비 보정은 화면 표시용(scanEnhanceImage)과
-// 동일한 부드러운 방식을 쓴다 — 세게 이진화하면 작은 글씨 획이 끊겨 오히려 인식률이 떨어진다.
+// 챕터 인식(Claude Vision)용으로 사진 상단 30%(헤더 "요한복음 N장 묵상 날짜:"가 있는 영역)만
+// 잘라낸 캔버스를 만든다. 헤더만 잘라 보내면 사진 전체를 보낼 때보다 토큰(비용)이 작고,
+// 관계없는 필기 내용도 함께 전송되지 않는다. 대비 보정은 화면 표시용(scanEnhanceImage)과
+// 동일한 부드러운 방식을 쓴다 — 자연스러운 사진이 비전 모델 인식에 더 유리하다.
 async function buildOcrHeaderCrop(file) {
   let decoded = null;
   try {
