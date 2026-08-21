@@ -19,6 +19,81 @@ function dateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+// --- 말씀 묵상 스캔 OCR: 날짜별 예상 본문(요한복음 1~21장, 평일만)과 대조해 caution 표시 ---
+// Gallery의 galleryReadingLabel()과 동일한 매핑(운영기간 2026-08-10~09-06 평일 20일,
+// 마지막 날만 20·21장 두 장)을 index.html이 gallery.js를 불러오지 않아도 되도록 여기서 다시 구현.
+const WORD_READING_START = '2026-08-10';
+const WORD_READING_END = '2026-09-06';
+let wordPhotoOcrToken = 0;
+let wordPhotoOcrMismatch = false;
+
+function buildWordReadingDays() {
+  const result = [];
+  const cursor = new Date(`${WORD_READING_START}T12:00:00`);
+  const end = new Date(`${WORD_READING_END}T12:00:00`);
+  while (cursor <= end) {
+    const weekday = cursor.getDay();
+    if (weekday >= 1 && weekday <= 5) result.push(dateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
+function expectedWordChapters(targetDateKey) {
+  const days = buildWordReadingDays();
+  const index = days.indexOf(targetDateKey);
+  if (index < 0) return null;
+  return index === days.length - 1 ? [20, 21] : [index + 1];
+}
+
+function expectedWordChapterLabel(targetDateKey) {
+  const chapters = expectedWordChapters(targetDateKey);
+  return chapters ? `요한복음 ${chapters.join('·')}장` : null;
+}
+
+function wordOcrTextMatchesChapters(text, chapters) {
+  if (!text) return false;
+  // OCR이 숫자를 문자로 잘못 읽는 흔한 오탐(O→0, l/I→1)만 가볍게 보정한 뒤
+  // "숫자+장" 패턴을 전부 뽑아 기대 챕터와 겹치는 게 있는지 확인한다.
+  const normalized = text.replace(/[Oo](?=\d*\s*장)/g, '0').replace(/[lI](?=\d*\s*장)/g, '1');
+  const matches = [...normalized.matchAll(/(\d{1,2})\s*장/g)].map((m) => Number(m[1]));
+  return matches.some((n) => chapters.includes(n));
+}
+
+function setWordOcrCaution(message) {
+  const banner = document.getElementById('word-photo-ocr-caution');
+  const text = document.getElementById('word-photo-ocr-caution-text');
+  wordPhotoOcrMismatch = !!message;
+  if (!banner || !text) return;
+  if (message) {
+    text.textContent = message;
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+async function runWordPhotoOcr(file) {
+  const statusEl = document.getElementById('word-photo-ocr-status');
+  setWordOcrCaution('');
+  const token = ++wordPhotoOcrToken;
+  const chapters = expectedWordChapters(wordModalDateKey);
+  if (!chapters || !window.Tesseract) return;
+  if (statusEl) statusEl.classList.remove('hidden');
+  try {
+    const { data } = await window.Tesseract.recognize(file, 'kor+eng');
+    if (token !== wordPhotoOcrToken) return;
+    const matched = wordOcrTextMatchesChapters(data.text, chapters);
+    if (!matched) {
+      setWordOcrCaution(`선택하신 날짜(${wordModalDateKey})의 본문은 ${expectedWordChapterLabel(wordModalDateKey)}인데, 스캔한 사진에서 확인하지 못했어요.`);
+    }
+  } catch (err) {
+    console.error('[pray-word] word photo ocr', err);
+  } finally {
+    if (token === wordPhotoOcrToken && statusEl) statusEl.classList.add('hidden');
+  }
+}
+
 let cachedUserId = null;
 async function getCurrentUserId() {
   if (cachedUserId) return cachedUserId;
@@ -535,6 +610,9 @@ function wireWordPhotoPreview() {
     preview.src = '';
     wrap.classList.add('hidden');
     input.value = '';
+    wordPhotoOcrToken += 1;
+    setWordOcrCaution('');
+    document.getElementById('word-photo-ocr-status')?.classList.add('hidden');
   }
 
   input.addEventListener('change', () => {
@@ -550,6 +628,7 @@ function wireWordPhotoPreview() {
     preview.src = url;
     preview.dataset.objectUrl = url;
     wrap.classList.remove('hidden');
+    runWordPhotoOcr(file);
   });
 
   if (removeBtn) removeBtn.addEventListener('click', clearPhoto);
@@ -630,6 +709,9 @@ async function openWordModal(dateKey, onSaved) {
   if (photoWrap) { photoWrap.classList.add('hidden'); delete photoWrap.dataset.existingPhotoPath; }
   if (photoHint) photoHint.classList.add('hidden');
   if (verseHint) verseHint.classList.add('hidden');
+  wordPhotoOcrToken += 1;
+  setWordOcrCaution('');
+  document.getElementById('word-photo-ocr-status')?.classList.add('hidden');
 
   if (record && !record.photo_unavailable && record.photo_path && photoWrap && photoPreview) {
     photoWrap.dataset.existingPhotoPath = record.photo_path;
@@ -699,6 +781,12 @@ async function saveWordModal() {
     return;
   }
   if (wordVerseHint) wordVerseHint.classList.add('hidden');
+
+  if (newFile && wordPhotoOcrMismatch) {
+    const label = expectedWordChapterLabel(dateKey);
+    const confirmed = confirm(`스캔한 사진에서 오늘의 본문${label ? `(${label})` : ''}을 확인하지 못했어요. 그래도 이 사진으로 저장할까요?`);
+    if (!confirmed) return;
+  }
 
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
 

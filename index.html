@@ -237,13 +237,19 @@
       </div>
 
       <div class="mb-5">
-        <label class="block text-xs font-medium text-on-surface-variant mb-1">사진 첨부 <span class="text-error">*</span></label>
-        <input type="file" accept="image/*" id="word-photo-input" class="w-full text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-on-surface">
+        <label class="block text-xs font-medium text-on-surface-variant mb-1">본문 스캔 사진 <span class="text-error">*</span></label>
+        <p class="text-[11px] text-on-surface-variant mb-1.5">오늘 읽은 본문 페이지를 카메라로 스캔해서 올려주세요.</p>
+        <input type="file" accept="image/*" capture="environment" id="word-photo-input" class="w-full text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-on-surface">
         <div id="word-photo-preview-wrap" class="hidden relative mt-2">
           <img id="word-photo-preview" class="w-full h-40 object-contain bg-surface-container rounded-xl" alt="첨부한 사진 미리보기">
           <button type="button" id="word-photo-remove" class="absolute top-2 right-2 icon-glass w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant text-xs" aria-label="사진 삭제">
             <i class="fa-solid fa-xmark"></i>
           </button>
+        </div>
+        <p id="word-photo-ocr-status" class="text-xs text-on-surface-variant mt-1.5 hidden"><i class="fa-solid fa-spinner fa-spin mr-1"></i>사진 속 본문을 인식하는 중...</p>
+        <div id="word-photo-ocr-caution" class="hidden mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <p id="word-photo-ocr-caution-text"></p>
+          <p class="text-[10px] text-on-surface-variant mt-1">사진이 맞다면 그대로 저장을 눌러주세요. 확인 후 그대로 진행할지 물어봅니다.</p>
         </div>
         <p id="word-photo-hint" class="text-xs text-error mt-1 hidden">사진을 첨부해주세요.</p>
       </div>
@@ -393,7 +399,8 @@
 <script src="assets/js/layout.js?v=23"></script>
 <script src="assets/js/bible-books.js"></script>
 <script src="assets/js/image-utils.js?v=1"></script>
-<script src="assets/js/pray-word.js?v=10"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="assets/js/pray-word.js?v=11"></script>
 <script src="assets/js/home.js?v=35"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
