@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
   const { data: authData } = await viewer.auth.getUser()
 
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode === 'report' ? 'report' : body.mode === 'board' ? 'board' : body.mode === 'board_cancel' ? 'board_cancel' : 'missing'
+  const mode = body.mode === 'report' ? 'report' : body.mode === 'board' ? 'board' : body.mode === 'board_cancel' ? 'board_cancel' : body.mode === 'parent' ? 'parent' : 'missing'
   const userId = String(body.userId || '')
   const date = String(body.date || '')
   const missing = Array.isArray(body.missing) ? body.missing.map(String).filter(Boolean) : []
@@ -92,8 +92,8 @@ Deno.serve(async (req) => {
   }
 
   const { data: member } = await admin.from('profiles').select('name,phone,parent_phone,grade_class').eq('id', userId).maybeSingle()
-  const to = digits(mode === 'report' ? member?.parent_phone || '' : member?.phone || '')
-  const logItems = mode === 'report' ? ['개인 리포트'] : mode === 'board' ? [audienceType === 'personal' ? 'Board 개인 메시지' : 'Board 전체 공지'] : missing
+  const to = digits(mode === 'report' || mode === 'parent' ? member?.parent_phone || '' : member?.phone || '')
+  const logItems = mode === 'report' ? ['개인 리포트'] : mode === 'board' ? [audienceType === 'personal' ? 'Board 개인 메시지' : 'Board 전체 공지'] : mode === 'parent' ? [audienceType === 'personal' ? '학부모 개인 메시지' : '학부모 전체 메시지'] : missing
   const writeLog = async (status: 'success' | 'failed', errorMessage: string | null = null) => {
     if (!member || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !logItems.length) return
     const { error: logError } = await admin.from('admin_sms_logs').insert({
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
   }
   if (!member) return json({ ok: false, message: '학생 정보를 찾을 수 없습니다.' })
   if (to.length < 10) {
-    const message = mode === 'report' ? 'Member에서 학부모 연락처를 확인해주세요.' : 'Member에서 학생 연락처를 확인해주세요.'
+    const message = mode === 'report' || mode === 'parent' ? 'Member에서 학부모 연락처를 확인해주세요.' : 'Member에서 학생 연락처를 확인해주세요.'
     await writeLog('failed', message)
     return json({ ok: false, message })
   }
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     await writeLog('failed', '리포트 링크 생성 오류')
     return json({ ok: false, message: '리포트 링크를 만들지 못했습니다. Admin 페이지를 새로고침한 후 다시 시도해주세요.' })
   }
-  if (mode === 'board' && !messageText) {
+  if ((mode === 'board' || mode === 'parent') && !messageText) {
     await writeLog('failed', '메시지 내용 누락')
     return json({ ok: false, message: '메시지 내용을 확인해주세요.' })
   }
@@ -159,6 +159,8 @@ Deno.serve(async (req) => {
       ? buildParentReportMessage(member.name, parsedReportUrl!.href)
       : mode === 'board'
       ? `[SAP ${audienceType === 'personal' ? '개인 메시지' : '전체 공지'}] ${messageText}\n\n-${boardSenderName} 선생님-`
+      : mode === 'parent'
+      ? `[SAP] ${member.name} 학생 학부모님, ${messageText}`
       : `[SAP] ${member.name} 학생, ${date} 현재 미인증 항목은 ${missing.join(', ')}입니다. 확인 후 인증을 완료해주세요.` }
   const requestPayload: Record<string, unknown> = { messages: [message], showMessageList: true }
   if (mode === 'board' && boardScheduledDate) requestPayload.scheduledDate = boardScheduledDate

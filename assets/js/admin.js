@@ -330,6 +330,58 @@ async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, 
   await adminLoadSmsLogs(true);
 }
 
+function adminWireParentMessageForm() {
+  const form = document.getElementById('admin-parent-message-form');
+  if (!form) return;
+  document.querySelectorAll('input[name="admin-parent-message-audience"]').forEach((input) => input.addEventListener('change', () => adminSetParentMessageAudience(input.value)));
+  adminSetParentMessageAudience('global');
+  adminRenderParentMessageRecipients();
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const body = document.getElementById('admin-parent-message-body').value.trim();
+    const audience = adminParentMessageAudienceValue();
+    const recipient = audience === 'personal' ? document.getElementById('admin-parent-message-recipient').value || null : null;
+    if (audience === 'personal' && !recipient) { adminShowStatus('메시지를 보낼 학생을 선택해주세요.', true); return; }
+    if (!body) { adminShowStatus('학부모님께 보낼 메시지를 입력해주세요.', true); return; }
+    const submitButton = document.getElementById('admin-parent-message-submit');
+    const originalLabel = submitButton?.textContent || '학부모님께 문자 발송';
+    await adminSendParentMessageSms(recipient, body, submitButton, originalLabel);
+  });
+}
+
+async function adminSendParentMessageSms(recipientId, body, submitButton, originalLabel) {
+  const restoreButton = () => { if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalLabel; } };
+  const targets = recipientId
+    ? adminMembers.filter((member) => member.id === recipientId)
+    : adminMembers.filter((member) => member.app_role === 'student' && member.is_active);
+  if (!recipientId && !confirm(`전체 학부모 ${targets.length}명에게 문자를 보낼까요?`)) return;
+  const withPhone = targets.filter((member) => String(member.parent_phone || '').replace(/\D/g, '').length >= 10);
+  const missingPhoneCount = targets.length - withPhone.length;
+  if (!withPhone.length) {
+    adminShowStatus(`학부모 연락처가 등록된 대상이 없어 문자를 보내지 못했습니다.${missingPhoneCount ? ` (연락처 미등록 ${missingPhoneCount}명)` : ''}`, true);
+    return;
+  }
+  if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 0/${withPhone.length}`; }
+  const today = adminTodayDateValue();
+  let cursor = 0; let success = 0; let failed = 0;
+  const worker = async () => {
+    while (cursor < withPhone.length) {
+      const target = withPhone[cursor++];
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'parent', userId: target.id, messageBody: body, date: today, audienceType: recipientId ? 'personal' : 'global' } });
+      if (!error && data?.ok) success += 1; else failed += 1;
+      if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 발송 중 ${success + failed}/${withPhone.length}`;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(5, withPhone.length) }, worker));
+  restoreButton();
+  adminShowStatus(`학부모 문자 발송: 성공 ${success}명${failed ? ` · 실패 ${failed}명` : ''}${missingPhoneCount ? ` · 연락처 미등록 ${missingPhoneCount}명 제외` : ''}.`, failed > 0);
+  if (success > 0) {
+    document.getElementById('admin-parent-message-form')?.reset();
+    adminSetParentMessageAudience('global');
+  }
+  await adminLoadSmsLogs(true);
+}
+
 function adminWireMessageList() {
   const wrap = document.getElementById('admin-message-list');
   if (!wrap) return;
@@ -633,6 +685,33 @@ function adminRenderMessageSenders(selectedId = null) {
     <span class="min-w-0"><span class="block text-sm font-bold truncate">${adminEscape(senderName || '이름 미등록')}${hasSignupName ? ' 선생님' : ''}</span><span class="block text-[10px] text-on-surface-variant">${hasSignupName ? '회원가입 이름' : 'Member에서 이름을 먼저 등록하세요'} · ${adminEscape(adminRoleLabel(member.app_role))}</span></span>
   </label>`;
   }).join('') : '<p class="text-xs text-error">활성 관리자 계정을 찾을 수 없습니다.</p>';
+}
+
+function adminParentMessageAudienceValue() {
+  return document.querySelector('input[name="admin-parent-message-audience"]:checked')?.value === 'personal' ? 'personal' : 'global';
+}
+
+function adminSetParentMessageAudience(audience) {
+  const value = audience === 'personal' ? 'personal' : 'global';
+  const input = document.querySelector(`input[name="admin-parent-message-audience"][value="${value}"]`);
+  if (input) input.checked = true;
+  const recipientWrap = document.getElementById('admin-parent-message-recipient-wrap');
+  const recipient = document.getElementById('admin-parent-message-recipient');
+  recipientWrap?.classList.toggle('hidden', value !== 'personal');
+  if (recipient) {
+    recipient.required = value === 'personal';
+    recipient.disabled = value !== 'personal';
+    if (value !== 'personal') recipient.value = '';
+  }
+}
+
+function adminRenderParentMessageRecipients(selectedId = null) {
+  const select = document.getElementById('admin-parent-message-recipient');
+  if (!select) return;
+  const students = adminMembers.filter((member) => member.app_role === 'student' && member.is_active);
+  select.innerHTML = '<option value="">학생을 선택하세요</option>' + students.map((member) =>
+    `<option value="${member.id}" ${member.id === selectedId ? 'selected' : ''}>${adminEscape(member.name)} (@${adminEscape(member.username)})</option>`
+  ).join('');
 }
 
 function commentProfileAvatarHTML(user, sizeClass = 'w-12 h-12') {
@@ -1007,6 +1086,7 @@ async function adminLoadMembers() {
     : {};
   adminRenderMembers();
   adminRenderMessageSenders(document.querySelector('input[name="admin-message-sender"]:checked')?.value || null);
+  adminRenderParentMessageRecipients(document.getElementById('admin-parent-message-recipient')?.value || null);
   await adminLoadMessages();
 }
 
@@ -1422,6 +1502,7 @@ async function initAdminWidgets() {
     adminWireMessageList();
     adminWireVerseForm();
     adminWireVerseList();
+    adminWireParentMessageForm();
     await adminLoadUsers();
   }
   adminWireConsole();
