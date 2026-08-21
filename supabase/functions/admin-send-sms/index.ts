@@ -80,15 +80,29 @@ Deno.serve(async (req) => {
   if (!apiKey || !apiSecret || !sender) return json({ ok: false, message: '솔라피 서버 설정이 필요합니다.' }, 500)
 
   if (mode === 'board_cancel') {
-    if (!groupIds.length) return json({ ok: true, cancelled: 0 })
+    if (!groupIds.length) return json({ ok: true, cancelled: 0, requested: 0, failedGroupIds: [] })
     let cancelled = 0
+    const failedGroupIds: string[] = []
     for (const groupId of groupIds) {
       const unschedule = await solapiRequest(apiKey, apiSecret, `/messages/v4/groups/${encodeURIComponent(groupId)}/schedule`, 'DELETE')
-      if (!unschedule.ok) continue
+      if (!unschedule.ok) {
+        // 이미 이통사로 발송 처리가 시작된 건 등, 정상적으로 취소가 불가능한 경우가 있어
+        // 실패한 groupId를 그대로 돌려주고 나머지는 계속 처리한다(all-or-nothing으로 막지 않음).
+        const detail = await unschedule.text().catch(() => '')
+        console.error('[admin-send-sms:board_cancel] unschedule failed', groupId, unschedule.status, detail)
+        failedGroupIds.push(groupId)
+        continue
+      }
       const remove = await solapiRequest(apiKey, apiSecret, `/messages/v4/groups/${encodeURIComponent(groupId)}`, 'DELETE')
-      if (remove.ok) cancelled += 1
+      if (remove.ok) {
+        cancelled += 1
+      } else {
+        const detail = await remove.text().catch(() => '')
+        console.error('[admin-send-sms:board_cancel] group delete failed', groupId, remove.status, detail)
+        failedGroupIds.push(groupId)
+      }
     }
-    return json({ ok: cancelled === groupIds.length, cancelled, requested: groupIds.length }, cancelled === groupIds.length ? 200 : 409)
+    return json({ ok: true, cancelled, requested: groupIds.length, failedGroupIds })
   }
 
   const { data: member } = await admin.from('profiles').select('name,phone,parent_phone,grade_class').eq('id', userId).maybeSingle()

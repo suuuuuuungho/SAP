@@ -142,7 +142,7 @@ async function adminLoadMessages() {
           <div class="flex flex-wrap items-center gap-1.5 mb-1"><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}">${message.recipient_user_id ? '개인 메시지' : '전체 공지'}</span><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${timingClass}">${timingLabel}</span></div>
           <p class="text-[11px] font-bold text-secondary mb-1">${adminEscape(adminRecipientLabel(message.recipient_user_id))} · ${adminEscape(adminMessageSenderLabel(message.sender_user_id || message.created_by))} 선생님</p>
           <p class="text-sm whitespace-pre-wrap">${adminEscape(message.body)}</p>
-          <p class="text-[10px] text-on-surface-variant mt-2">${startsAt.toLocaleString('ko-KR')}부터${message.expires_at ? ` · ${expiresAt.toLocaleString('ko-KR')}까지` : ''} · 문자 ${message.sms_status === 'scheduled' ? '예약됨' : message.sms_status === 'sent' ? '발송 접수' : message.sms_status === 'partial' ? '일부 실패' : '미접수'}</p>
+          <p class="text-[10px] text-on-surface-variant mt-2">${startsAt.toLocaleString('ko-KR')}부터${message.expires_at ? ` · ${expiresAt.toLocaleString('ko-KR')}까지` : ''} · 문자 ${{ scheduled: '예약됨', sent: '발송 접수', partial: '일부 실패', cancelled: '취소됨', partial_cancelled: '일부만 취소됨' }[message.sms_status] || '미접수'}</p>
         </div>
         <div class="flex gap-1 flex-shrink-0">
           <button type="button" data-action="edit" class="icon-glass w-8 h-8 rounded-full" aria-label="수정"><i class="fa-solid fa-pen text-xs"></i></button>
@@ -196,7 +196,7 @@ async function adminLoadParentMessages() {
   wrap.innerHTML = adminParentMessages.length ? adminParentMessages.map((message) => {
     const startsAt = new Date(message.starts_at || message.created_at);
     const scheduled = startsAt > now;
-    const statusLabel = { scheduled: '예약됨', sent: '발송 접수', partial: '일부 실패', failed: '발송 실패', no_phone: '연락처 없음', cancelled: '취소됨', pending: '처리 중' }[message.sms_status] || message.sms_status;
+    const statusLabel = { scheduled: '예약됨', sent: '발송 접수', partial: '일부 실패', failed: '발송 실패', no_phone: '연락처 없음', cancelled: '취소됨', partial_cancelled: '일부만 취소됨', pending: '처리 중' }[message.sms_status] || message.sms_status;
     return `
     <article class="glass-card rounded-2xl p-4" data-parent-message-id="${message.id}">
       <div class="flex items-start justify-between gap-3">
@@ -234,13 +234,21 @@ function adminRenderParentMessageHistoryControls() {
     <button type="button" data-parent-message-history-page="next" class="icon-glass w-9 h-9 rounded-full disabled:opacity-30" aria-label="다음 페이지" ${adminParentMessageHistoryPage >= totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
 }
 
+// 그룹 취소는 all-or-nothing이 아니다: 발송 시각이 임박해 이미 이통사로 넘어간 건은
+// 정상적으로 취소가 안 될 수 있으므로, 성공한 것만 반영하고 남은 실패분은 계속 추적한다.
+// 반환값의 ok는 "완전히 취소됨"을 뜻하고, cancelled/failed는 호출자가 상세 메시지를 만들 때 쓴다.
 async function adminCancelParentMessageSms(message) {
   const groupIds = Array.isArray(message?.sms_group_ids) ? message.sms_group_ids.filter(Boolean) : [];
-  if (!groupIds.length) return true;
+  if (!groupIds.length) return { ok: true, cancelled: 0, failed: 0 };
   const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board_cancel', groupIds } });
-  if (error || !data?.ok) { console.error('[admin] cancel parent sms', error || data); return false; }
-  await window.supabaseClient.from('parent_messages').update({ sms_group_ids: [], sms_status: 'cancelled' }).eq('id', message.id);
-  return true;
+  if (error || !data?.ok) { console.error('[admin] cancel parent sms', error || data); return { ok: false, cancelled: 0, failed: groupIds.length }; }
+  const failedGroupIds = Array.isArray(data.failedGroupIds) ? data.failedGroupIds.filter((id) => groupIds.includes(id)) : [];
+  const cancelled = groupIds.length - failedGroupIds.length;
+  await window.supabaseClient.from('parent_messages').update({
+    sms_group_ids: failedGroupIds,
+    sms_status: failedGroupIds.length === 0 ? 'cancelled' : cancelled > 0 ? 'partial_cancelled' : (message.sms_status || 'scheduled'),
+  }).eq('id', message.id);
+  return { ok: failedGroupIds.length === 0, cancelled, failed: failedGroupIds.length };
 }
 
 function adminWireParentMessageList() {
@@ -268,13 +276,21 @@ function adminWireParentMessageList() {
     if (!message) return;
     if (button.dataset.action === 'cancel') {
       if (!confirm('예약된 학부모 문자 발송을 취소할까요?')) return;
-      if (!(await adminCancelParentMessageSms(message))) { adminShowStatus('예약 문자를 취소하지 못했습니다.', true); return; }
+      const result = await adminCancelParentMessageSms(message);
+      if (result.ok) {
+        adminShowStatus(result.cancelled ? `예약 문자 ${result.cancelled}건을 취소했습니다.` : '취소할 예약 문자가 없습니다.');
+      } else if (result.cancelled) {
+        adminShowStatus(`${result.cancelled}건은 취소했지만, ${result.failed}건은 이미 발송 처리가 시작되어 취소하지 못했습니다.`, true);
+      } else {
+        adminShowStatus('이미 발송 처리가 시작되었거나 완료되어 취소하지 못했습니다.', true);
+      }
       await adminLoadParentMessages();
       return;
     }
     if (button.dataset.action === 'delete') {
-      if (new Date(message.starts_at) > new Date() && !(await adminCancelParentMessageSms(message))) {
-        adminShowStatus('예약 문자를 취소하지 못해 삭제를 중단했습니다.', true);
+      if (new Date(message.starts_at) > new Date() && !(await adminCancelParentMessageSms(message)).ok) {
+        adminShowStatus('예약 문자를 취소하지 못해 삭제를 중단했습니다. 목록에서 남은 예약 상태를 확인해주세요.', true);
+        await adminLoadParentMessages();
         return;
       }
       await window.supabaseClient.from('parent_messages').delete().eq('id', id);
@@ -378,8 +394,8 @@ function adminWireMessageForm() {
     const originalLabel = submitButton?.textContent || 'Board Message 전송';
     if (submitButton) submitButton.disabled = true;
     if (previousMessage && new Date(previousMessage.starts_at || previousMessage.created_at) > new Date() && Array.isArray(previousMessage.sms_group_ids) && previousMessage.sms_group_ids.length) {
-      const cancelled = await adminCancelBoardMessageSms(previousMessage);
-      if (!cancelled) { adminShowStatus('기존 예약 문자를 취소하지 못해 수정을 중단했습니다.', true); if (submitButton) submitButton.disabled = false; return; }
+      const cancelResult = await adminCancelBoardMessageSms(previousMessage);
+      if (!cancelResult.ok) { adminShowStatus('기존 예약 문자를 취소하지 못해 수정을 중단했습니다. 목록에서 남은 예약 상태를 확인해주세요.', true); if (submitButton) submitButton.disabled = false; return; }
     }
     const result = adminEditingMessageId
       ? await window.supabaseClient.from('home_messages').update(payload).eq('id', adminEditingMessageId).select('*').single()
@@ -405,13 +421,19 @@ function adminWireMessageForm() {
   document.getElementById('admin-message-edit-cancel')?.addEventListener('click', adminResetMessageForm);
 }
 
+// adminCancelParentMessageSms와 동일한 partial-cancel 방침(all-or-nothing 아님).
 async function adminCancelBoardMessageSms(message) {
   const groupIds = Array.isArray(message?.sms_group_ids) ? message.sms_group_ids.filter(Boolean) : [];
-  if (!groupIds.length) return true;
+  if (!groupIds.length) return { ok: true, cancelled: 0, failed: 0 };
   const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'board_cancel', groupIds } });
-  if (error || !data?.ok) { console.error('[admin] cancel board sms', error || data); return false; }
-  await window.supabaseClient.from('home_messages').update({ sms_group_ids: [], sms_status: 'cancelled' }).eq('id', message.id);
-  return true;
+  if (error || !data?.ok) { console.error('[admin] cancel board sms', error || data); return { ok: false, cancelled: 0, failed: groupIds.length }; }
+  const failedGroupIds = Array.isArray(data.failedGroupIds) ? data.failedGroupIds.filter((id) => groupIds.includes(id)) : [];
+  const cancelled = groupIds.length - failedGroupIds.length;
+  await window.supabaseClient.from('home_messages').update({
+    sms_group_ids: failedGroupIds,
+    sms_status: failedGroupIds.length === 0 ? 'cancelled' : cancelled > 0 ? 'partial_cancelled' : (message.sms_status || 'scheduled'),
+  }).eq('id', message.id);
+  return { ok: failedGroupIds.length === 0, cancelled, failed: failedGroupIds.length };
 }
 
 async function adminSendBoardMessageSms(messageId, recipientId, body, startsAt, senderId, audience, submitButton, originalLabel) {
@@ -599,8 +621,9 @@ function adminWireMessageList() {
       return;
     }
     if (button.dataset.action === 'delete') {
-      if (message && new Date(message.starts_at || message.created_at) > new Date() && !(await adminCancelBoardMessageSms(message))) {
-        adminShowStatus('예약 문자를 취소하지 못해 메시지 삭제를 중단했습니다.', true);
+      if (message && new Date(message.starts_at || message.created_at) > new Date() && !(await adminCancelBoardMessageSms(message)).ok) {
+        adminShowStatus('예약 문자를 취소하지 못해 메시지 삭제를 중단했습니다. 목록에서 남은 예약 상태를 확인해주세요.', true);
+        await adminLoadMessages();
         return;
       }
       await window.supabaseClient.from('home_messages').delete().eq('id', id);
@@ -609,8 +632,9 @@ function adminWireMessageList() {
     } else {
       const currentlyActive = !article.classList.contains('opacity-50');
       const futureMessage = message && new Date(message.starts_at || message.created_at) > new Date();
-      if (currentlyActive && futureMessage && !(await adminCancelBoardMessageSms(message))) {
-        adminShowStatus('예약 문자를 취소하지 못해 비활성화를 중단했습니다.', true);
+      if (currentlyActive && futureMessage && !(await adminCancelBoardMessageSms(message)).ok) {
+        adminShowStatus('예약 문자를 취소하지 못해 비활성화를 중단했습니다. 목록에서 남은 예약 상태를 확인해주세요.', true);
+        await adminLoadMessages();
         return;
       }
       await window.supabaseClient.from('home_messages').update({ is_active: !currentlyActive }).eq('id', id);
