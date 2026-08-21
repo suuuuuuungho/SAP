@@ -86,6 +86,34 @@ function setWordOcrStatus(message) {
   }
 }
 
+// Tesseract 워커는 초기화(언어 데이터 로드)가 다소 걸려서, 사진을 바꿀 때마다 새로 만들지 않고
+// 모듈 전체에서 하나만 만들어 재사용한다.
+let tesseractWorkerPromise = null;
+async function getTesseractWorker() {
+  if (!window.Tesseract) return null;
+  if (!tesseractWorkerPromise) {
+    tesseractWorkerPromise = window.Tesseract.createWorker('kor+eng').catch((err) => {
+      tesseractWorkerPromise = null;
+      throw err;
+    });
+  }
+  return tesseractWorkerPromise;
+}
+
+async function recognizeWordPhotoText(image, pageSegMode) {
+  const worker = await getTesseractWorker();
+  if (!worker) return window.Tesseract ? (await window.Tesseract.recognize(image, 'kor+eng')).data.text : '';
+  if (pageSegMode) {
+    try {
+      await worker.setParameters({ tessedit_pageseg_mode: pageSegMode });
+    } catch (err) {
+      console.warn('[pray-word] tesseract setParameters failed', err);
+    }
+  }
+  const { data } = await worker.recognize(image);
+  return data.text;
+}
+
 async function runWordPhotoOcr(file) {
   setWordOcrCaution('');
   const token = ++wordPhotoOcrToken;
@@ -93,9 +121,24 @@ async function runWordPhotoOcr(file) {
   if (!chapters || !window.Tesseract) return;
   setWordOcrStatus('본문 인식 중...');
   try {
-    const { data } = await window.Tesseract.recognize(file, 'kor+eng');
+    let matched = false;
+
+    // 1차: 챕터 번호가 적힌 상단 30% 헤더만 크롭 + 강한 이진화로 인식 시도(더 빠르고 정확).
+    const headerCrop = await buildOcrHeaderCrop(file);
     if (token !== wordPhotoOcrToken) return;
-    const matched = wordOcrTextMatchesChapters(data.text, chapters);
+    if (headerCrop) {
+      const headerText = await recognizeWordPhotoText(headerCrop, window.Tesseract.PSM && window.Tesseract.PSM.SINGLE_BLOCK);
+      if (token !== wordPhotoOcrToken) return;
+      matched = wordOcrTextMatchesChapters(headerText, chapters);
+    }
+
+    // 2차 폴백: 헤더 크롭에서 못 찾았으면 전체 사진으로 한 번 더 시도.
+    if (!matched) {
+      const fullText = await recognizeWordPhotoText(file, window.Tesseract.PSM && window.Tesseract.PSM.AUTO);
+      if (token !== wordPhotoOcrToken) return;
+      matched = wordOcrTextMatchesChapters(fullText, chapters);
+    }
+
     if (!matched) {
       setWordOcrCaution(`선택하신 날짜(${wordModalDateKey})의 본문은 ${expectedWordChapterLabel(wordModalDateKey)}인데, 스캔한 사진에서 확인하지 못했어요.`);
     }
@@ -147,6 +190,88 @@ function localBackgroundLuma(lumas, width, height, radius) {
   return boxBlur1D(boxBlur1D(lumas, width, height, radius, true), width, height, radius, false);
 }
 
+// 파일을 캔버스에 그릴 수 있는 소스(ImageBitmap 또는 <img>)로 디코딩한다.
+// scanEnhanceImage와 buildOcrHeaderCrop이 공통으로 사용.
+async function decodeImageSource(file) {
+  let source = null;
+  let objectUrl = '';
+  if ('createImageBitmap' in window) {
+    try {
+      source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (_) {
+      try {
+        source = await createImageBitmap(file);
+      } catch (_2) {
+        source = null;
+      }
+    }
+  }
+  if (!source) {
+    // 일부 브라우저/사진 형식(예: HEIC)에서 createImageBitmap이 실패할 수 있어
+    // <img> 엘리먼트로 디코딩하는 방식으로 한 번 더 시도한다.
+    objectUrl = URL.createObjectURL(file);
+    source = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = objectUrl;
+    });
+  }
+  const width = source.width || source.naturalWidth;
+  const height = source.height || source.naturalHeight;
+  return { source, width, height, objectUrl };
+}
+
+function releaseImageSource(decoded) {
+  if (!decoded) return;
+  if (decoded.source && typeof decoded.source.close === 'function') decoded.source.close();
+  if (decoded.objectUrl) URL.revokeObjectURL(decoded.objectUrl);
+}
+
+// OCR 인식용으로 사진 상단 30%(챕터 헤더 "요한복음 N장 묵상 날짜:"가 있는 영역)만 잘라내
+// 화면 표시용보다 더 과감하게 흑/백 이진화한 캔버스를 만든다. 헤더만 잘라 인식하면
+// 전체 사진을 넣을 때보다 글자가 상대적으로 커지고 레이아웃이 단순해져 인식률이 오른다.
+async function buildOcrHeaderCrop(file) {
+  let decoded = null;
+  try {
+    decoded = await decodeImageSource(file);
+    const { source, width, height } = decoded;
+    if (!width || !height) return null;
+
+    const cropSourceHeight = Math.max(1, Math.round(height * 0.3));
+    const maxDimension = 2000;
+    const scale = Math.min(1, maxDimension / width);
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(cropSourceHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(source, 0, 0, width, cropSourceHeight, 0, 0, targetWidth, targetHeight);
+
+    const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
+    const pixels = imageData.data;
+    const lumas = new Float32Array(targetWidth * targetHeight);
+    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+      lumas[p] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+    }
+    const radius = Math.max(20, Math.min(80, Math.round(Math.max(targetWidth, targetHeight) / 20)));
+    const background = localBackgroundLuma(lumas, targetWidth, targetHeight, radius);
+    const bias = 12; // OCR 전용 크롭이라 화면용보다 더 과감하게 흑/백으로 떨어뜨린다.
+    for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+      const value = lumas[p] < background[p] - bias ? 0 : 255;
+      pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
+    }
+    context.putImageData(imageData, 0, 0);
+    return canvas;
+  } catch (error) {
+    console.warn('[pray-word] ocr header crop failed', error);
+    return null;
+  } finally {
+    releaseImageSource(decoded);
+  }
+}
+
 // 휴대폰으로 찍은 원본 사진을 스캐너 앱처럼 순수 흑백(이진화)으로 자동 보정한다.
 // 종이 전체의 밝기 평균이 아니라 각 픽셀 주변의 "국소 배경 밝기"와 비교해서 어둡게 찍힌
 // 그림자 부분도 흰 배경으로, 글씨는 검게 떨어지도록 만든다(적응형 이진화).
@@ -156,34 +281,10 @@ async function scanEnhanceImage(file) {
   if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
 
   const maxDimension = 1800;
-  let source = null;
-  let objectUrl = '';
+  let decoded = null;
   try {
-    if ('createImageBitmap' in window) {
-      try {
-        source = await createImageBitmap(file, { imageOrientation: 'from-image' });
-      } catch (_) {
-        try {
-          source = await createImageBitmap(file);
-        } catch (_2) {
-          source = null;
-        }
-      }
-    }
-    if (!source) {
-      // 일부 브라우저/사진 형식(예: HEIC)에서 createImageBitmap이 실패할 수 있어
-      // <img> 엘리먼트로 디코딩하는 방식으로 한 번 더 시도한다.
-      objectUrl = URL.createObjectURL(file);
-      source = await new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = objectUrl;
-      });
-    }
-
-    const width = source.width || source.naturalWidth;
-    const height = source.height || source.naturalHeight;
+    decoded = await decodeImageSource(file);
+    const { source, width, height } = decoded;
     if (!width || !height) return file;
     const scale = Math.min(1, maxDimension / Math.max(width, height));
     const targetWidth = Math.max(1, Math.round(width * scale));
@@ -223,8 +324,7 @@ async function scanEnhanceImage(file) {
     console.warn('[pray-word] scan enhance failed, using original photo', error);
     return file;
   } finally {
-    if (source && typeof source.close === 'function') source.close();
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    releaseImageSource(decoded);
   }
 }
 
