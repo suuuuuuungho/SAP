@@ -465,6 +465,19 @@ function adminWireParentMessageForm() {
   document.querySelectorAll('input[name="admin-parent-message-audience"]').forEach((input) => input.addEventListener('change', () => adminSetParentMessageAudience(input.value)));
   adminResetParentMessageForm();
   adminRenderParentMessageRecipients();
+  form.querySelectorAll('[data-parent-message-insert]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const textarea = document.getElementById('admin-parent-message-body');
+      if (!textarea) return;
+      const placeholder = button.dataset.parentMessageInsert;
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      textarea.value = textarea.value.slice(0, start) + placeholder + textarea.value.slice(end);
+      const cursor = start + placeholder.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const body = document.getElementById('admin-parent-message-body').value.trim();
@@ -500,6 +513,25 @@ function adminWireParentMessageForm() {
   });
 }
 
+// 학부모 메시지 본문의 {{이름}}/{{리포트링크}}를 학생별로 채워 넣는다.
+// 리포트 링크는 실제 요청이 있을 때만(placeholder가 쓰였을 때만) 토큰을 발급해 불필요한 생성을 피한다.
+async function adminPersonalizeParentMessageBody(template, member) {
+  let text = template.split('{{이름}}').join(member.name || '학생');
+  if (text.includes('{{리포트링크}}')) {
+    try {
+      const report = await adminCreateStudentReportLink(member.id);
+      const siteUrl = window.APP_CONFIG?.PUBLIC_SITE_URL || ADMIN_REPORT_PUBLIC_SITE_URL;
+      const url = new URL('report.html', siteUrl);
+      url.searchParams.set('token', report.token);
+      text = text.split('{{리포트링크}}').join(url.href);
+    } catch (error) {
+      console.error('[adminPersonalizeParentMessageBody] report link', member.id, error);
+      text = text.split('{{리포트링크}}').join('(리포트 링크 생성 실패)');
+    }
+  }
+  return text;
+}
+
 async function adminSendParentMessageSms(messageId, recipientId, body, startsAt, submitButton, originalLabel) {
   const restoreButton = () => { if (submitButton) { submitButton.disabled = false; submitButton.textContent = originalLabel; } };
   const targets = recipientId
@@ -521,15 +553,17 @@ async function adminSendParentMessageSms(messageId, recipientId, body, startsAt,
   if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 0/${withPhone.length}`;
   let cursor = 0; let success = 0; let failed = 0;
   const groupIds = [];
+  const hasPlaceholder = body.includes('{{이름}}') || body.includes('{{리포트링크}}');
   const worker = async () => {
     while (cursor < withPhone.length) {
       const target = withPhone[cursor++];
-      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'parent', userId: target.id, messageBody: body, date: targetDate, scheduledAt: startsAt, audienceType: recipientId ? 'personal' : 'global' } });
+      const messageBody = hasPlaceholder ? await adminPersonalizeParentMessageBody(body, target) : body;
+      const { data, error } = await window.supabaseClient.functions.invoke('admin-send-sms', { body: { mode: 'parent', userId: target.id, messageBody, date: targetDate, scheduledAt: startsAt, audienceType: recipientId ? 'personal' : 'global' } });
       if (!error && data?.ok) { success += 1; if (data.groupId) groupIds.push(data.groupId); } else failed += 1;
       if (submitButton) submitButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>문자 ${isScheduled ? '예약' : '발송'} 중 ${success + failed}/${withPhone.length}`;
     }
   };
-  await Promise.all(Array.from({ length: Math.min(5, withPhone.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(hasPlaceholder ? 3 : 5, withPhone.length) }, worker));
   const smsStatus = failed ? (success ? 'partial' : 'failed') : isScheduled ? 'scheduled' : 'sent';
   await window.supabaseClient.from('parent_messages').update({ sms_group_ids: groupIds, sms_status: smsStatus }).eq('id', messageId);
   restoreButton();
