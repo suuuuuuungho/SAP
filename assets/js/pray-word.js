@@ -354,8 +354,12 @@ async function uploadPrayPhoto(userId, dateKey, index, file) {
 }
 
 async function uploadWordPhoto(userId, dateKey, file) {
+  // file은 이미 scanEnhanceImage에서 1800px 이내로 리사이즈 + JPEG 0.92로 저장된 스캔본이라
+  // 여기서 다시 낮은 품질로 압축하면 이중 손실이 생긴다. maxDimension은 이미 처리된 스캔본
+  // 크기와 맞춰 "그 안에 들어가는지"만 확인하는 안전장치로 두고, quality는 눈에 띄는 화질
+  // 저하가 없도록 높여서 사실상 리사이즈만(필요할 때만) 하도록 한다.
   const uploadFile = window.optimizeImageForUpload
-    ? await window.optimizeImageForUpload(file, { maxDimension: 1600, quality: 0.8 })
+    ? await window.optimizeImageForUpload(file, { maxDimension: 1800, quality: 0.95 })
     : file;
   const path = `word/${userId}/${dateKey}-${Date.now()}.${fileExtension(uploadFile)}`;
   const { error } = await window.supabaseClient.storage.from(VERIFICATION_PHOTOS_BUCKET).upload(path, uploadFile, { upsert: true, contentType: uploadFile.type, cacheControl: '31536000' });
