@@ -133,8 +133,9 @@ async function adminLoadMessages() {
   wrap.innerHTML = adminMessages.length ? adminMessages.map((message) => {
     const startsAt = new Date(message.starts_at || message.created_at);
     const expiresAt = message.expires_at ? new Date(message.expires_at) : null;
-    const timingLabel = startsAt > now ? '예약' : expiresAt && expiresAt <= now ? '종료' : '게시 중';
-    const timingClass = startsAt > now ? 'bg-secondary/10 text-secondary' : expiresAt && expiresAt <= now ? 'bg-surface-container text-on-surface-variant' : 'bg-quaternary/10 text-quaternary';
+    const isCancelled = message.sms_status === 'cancelled' || message.sms_status === 'partial_cancelled';
+    const timingLabel = isCancelled ? '예약취소됨' : startsAt > now ? '예약' : expiresAt && expiresAt <= now ? '종료' : '게시 중';
+    const timingClass = isCancelled ? 'bg-error/10 text-error' : startsAt > now ? 'bg-secondary/10 text-secondary' : expiresAt && expiresAt <= now ? 'bg-surface-container text-on-surface-variant' : 'bg-quaternary/10 text-quaternary';
     return `
     <article class="glass-card rounded-2xl p-4 ${message.is_active ? '' : 'opacity-50'}" data-message-id="${message.id}">
       <div class="flex items-start justify-between gap-3">
@@ -195,13 +196,16 @@ async function adminLoadParentMessages() {
   const now = new Date();
   wrap.innerHTML = adminParentMessages.length ? adminParentMessages.map((message) => {
     const startsAt = new Date(message.starts_at || message.created_at);
-    const scheduled = startsAt > now;
+    const isCancelled = message.sms_status === 'cancelled' || message.sms_status === 'partial_cancelled';
+    const scheduled = !isCancelled && startsAt > now;
+    const timingLabel = isCancelled ? '예약취소됨' : scheduled ? '예약' : '발송완료';
+    const timingClass = isCancelled ? 'bg-error/10 text-error' : scheduled ? 'bg-secondary/10 text-secondary' : 'bg-quaternary/10 text-quaternary';
     const statusLabel = { scheduled: '예약됨', sent: '발송 접수', partial: '일부 실패', failed: '발송 실패', no_phone: '연락처 없음', cancelled: '취소됨', partial_cancelled: '일부만 취소됨', pending: '처리 중' }[message.sms_status] || message.sms_status;
     return `
     <article class="glass-card rounded-2xl p-4" data-parent-message-id="${message.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-1.5 mb-1"><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}">${message.recipient_user_id ? '특정 학부모' : '전체 학부모'}</span><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${scheduled ? 'bg-secondary/10 text-secondary' : 'bg-quaternary/10 text-quaternary'}">${scheduled ? '예약' : '발송완료'}</span></div>
+          <div class="flex flex-wrap items-center gap-1.5 mb-1"><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${message.recipient_user_id ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}">${message.recipient_user_id ? '특정 학부모' : '전체 학부모'}</span><span class="text-[10px] font-bold rounded-full px-2 py-0.5 ${timingClass}">${timingLabel}</span></div>
           <p class="text-[11px] font-bold text-secondary mb-1">${adminEscape(adminParentRecipientLabel(message.recipient_user_id))}</p>
           <p class="text-sm whitespace-pre-wrap">${adminEscape(message.body)}</p>
           <p class="text-[10px] text-on-surface-variant mt-2">${startsAt.toLocaleString('ko-KR')} · 문자 ${statusLabel}</p>
