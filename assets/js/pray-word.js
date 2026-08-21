@@ -106,7 +106,50 @@ async function runWordPhotoOcr(file) {
   }
 }
 
-// 휴대폰으로 찍은 원본 사진을 흑백 + 대비 강조("스캔" 느낌)로 자동 보정한다.
+// 1D 박스 블러(이동 평균): 반경 radius 윈도우의 평균을 O(n)에 계산해 조명/그림자의
+// "국소 배경 밝기"를 추정하는 데 쓴다. horizontal=true면 가로 방향, false면 세로 방향.
+function boxBlur1D(src, width, height, radius, horizontal) {
+  const out = new Float32Array(src.length);
+  if (horizontal) {
+    for (let y = 0; y < height; y += 1) {
+      const rowStart = y * width;
+      let sum = 0;
+      let count = 0;
+      for (let x = 0; x <= radius && x < width; x += 1) { sum += src[rowStart + x]; count += 1; }
+      out[rowStart] = sum / count;
+      for (let x = 1; x < width; x += 1) {
+        const addIdx = x + radius;
+        const removeIdx = x - radius - 1;
+        if (addIdx < width) { sum += src[rowStart + addIdx]; count += 1; }
+        if (removeIdx >= 0) { sum -= src[rowStart + removeIdx]; count -= 1; }
+        out[rowStart + x] = sum / count;
+      }
+    }
+  } else {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      let count = 0;
+      for (let y = 0; y <= radius && y < height; y += 1) { sum += src[y * width + x]; count += 1; }
+      out[x] = sum / count;
+      for (let y = 1; y < height; y += 1) {
+        const addIdx = y + radius;
+        const removeIdx = y - radius - 1;
+        if (addIdx < height) { sum += src[addIdx * width + x]; count += 1; }
+        if (removeIdx >= 0) { sum -= src[removeIdx * width + x]; count -= 1; }
+        out[y * width + x] = sum / count;
+      }
+    }
+  }
+  return out;
+}
+
+function localBackgroundLuma(lumas, width, height, radius) {
+  return boxBlur1D(boxBlur1D(lumas, width, height, radius, true), width, height, radius, false);
+}
+
+// 휴대폰으로 찍은 원본 사진을 스캐너 앱처럼 순수 흑백(이진화)으로 자동 보정한다.
+// 종이 전체의 밝기 평균이 아니라 각 픽셀 주변의 "국소 배경 밝기"와 비교해서 어둡게 찍힌
+// 그림자 부분도 흰 배경으로, 글씨는 검게 떨어지도록 만든다(적응형 이진화).
 // 미리보기/OCR/실제 업로드 모두 이 보정된 파일을 사용해 글자를 더 또렷하게 만든다.
 async function scanEnhanceImage(file) {
   if (!file || !String(file.type || '').startsWith('image/')) return file;
@@ -120,9 +163,16 @@ async function scanEnhanceImage(file) {
       try {
         source = await createImageBitmap(file, { imageOrientation: 'from-image' });
       } catch (_) {
-        source = await createImageBitmap(file);
+        try {
+          source = await createImageBitmap(file);
+        } catch (_2) {
+          source = null;
+        }
       }
-    } else {
+    }
+    if (!source) {
+      // 일부 브라우저/사진 형식(예: HEIC)에서 createImageBitmap이 실패할 수 있어
+      // <img> 엘리먼트로 디코딩하는 방식으로 한 번 더 시도한다.
       objectUrl = URL.createObjectURL(file);
       source = await new Promise((resolve, reject) => {
         const image = new Image();
@@ -147,18 +197,17 @@ async function scanEnhanceImage(file) {
     const imageData = context.getImageData(0, 0, targetWidth, targetHeight);
     const pixels = imageData.data;
     const lumas = new Float32Array(targetWidth * targetHeight);
-    let min = 255;
-    let max = 0;
     for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      const luma = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-      lumas[p] = luma;
-      if (luma < min) min = luma;
-      if (luma > max) max = luma;
+      lumas[p] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
     }
-    const range = max - min;
+    // 반경은 이미지 크기에 비례하되, 글씨 획보다는 충분히 크고(획을 배경으로 착각하지 않게)
+    // 그림자 얼룩보다는 충분히 작게(20~80px 사이) 잡는다.
+    const radius = Math.max(20, Math.min(80, Math.round(Math.max(targetWidth, targetHeight) / 20)));
+    const background = localBackgroundLuma(lumas, targetWidth, targetHeight, radius);
+    const bias = 15; // 국소 배경보다 이 값 이상 어두우면 글씨(검정)로 판정
     for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
-      const stretched = range > 10 ? ((lumas[p] - min) * 255) / range : lumas[p];
-      pixels[i] = pixels[i + 1] = pixels[i + 2] = stretched;
+      const value = lumas[p] < background[p] - bias ? 0 : 255;
+      pixels[i] = pixels[i + 1] = pixels[i + 2] = value;
     }
     context.putImageData(imageData, 0, 0);
 
