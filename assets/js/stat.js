@@ -25,10 +25,10 @@ let statTrendChart = null;
 let statRadarChart = null;
 let statDonutChart = null;
 
-// 단어 시험(오프라인 시험지 채점 결과) — Study 탭과 동일하게 8/22, 9/3 두 번 고정.
+// 단어 시험(오프라인 시험지 채점 결과) — Study 탭과 동일하게 8/22, 9/5 두 번 고정.
 const STAT_EXAM_DATES = [
   { key: '2026-08-22', label: '8/22 (토)' },
-  { key: '2026-09-03', label: '9/3 (토)' }
+  { key: '2026-09-05', label: '9/5 (토)' }
 ];
 
 // --- 데이터 조회 & 정규화 ---

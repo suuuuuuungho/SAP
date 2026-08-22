@@ -1680,8 +1680,8 @@ function adminRenderAllStats() {
   wrap.innerHTML = `<div class="lg:hidden flex flex-col gap-3">${mobileRows}</div><div class="hidden lg:block max-h-[70vh] overflow-y-auto scrollbar-hide rounded-2xl">${header}${desktopRows}</div>`;
 }
 
-// 단어 시험 채점 — 8/22, 9/3 두 날짜 각각 전체 학생 제출 현황을 보여주고 점수를 입력하면 저장한다.
-const ADMIN_WORD_EXAM_DATES = ['2026-08-22', '2026-09-03'];
+// 단어 시험 채점 — 8/22, 9/5 두 날짜 각각 전체 학생 제출 현황을 보여주고 점수를 입력하면 저장한다.
+const ADMIN_WORD_EXAM_DATES = ['2026-08-22', '2026-09-05'];
 let adminWordExamActiveDate = ADMIN_WORD_EXAM_DATES[0];
 let adminWordExamRows = [];
 let adminWordExamSearch = '';

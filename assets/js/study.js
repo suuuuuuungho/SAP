@@ -9,11 +9,11 @@ const STUDY_QUIZ_MIN_WORDS = 2;      // 퀴즈를 진행하기 위한 최소 단
 const STUDY_LEVEL = 1;
 const STUDY_PAGE_SIZE = 1000;        // Supabase REST 기본 최대 반환 행 수 — 이보다 크면 나눠 받아야 함
 
-// 단어 시험(오프라인 시험지 사진 제출) — 8/22, 9/3 두 번만 고정으로 연다.
+// 단어 시험(오프라인 시험지 사진 제출) — 8/22, 9/5 두 번만 고정으로 연다.
 const STUDY_EXAM_BUCKET = 'verification-photos-v2';
 const STUDY_EXAM_DATES = [
   { key: '2026-08-22', label: '8/22 (토)' },
-  { key: '2026-09-03', label: '9/3 (토)' }
+  { key: '2026-09-05', label: '9/5 (토)' }
 ];
 
 let studyAllWords = [];      // vocab_words 전체, study_day/sort_order 순
