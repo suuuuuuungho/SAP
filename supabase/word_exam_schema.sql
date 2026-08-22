@@ -96,6 +96,8 @@ $$;
 grant execute on function public.get_word_exam_rankings() to authenticated;
 
 -- Admin: 특정 시험 날짜의 전체 학생 제출 현황(미제출 포함) 조회.
+-- 반환 컬럼(visible_to_student 추가)이 바뀌어 create or replace만으로는 안 되므로 먼저 drop한다.
+drop function if exists public.admin_get_word_exam_submissions(date);
 create or replace function public.admin_get_word_exam_submissions(target_exam_date date)
 returns table (
   user_id uuid, username text, name text, grade_class text,
