@@ -238,6 +238,16 @@ async function saveExamSubmission(userId, examDate, photoPath) {
   if (error) throw error;
 }
 
+// 채점 전(status='pending')에만 RLS가 허용 — 채점 완료된 시험은 삭제되지 않는다.
+async function deleteExamSubmission(userId, examDate, photoPath) {
+  const { error } = await window.supabaseClient.from('word_exam_submissions').delete().eq('user_id', userId).eq('exam_date', examDate);
+  if (error) throw error;
+  if (photoPath) {
+    const { error: storageError } = await window.supabaseClient.storage.from(STUDY_EXAM_BUCKET).remove([photoPath]);
+    if (storageError) console.error('[study] exam photo storage remove', storageError);
+  }
+}
+
 function examCardHTML(examInfo) {
   const sub = studyExamSubmissions[examInfo.key];
   const photoUrl = sub ? studyExamPhotoUrl(sub.photo_path) : '';
@@ -257,10 +267,13 @@ function examCardHTML(examInfo) {
           <img src="${photoUrl}" loading="lazy" decoding="async" alt="${examInfo.label} 시험지 사진" class="w-full h-full object-contain">
         </div>` : ''}
       ${!graded ? `
-        <label class="pill-btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 cursor-pointer">
-          <i class="fa-solid fa-camera"></i><span>${sub ? '사진 다시 올리기' : '시험지 사진 올리기'}</span>
-          <input type="file" accept="image/*" capture="environment" class="hidden study-exam-file" data-exam-date="${examInfo.key}">
-        </label>` : ''}
+        <div class="flex items-center gap-2">
+          <label class="pill-btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-camera"></i><span>${sub ? '사진 다시 올리기' : '시험지 사진 올리기'}</span>
+            <input type="file" accept="image/*" capture="environment" class="hidden study-exam-file" data-exam-date="${examInfo.key}">
+          </label>
+          ${sub ? `<button type="button" class="glass-card rounded-full px-4 py-2.5 text-sm text-error study-exam-delete" data-exam-date="${examInfo.key}">삭제</button>` : ''}
+        </div>` : ''}
     </div>`;
 }
 
@@ -289,6 +302,23 @@ function wireExamMode() {
         console.error('[study] exam upload', error);
         alert('사진 업로드에 실패했어요. 다시 시도해주세요.');
         label.innerHTML = originalHTML;
+      }
+    });
+  });
+  container.querySelectorAll('.study-exam-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('제출한 시험지 사진을 삭제할까요?')) return;
+      const examDate = btn.dataset.examDate;
+      btn.disabled = true;
+      try {
+        const sub = studyExamSubmissions[examDate];
+        await deleteExamSubmission(studyCurrentUserId, examDate, sub && sub.photo_path);
+        delete studyExamSubmissions[examDate];
+        renderExamMode();
+      } catch (error) {
+        console.error('[study] exam delete', error);
+        alert('삭제에 실패했어요. 다시 시도해주세요.');
+        btn.disabled = false;
       }
     });
   });

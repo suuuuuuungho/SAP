@@ -26,10 +26,10 @@ create policy "word_exam_submissions_select"
   on public.word_exam_submissions for select
   using (user_id = auth.uid() or public.is_app_admin(auth.uid()));
 
--- 학생은 채점 전(status='pending')까지만 본인 행을 쓸 수 있다 — 사진 재업로드는 허용하되
--- 점수/상태는 절대 직접 못 건드리고(score는 항상 null이어야 통과), 채점이 끝나면(status='graded')
--- 더 이상 update가 걸리지 않아 사진을 바꿔 점수와 어긋나는 일을 막는다. 점수 기록은 아래
--- admin_grade_word_exam() 함수(security definer)로만 가능하다.
+-- 학생은 채점 전(status='pending')까지만 본인 행을 쓰거나 지울 수 있다 — 사진 재업로드/삭제는
+-- 허용하되 점수/상태는 절대 직접 못 건드리고(score는 항상 null이어야 통과), 채점이 끝나면
+-- (status='graded') 더 이상 update/delete가 걸리지 않아 사진을 바꾸거나 지워서 점수와 어긋나는
+-- 일을 막는다. 점수 기록은 아래 admin_grade_word_exam() 함수(security definer)로만 가능하다.
 drop policy if exists "word_exam_submissions_insert_own" on public.word_exam_submissions;
 create policy "word_exam_submissions_insert_own"
   on public.word_exam_submissions for insert
@@ -40,6 +40,11 @@ create policy "word_exam_submissions_update_own"
   on public.word_exam_submissions for update
   using (user_id = auth.uid() and status = 'pending')
   with check (user_id = auth.uid() and status = 'pending' and score is null);
+
+drop policy if exists "word_exam_submissions_delete_own" on public.word_exam_submissions;
+create policy "word_exam_submissions_delete_own"
+  on public.word_exam_submissions for delete
+  using (user_id = auth.uid() and status = 'pending');
 
 drop policy if exists "word_exam_submissions_admin_all" on public.word_exam_submissions;
 create policy "word_exam_submissions_admin_all"
