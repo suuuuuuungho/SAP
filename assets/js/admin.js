@@ -22,8 +22,7 @@ const ADMIN_FEATURE_STRUCTURE = [
   ] },
   { key: 'hall_of_fame', title: 'Hall of Fame', description: '전체 이용자가 보는 랭킹 탭', icon: 'fa-solid fa-trophy', children: [
     { key: 'ranking', title: '전체 누적 랭킹', description: '운영기간 전체 누적 활동 시간 기준 상위 이용자를 표시합니다.' },
-    { key: 'ranking_weekly', title: '주차별 랭킹', description: 'Week1~4 탭으로 나눈 주차별 랭킹을 표시합니다.' },
-    { key: 'hall_of_fame_word_exam', title: '단어 시험 랭킹', description: '단어 시험 누적 점수 상위 5명의 랭킹을 표시합니다.' }
+    { key: 'ranking_weekly', title: '주차별 랭킹', description: 'Week1~4 탭으로 나눈 주차별 랭킹을 표시합니다.' }
   ] },
   { key: 'mypage', title: 'MyPage', description: '개인의 일별 인증과 활동 기록 탭', icon: 'fa-solid fa-user', children: [
     { key: 'pray', title: '기도 인증', description: '기도 시간과 인증 사진을 기록합니다.' },
@@ -32,8 +31,7 @@ const ADMIN_FEATURE_STRUCTURE = [
     { key: 'worship', title: '예배 인증', description: '예배 참석 여부와 시간을 기록합니다.' }
   ] },
   { key: 'study', title: 'Study', description: '영단어 학습 탭', icon: 'fa-solid fa-book', children: [
-    { key: 'study_vocab', title: '영단어 학습', description: '단어 목록, 암기 카드와 퀴즈를 제공합니다.' },
-    { key: 'word_exam', title: '단어 시험', description: '단어 시험지 사진 업로드와 점수 확인을 제공합니다.' }
+    { key: 'study_vocab', title: '영단어 학습', description: '단어 목록, 암기 카드와 퀴즈를 제공합니다.' }
   ] },
   { key: 'gallery', title: 'Gallery', description: '전체 이용자의 인증 게시물 탭', icon: 'fa-regular fa-images', children: [
     { key: 'gallery_pray', title: '기도 갤러리', description: '기도 인증 게시물과 사진을 표시합니다.' },
@@ -1722,6 +1720,14 @@ async function adminSetWordExamVisibility(userId, examDate, visible) {
   if (error) throw error;
 }
 
+// 선택한 시험 날짜에 제출된(사진이 있는) 행 전체를 한 번에 공개/비공개로 전환한다.
+async function adminSetAllWordExamVisibility(examDate, visible) {
+  const { error } = await window.supabaseClient.from('word_exam_submissions')
+    .update({ visible_to_student: visible, updated_at: new Date().toISOString() })
+    .eq('exam_date', examDate);
+  if (error) throw error;
+}
+
 // 사진과 제출 행을 통째로 지운다 — 사진 없이 점수만 남는 상태를 만들지 않기 위해서다.
 async function adminDeleteWordExamPhoto(userId, examDate, photoPath) {
   const { error } = await window.supabaseClient.from('word_exam_submissions').delete().eq('user_id', userId).eq('exam_date', examDate);
@@ -1839,6 +1845,20 @@ function adminRenderWordExamList() {
       await adminLoadWordExam();
     });
   });
+  adminRenderWordExamBulkVisible();
+}
+
+// 선택한 시험 날짜에 제출된 학생 기준으로 "전체 공개" 체크박스의 켜짐/부분선택 상태를 계산한다.
+function adminRenderWordExamBulkVisible() {
+  const checkbox = document.getElementById('admin-word-exam-bulk-visible');
+  const countEl = document.getElementById('admin-word-exam-bulk-count');
+  if (!checkbox) return;
+  const submitted = adminWordExamRows.filter((row) => row.photo_path);
+  const visibleCount = submitted.filter((row) => row.visible_to_student).length;
+  checkbox.disabled = submitted.length === 0;
+  checkbox.checked = submitted.length > 0 && visibleCount === submitted.length;
+  checkbox.indeterminate = visibleCount > 0 && visibleCount < submitted.length;
+  if (countEl) countEl.textContent = submitted.length ? `제출 ${submitted.length}명 중 ${visibleCount}명 공개` : '제출된 학생이 없습니다.';
 }
 
 async function adminLoadWordExam() {
@@ -1848,6 +1868,41 @@ async function adminLoadWordExam() {
   if (error) { if (wrap) wrap.innerHTML = '<p class="text-sm text-error text-center py-10">word_exam_schema.sql을 먼저 실행해주세요.</p>'; return; }
   adminWordExamRows = data || [];
   adminRenderWordExamList();
+  await adminLoadWordExamFeatureToggles();
+}
+
+// Control Panel에 있던 '단어 시험'/'단어 시험 랭킹' on/off를 Word Test 탭으로 옮겨왔다 —
+// 학생 점수 공개 관련 설정을 전부 이 탭 하나에서 관리하기 위함. app_feature_flags 테이블은
+// 그대로 재사용하고(section/label 값도 기존 시드와 동일하게 유지), 여기서 직접 읽고 쓴다.
+const WORD_EXAM_FEATURE_TOGGLES = [
+  { key: 'word_exam', label: 'Word Exam', section: 'Private', display: '학생 화면 노출 (Study)' },
+  { key: 'hall_of_fame_word_exam', label: 'Word Exam Ranking', section: 'Public', display: 'Hall of Fame 랭킹' }
+];
+
+async function adminLoadWordExamFeatureToggles() {
+  const wrap = document.getElementById('admin-word-exam-feature-toggles');
+  if (!wrap) return;
+  const { data, error } = await window.supabaseClient.from('app_feature_flags').select('feature_key,is_enabled')
+    .in('feature_key', WORD_EXAM_FEATURE_TOGGLES.map((toggle) => toggle.key));
+  if (error) { wrap.innerHTML = '<p class="text-xs text-error">기능 상태를 불러오지 못했습니다.</p>'; return; }
+  const flagMap = Object.fromEntries((data || []).map((row) => [row.feature_key, row.is_enabled]));
+  wrap.innerHTML = WORD_EXAM_FEATURE_TOGGLES.map((toggle) => `
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold text-on-surface-variant">${adminEscape(toggle.display)}</span>
+      <label class="admin-switch" aria-label="${adminEscape(toggle.display)} 켜기 또는 끄기">
+        <input type="checkbox" data-word-exam-feature-key="${toggle.key}" ${flagMap[toggle.key] !== false ? 'checked' : ''}>
+        <span class="admin-switch-track"></span>
+      </label>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-word-exam-feature-key]').forEach((input) => input.addEventListener('change', async () => {
+    const toggle = WORD_EXAM_FEATURE_TOGGLES.find((t) => t.key === input.dataset.wordExamFeatureKey);
+    const { error: updateError } = await window.supabaseClient.from('app_feature_flags').upsert(
+      { feature_key: toggle.key, label: toggle.label, section: toggle.section, is_enabled: input.checked, updated_by: adminCurrentUserId, updated_at: new Date().toISOString() },
+      { onConflict: 'feature_key' }
+    );
+    if (updateError) { input.checked = !input.checked; adminShowStatus('기능 상태를 변경하지 못했습니다.', true); }
+    else adminShowStatus(`${toggle.display} 기능을 ${input.checked ? '켰습니다' : '껐습니다'}.`);
+  }));
 }
 
 function adminWireWordExam() {
@@ -1865,6 +1920,27 @@ function adminWireWordExam() {
   document.getElementById('admin-word-exam-search')?.addEventListener('input', (event) => {
     adminWordExamSearch = event.target.value;
     adminRenderWordExamList();
+  });
+  // 학생들이 점수 공개에 민감한 항목이라 실수 방지를 위해 항상 확인창을 거친다.
+  document.getElementById('admin-word-exam-bulk-visible')?.addEventListener('change', async (event) => {
+    const checkbox = event.target;
+    const target = checkbox.checked;
+    const submittedCount = adminWordExamRows.filter((row) => row.photo_path).length;
+    if (submittedCount === 0) { adminRenderWordExamBulkVisible(); return; }
+    const confirmMessage = target
+      ? `제출된 학생 ${submittedCount}명 전체에게 시험지 사진과 점수를 공개할까요?`
+      : `제출된 학생 ${submittedCount}명 전체를 비공개로 전환할까요?`;
+    if (!confirm(confirmMessage)) { adminRenderWordExamBulkVisible(); return; }
+    checkbox.disabled = true;
+    try {
+      await adminSetAllWordExamVisibility(adminWordExamActiveDate, target);
+      adminShowStatus(target ? '전체 공개했습니다.' : '전체 비공개로 전환했습니다.');
+      await adminLoadWordExam();
+    } catch (error) {
+      console.error('[admin] word exam bulk visibility', error);
+      adminShowStatus('일괄 공개 설정에 실패했습니다.', true);
+      adminRenderWordExamBulkVisible();
+    }
   });
 }
 
