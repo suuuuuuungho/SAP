@@ -148,13 +148,16 @@ as $$
   where p.team_id is not null and p.app_role = 'student' and p.is_active = true;
 $$;
 
--- 팀별 기도/말씀/공부 누적 시간 합계 (첫 번째 차트용 — 예배는 제외).
+-- 팀별 기도/말씀/공부/예배 누적 시간 합계 (첫 번째 차트용).
+-- 반환 컬럼(worship_minutes 추가)이 바뀌어 create or replace만으로는 안 되므로 먼저 drop한다.
+drop function if exists public.get_team_totals(int);
 create or replace function public.get_team_totals(week_no int default null)
-returns table (team_id uuid, team_name text, pray_minutes bigint, word_minutes bigint, study_minutes bigint)
+returns table (team_id uuid, team_name text, pray_minutes bigint, word_minutes bigint, study_minutes bigint, worship_minutes bigint)
 language sql stable security definer set search_path = public
 as $$
   select t.id, t.name,
-    coalesce(sum(m.pray_minutes), 0)::bigint, coalesce(sum(m.word_minutes), 0)::bigint, coalesce(sum(m.study_minutes), 0)::bigint
+    coalesce(sum(m.pray_minutes), 0)::bigint, coalesce(sum(m.word_minutes), 0)::bigint,
+    coalesce(sum(m.study_minutes), 0)::bigint, coalesce(sum(m.worship_minutes), 0)::bigint
   from public.teams t
   left join public.profiles p on p.team_id = t.id and p.app_role = 'student' and p.is_active = true
   left join public.team_user_period_minutes(week_no) m on m.user_id = p.id
@@ -163,7 +166,7 @@ as $$
 $$;
 grant execute on function public.get_team_totals(int) to authenticated;
 
--- 팀별 기여도(기도+말씀+공부+예배 총 분) Top 3 (두 번째 "wagon" 그래픽용).
+-- 팀별 기여도(기도+말씀+공부+예배 총 분) Top 3 — 팀 명단에서 순위·비중(%) 표시용.
 create or replace function public.get_team_contribution_top3(week_no int default null)
 returns table (
   team_id uuid, team_name text, rank_no bigint,

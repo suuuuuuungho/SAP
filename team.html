@@ -29,10 +29,10 @@
     </div>
   </div>
 
-  <section class="mb-10 lg:mb-14">
+  <section class="mb-16">
     <div class="flex items-center gap-2 mb-4">
       <h2 class="text-lg font-bold">팀별 활동 시간</h2>
-      <span class="text-xs text-on-surface-variant">기도 · 말씀 · 공부 합산</span>
+      <span class="text-xs text-on-surface-variant">기도 · 말씀 · 공부 · 예배 합산</span>
     </div>
     <div class="glass-card rounded-[1.5rem] p-4 sm:p-6">
       <div class="relative h-64 sm:h-80">
@@ -43,14 +43,9 @@
 
   <section class="mb-16">
     <div class="flex items-center gap-2 mb-4">
-      <h2 class="text-lg font-bold">팀별 기여도 TOP 3</h2>
-      <span class="text-xs text-on-surface-variant">기도 · 말씀 · 공부 · 예배 총 활동시간 기준</span>
+      <h2 class="text-lg font-bold">팀 명단</h2>
+      <span class="text-xs text-on-surface-variant">팀별 기여도 TOP 3에게 순위·비중(%) 표시</span>
     </div>
-    <div id="team-wagon-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6"></div>
-  </section>
-
-  <section class="mb-16">
-    <h2 class="text-lg font-bold mb-4">팀 명단</h2>
     <div id="team-roster-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
   </section>
 </template>
@@ -62,7 +57,7 @@
 <script src="assets/js/layout.js?v=27"></script>
 <script src="assets/js/profile-avatar.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/team.js?v=2"></script>
+<script src="assets/js/team.js?v=3"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'team' });
