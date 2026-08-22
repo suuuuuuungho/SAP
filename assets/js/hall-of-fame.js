@@ -227,7 +227,8 @@ function wireHofTabs() {
   });
 }
 
-// 단어 시험 Top 5 — 주차 탭과 무관하게 채점 완료된 시험 누적 점수로만 집계하므로 별도 섹션으로 분리한다.
+// 단어 시험 Top 5 — 주차 탭과 무관하게 채점 완료된 시험 누적 점수로 순위만 매기고, 점수 자체는
+// 노출하지 않는다(RPC도 grade_class까지만 내려준다). 표시는 이름/아이디/학년반까지만.
 function hofWordExamRowHTML(row, isLast) {
   const isMe = row.user_id === hofCurrentUserId;
   const medal = row.rank_no <= 3 ? ['🥇', '🥈', '🥉'][row.rank_no - 1] : String(row.rank_no);
@@ -239,7 +240,7 @@ function hofWordExamRowHTML(row, isLast) {
         <p class="text-sm font-semibold truncate">${hofEscape(row.name)}${isMe ? ' <span class="text-[10px] text-primary">ME</span>' : ''}</p>
         <p class="text-[11px] text-on-surface-variant truncate">@${hofEscape(row.username)}</p>
       </div>
-      <p class="text-sm font-bold text-on-surface whitespace-nowrap">${row.total_score} / ${row.total_max}점</p>
+      <p class="text-xs font-semibold text-on-surface-variant whitespace-nowrap">${hofEscape(row.grade_class || '')}</p>
     </div>`;
 }
 

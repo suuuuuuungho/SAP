@@ -69,16 +69,17 @@ create policy "verification_photos_v2_admin_all"
   using (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()))
   with check (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()));
 
--- Hall of Fame용 Top 5 랭킹 (채점 완료된 시험만 합산).
+-- Hall of Fame용 Top 5 랭킹 (채점 완료된 시험만 합산) — 점수는 순위 계산에만 쓰고 클라이언트에는
+-- 절대 내려주지 않는다. 노출은 이름/아이디/학년반까지만.
+drop function if exists public.get_word_exam_rankings();
 create or replace function public.get_word_exam_rankings()
 returns table (
-  rank_no bigint, user_id uuid, username text, name text,
-  total_score numeric, total_max numeric, exam_count bigint
+  rank_no bigint, user_id uuid, username text, name text, grade_class text
 )
 language sql stable security definer set search_path = public
 as $$
   with totals as (
-    select s.user_id, sum(s.score) as total_score, sum(s.max_score) as total_max, count(*) as exam_count
+    select s.user_id, sum(s.score) as total_score, count(*) as exam_count
     from public.word_exam_submissions s
     where s.status = 'graded' and s.visible_to_student = true
     group by s.user_id
@@ -87,7 +88,7 @@ as $$
     select t.*, row_number() over (order by t.total_score desc, t.exam_count desc) as rank_no
     from totals t
   )
-  select r.rank_no, r.user_id, p.username, p.name, r.total_score, r.total_max, r.exam_count
+  select r.rank_no, r.user_id, p.username, p.name, p.grade_class
   from ranked r
   join public.profiles p on p.id = r.user_id
   where r.rank_no <= 5
