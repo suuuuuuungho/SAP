@@ -352,6 +352,7 @@ function renderApp({ activePage }) {
   if (window.initHomeWidgets) window.initHomeWidgets();
   if (window.initPublicHomeWidgets) window.initPublicHomeWidgets();
   if (window.initHallOfFameWidgets) window.initHallOfFameWidgets();
+  if (window.initTeamWidgets) window.initTeamWidgets();
   if (window.initStudyWidgets) window.initStudyWidgets();
   if (window.initGalleryWidgets) window.initGalleryWidgets();
   if (window.initStatWidgets) window.initStatWidgets();
