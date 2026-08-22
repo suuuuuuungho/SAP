@@ -144,8 +144,8 @@ function renderTeamTotalsChart(rows) {
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${teamFormatMinutes(ctx.parsed.y)}` } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Pretendard' } } },
-        y: { beginAtZero: true, ticks: { callback: (value) => teamFormatMinutes(value), font: { family: 'Pretendard', size: 10 } } }
+        x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Pretendard' } } },
+        y: { stacked: true, beginAtZero: true, ticks: { callback: (value) => teamFormatMinutes(value), font: { family: 'Pretendard', size: 10 } } }
       }
     }
   });
@@ -159,58 +159,66 @@ async function loadTeamTotals(weekNo) {
 
 // --- 팀별 기여도 Top3 "wagon" 그래픽 ---
 // 개인 식별은 실제 사진이 아니라 요청대로 원형 placeholder(사람 아이콘)로 표시한다.
-// 왼쪽부터 3위·2위·1위 순으로 늘어서고, 1위 옆의 마지막 밧줄만 굵게 그려 "가장 강하게 끄는 사람"을 강조한다.
+// 1·2·3위가 서로 이어지는 게 아니라, 각자의 밧줄이 wagon 한 곳(hitch)에 따로 모이는 모양으로 그린다.
+// 배경 SVG(밧줄+wagon)와 HTML 원형 placeholder를 같은 좌표계(고정 aspect-ratio 컨테이너)에 겹쳐서
+// 정확히 맞아떨어지게 한다.
 
 const TEAM_WAGON_MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
-const TEAM_WAGON_SIZES = { 1: { box: 'w-16 h-16', icon: 'text-2xl' }, 2: { box: 'w-14 h-14', icon: 'text-xl' }, 3: { box: 'w-12 h-12', icon: 'text-lg' } };
-const TEAM_WAGON_CART_SVG = `
-  <svg viewBox="0 0 84 64" class="w-16 h-14 sm:w-20 sm:h-16" aria-hidden="true" focusable="false">
-    <rect x="8" y="14" width="64" height="30" rx="8" fill="#c98a4b"></rect>
-    <rect x="8" y="14" width="64" height="8" rx="4" fill="#e0a86a"></rect>
-    <circle cx="26" cy="48" r="11" fill="#4b3621"></circle>
-    <circle cx="26" cy="48" r="4" fill="#c9b79c"></circle>
-    <circle cx="58" cy="48" r="11" fill="#4b3621"></circle>
-    <circle cx="58" cy="48" r="4" fill="#c9b79c"></circle>
-  </svg>`;
+const TEAM_WAGON_VIEWBOX = { width: 460, height: 180 };
+const TEAM_WAGON_HITCH = { x: 398, y: 94 };
+// rankNo별: 밧줄이 시작되는 y좌표(행 높이), 밧줄 시작 x(placeholder 오른쪽 끝 근처), 밧줄 굵기, placeholder 크기.
+const TEAM_WAGON_ROWS = {
+  1: { y: 38, ropeStartX: 66, ropeWidth: 5, circleSize: 'w-14 h-14', iconSize: 'text-2xl' },
+  2: { y: 94, ropeStartX: 62, ropeWidth: 4, circleSize: 'w-12 h-12', iconSize: 'text-xl' },
+  3: { y: 150, ropeStartX: 58, ropeWidth: 3, circleSize: 'w-11 h-11', iconSize: 'text-lg' }
+};
 
-function teamWagonRopeHTML(bold) {
-  const thickness = bold ? 'h-[5px]' : 'h-[3px]';
-  return `<div class="flex-1 min-w-[24px] max-w-[52px] ${thickness} rounded-full bg-gradient-to-r from-[#b08968] to-[#8b5e34] flex-shrink-0"></div>`;
+function teamWagonSVG(byRank) {
+  const ropes = [1, 2, 3].map((rankNo) => {
+    if (!byRank[rankNo]) return '';
+    const row = TEAM_WAGON_ROWS[rankNo];
+    return `<line x1="${row.ropeStartX}" y1="${row.y}" x2="${TEAM_WAGON_HITCH.x}" y2="${TEAM_WAGON_HITCH.y}" stroke="#b08968" stroke-width="${row.ropeWidth}" stroke-linecap="round" />`;
+  }).join('');
+  const wagon = `
+    <g>
+      <rect x="402" y="76" width="50" height="32" rx="8" fill="#c98a4b" />
+      <rect x="402" y="76" width="50" height="8" rx="4" fill="#e0a86a" />
+      <circle cx="416" cy="112" r="10" fill="#4b3621" />
+      <circle cx="416" cy="112" r="4" fill="#c9b79c" />
+      <circle cx="440" cy="112" r="10" fill="#4b3621" />
+      <circle cx="440" cy="112" r="4" fill="#c9b79c" />
+    </g>`;
+  return `<svg viewBox="0 0 ${TEAM_WAGON_VIEWBOX.width} ${TEAM_WAGON_VIEWBOX.height}" class="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden="true" focusable="false">${ropes}${wagon}</svg>`;
 }
 
-function teamWagonMemberHTML(member) {
-  const size = TEAM_WAGON_SIZES[member.rank_no];
+function teamWagonMemberRowHTML(member) {
+  const row = TEAM_WAGON_ROWS[member.rank_no];
+  const topPct = (row.y / TEAM_WAGON_VIEWBOX.height * 100).toFixed(2);
   return `
-    <div class="flex flex-col items-center flex-shrink-0">
-      <div class="relative">
-        <div class="${size.box} rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center ring-4 ring-white shadow-md">
-          <i class="fa-solid fa-user ${size.icon}"></i>
+    <div class="absolute left-0 flex items-center gap-2" style="top:${topPct}%; transform: translateY(-50%); max-width: 60%;">
+      <div class="relative flex-shrink-0">
+        <div class="${row.circleSize} rounded-full bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center ring-4 ring-white shadow-md">
+          <i class="fa-solid fa-user ${row.iconSize}"></i>
         </div>
         <span class="absolute -top-1.5 -right-1 text-base leading-none">${TEAM_WAGON_MEDALS[member.rank_no]}</span>
       </div>
-      <p class="mt-2 text-[11px] font-bold text-on-surface text-center leading-tight max-w-[76px] truncate">${teamEscape(member.name)}</p>
-      <p class="text-[10px] text-on-surface-variant max-w-[76px] truncate">@${teamEscape(member.username)}</p>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-on-surface truncate">${teamEscape(member.name)}</p>
+        <p class="text-[10px] text-on-surface-variant truncate">@${teamEscape(member.username)}</p>
+      </div>
     </div>`;
 }
 
 function teamWagonCardHTML(team) {
   const byRank = Object.fromEntries(team.items.map((member) => [member.rank_no, member]));
-  const chain = [];
-  [3, 2, 1].forEach((rankNo) => {
-    const member = byRank[rankNo];
-    if (!member) return;
-    if (chain.length > 0) chain.push(teamWagonRopeHTML(false));
-    chain.push(teamWagonMemberHTML(member));
-  });
-  const hasAny = chain.length > 0;
+  const hasAny = [1, 2, 3].some((rankNo) => byRank[rankNo]);
   return `
     <section class="glass-card rounded-[1.5rem] p-5">
-      <h3 class="text-lg font-bold mb-4">${teamEscape(team.team_name)}</h3>
+      <h3 class="text-lg font-bold mb-3">${teamEscape(team.team_name)}</h3>
       ${hasAny ? `
-        <div class="flex items-center justify-center gap-2 overflow-x-auto py-2 px-1">
-          ${chain.join('')}
-          ${teamWagonRopeHTML(true)}
-          <div class="flex-shrink-0">${TEAM_WAGON_CART_SVG}</div>
+        <div class="relative w-full" style="aspect-ratio: ${TEAM_WAGON_VIEWBOX.width} / ${TEAM_WAGON_VIEWBOX.height};">
+          ${teamWagonSVG(byRank)}
+          ${[1, 2, 3].map((rankNo) => byRank[rankNo] ? teamWagonMemberRowHTML(byRank[rankNo]) : '').join('')}
         </div>` : '<div class="py-8 text-center text-sm text-on-surface-variant">아직 집계된 기록이 없어요.</div>'}
     </section>`;
 }
