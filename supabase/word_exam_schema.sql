@@ -53,8 +53,14 @@ create policy "word_exam_submissions_admin_all"
   with check (public.is_app_admin(auth.uid()));
 
 -- storage 버킷은 gallery_schema.sql에서 만든 'verification-photos-v2'를 그대로 재사용한다.
--- 기존 RLS 정책(verification_photos_v2_all_own)이 경로의 두 번째 세그먼트만 auth.uid()로
--- 검사하므로 wordexam/{user_id}/... 경로도 별도 정책 추가 없이 바로 동작한다.
+-- 이제는 학생이 아니라 관리자가 시험지 사진을 학생 폴더(wordexam/{student_id}/...)에 올리므로,
+-- 기존 "본인 폴더만" 정책(verification_photos_v2_all_own)만으로는 관리자 쓰기가 막힌다.
+-- 이 버킷에 한해 관리자에게 폴더 제한 없이 읽기/쓰기/삭제를 허용하는 정책을 추가한다.
+drop policy if exists "verification_photos_v2_admin_all" on storage.objects;
+create policy "verification_photos_v2_admin_all"
+  on storage.objects for all to authenticated
+  using (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()))
+  with check (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()));
 
 -- Hall of Fame용 Top 5 랭킹 (채점 완료된 시험만 합산).
 create or replace function public.get_word_exam_rankings()

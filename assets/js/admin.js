@@ -1686,27 +1686,64 @@ let adminWordExamActiveDate = ADMIN_WORD_EXAM_DATES[0];
 let adminWordExamRows = [];
 let adminWordExamSearch = '';
 
+const WORD_EXAM_BUCKET = 'verification-photos-v2';
+
 function adminWordExamPhotoUrl(path) {
   if (!path) return '';
-  return window.supabaseClient.storage.from('verification-photos-v2').getPublicUrl(path).data.publicUrl;
+  return window.supabaseClient.storage.from(WORD_EXAM_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+function adminWordExamFileExtension(file) {
+  const fromName = String(file?.name || '').split('.').pop();
+  if (fromName && fromName.length <= 5) return fromName.toLowerCase();
+  return String(file?.type || '').split('/').pop() || 'jpg';
+}
+
+// 관리자가 시험지 사진을 직접 첨부/교체한다 — admin_all RLS(is_app_admin)가 테이블 전체 행에
+// 대한 쓰기를 이미 허용하므로 RPC 없이 upsert로 충분하다. 점수/상태는 건드리지 않는다.
+async function adminAttachWordExamPhoto(userId, examDate, file) {
+  const uploadFile = window.optimizeImageForUpload ? await window.optimizeImageForUpload(file, { maxDimension: 1600, quality: 0.8 }) : file;
+  const path = `wordexam/${userId}/${examDate}-${Date.now()}.${adminWordExamFileExtension(uploadFile)}`;
+  const { error: uploadError } = await window.supabaseClient.storage.from(WORD_EXAM_BUCKET)
+    .upload(path, uploadFile, { upsert: true, contentType: uploadFile.type, cacheControl: '31536000' });
+  if (uploadError) throw uploadError;
+  const { error: saveError } = await window.supabaseClient.from('word_exam_submissions').upsert(
+    { user_id: userId, exam_date: examDate, photo_path: path, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,exam_date' }
+  );
+  if (saveError) throw saveError;
+}
+
+// 사진과 제출 행을 통째로 지운다 — 사진 없이 점수만 남는 상태를 만들지 않기 위해서다.
+async function adminDeleteWordExamPhoto(userId, examDate, photoPath) {
+  const { error } = await window.supabaseClient.from('word_exam_submissions').delete().eq('user_id', userId).eq('exam_date', examDate);
+  if (error) throw error;
+  if (photoPath) {
+    const { error: storageError } = await window.supabaseClient.storage.from(WORD_EXAM_BUCKET).remove([photoPath]);
+    if (storageError) console.error('[admin] word exam photo storage remove', storageError);
+  }
 }
 
 function adminWordExamRowHTML(row) {
   const photoUrl = adminWordExamPhotoUrl(row.photo_path);
-  const submitted = row.status && row.status !== 'none';
+  const submitted = !!row.photo_path;
   const graded = row.status === 'graded';
   return `
     <div class="glass-card rounded-[1.5rem] p-4 flex flex-col sm:flex-row sm:items-center gap-4" data-word-exam-user="${row.user_id}">
-      <div class="flex items-center gap-3 flex-1 min-w-0">
-        ${photoUrl
-          ? `<a href="${photoUrl}" target="_blank" rel="noopener" class="w-16 h-16 rounded-xl overflow-hidden bg-surface-container flex-shrink-0"><img src="${photoUrl}" loading="lazy" class="w-full h-full object-cover"></a>`
-          : `<div class="w-16 h-16 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0 text-[10px] text-center px-1">미제출</div>`}
-        <div class="min-w-0">
-          <p class="font-bold truncate">${adminEscape(row.name)} <span class="text-xs text-on-surface-variant font-normal">@${adminEscape(row.username)}</span></p>
-          <p class="text-xs text-on-surface-variant truncate">${adminEscape(row.grade_class || '')}</p>
-        </div>
+      <div class="min-w-0 flex-1">
+        <p class="font-bold truncate">${adminEscape(row.name)} <span class="text-xs text-on-surface-variant font-normal">@${adminEscape(row.username)}</span></p>
+        <p class="text-xs text-on-surface-variant truncate">${adminEscape(row.grade_class || '')}</p>
       </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+        <label class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-primary cursor-pointer flex-shrink-0" aria-label="시험지 사진 첨부">
+          <i class="fa-solid fa-plus"></i>
+          <input type="file" accept="image/*" class="hidden word-exam-photo-input">
+        </label>
+        ${photoUrl ? `
+          <div class="relative w-12 h-12 flex-shrink-0">
+            <a href="${photoUrl}" target="_blank" rel="noopener" class="block w-12 h-12 rounded-xl overflow-hidden bg-surface-container"><img src="${photoUrl}" loading="lazy" class="w-full h-full object-cover"></a>
+            <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-error text-white flex items-center justify-center text-[10px] word-exam-photo-delete" aria-label="사진 삭제"><i class="fa-solid fa-xmark"></i></button>
+          </div>` : ''}
         <input type="number" min="0" max="100" step="1" class="glass-input rounded-xl px-3 py-2 text-sm w-20 word-exam-score-input" placeholder="점수" value="${row.score != null ? row.score : ''}" ${submitted ? '' : 'disabled'}>
         <span class="text-xs text-on-surface-variant">/ 100점</span>
         <button type="button" class="pill-btn-primary px-4 py-2 text-sm word-exam-save-btn disabled:opacity-40 disabled:cursor-not-allowed" ${submitted ? '' : 'disabled'}>${graded ? '수정' : '채점'}</button>
@@ -1720,6 +1757,41 @@ function adminRenderWordExamList() {
   const q = adminWordExamSearch.trim().toLowerCase();
   const rows = adminWordExamRows.filter((row) => !q || row.name.toLowerCase().includes(q) || row.username.toLowerCase().includes(q));
   wrap.innerHTML = rows.length ? rows.map(adminWordExamRowHTML).join('') : '<p class="text-sm text-on-surface-variant text-center py-10">조건에 맞는 학생이 없습니다.</p>';
+  wrap.querySelectorAll('.word-exam-photo-input').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+      const userId = input.closest('[data-word-exam-user]').dataset.wordExamUser;
+      input.disabled = true;
+      try {
+        await adminAttachWordExamPhoto(userId, adminWordExamActiveDate, file);
+        adminShowStatus('시험지 사진을 첨부했습니다.');
+        await adminLoadWordExam();
+      } catch (error) {
+        console.error('[admin] word exam photo attach', error);
+        adminShowStatus('사진 첨부에 실패했습니다.', true);
+        input.disabled = false;
+      }
+    });
+  });
+  wrap.querySelectorAll('.word-exam-photo-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('첨부한 시험지 사진을 삭제할까요? 점수도 함께 초기화됩니다.')) return;
+      const card = btn.closest('[data-word-exam-user]');
+      const userId = card.dataset.wordExamUser;
+      const row = adminWordExamRows.find((r) => r.user_id === userId);
+      btn.disabled = true;
+      try {
+        await adminDeleteWordExamPhoto(userId, adminWordExamActiveDate, row?.photo_path);
+        adminShowStatus('시험지 사진을 삭제했습니다.');
+        await adminLoadWordExam();
+      } catch (error) {
+        console.error('[admin] word exam photo delete', error);
+        adminShowStatus('사진 삭제에 실패했습니다.', true);
+        btn.disabled = false;
+      }
+    });
+  });
   wrap.querySelectorAll('.word-exam-save-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const card = btn.closest('[data-word-exam-user]');
