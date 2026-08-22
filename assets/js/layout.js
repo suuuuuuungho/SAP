@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   // [data-member-nav] 숨김 로직 대상에서 제외). 다른 항목은 관리자/교사 등급이면
   // 숨겨지는 게 기존 의도된 동작이라 그대로 둔다.
   { id: 'hall-of-fame', label: 'Hall of Fame', href: 'hall-of-fame.html', icon: 'fa-solid fa-trophy', shared: true },
+  { id: 'team', label: 'Team', href: 'team.html', icon: 'fa-solid fa-people-group' },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
@@ -111,6 +112,7 @@ const ADMIN_NAV_GROUPS = [
     { id: 'verse', label: 'Bible Verse', icon: 'fa-solid fa-book-bible', full: true },
     { id: 'gallery-manage', label: 'Gallery manage', icon: 'fa-solid fa-photo-film', full: true },
     { id: 'word-exam', label: 'Word Test', icon: 'fa-solid fa-file-pen', full: true },
+    { id: 'team-manage', label: 'Team Manage', icon: 'fa-solid fa-people-group', full: true },
     { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders', full: true },
     { id: 'member', label: 'Member', icon: 'fa-solid fa-users', full: true },
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large', full: true },
@@ -297,9 +299,9 @@ async function applyFeatureFlags(activePage) {
   if (error) return; // 관리자 스키마 적용 전에는 기존 기능을 그대로 유지합니다.
   const flags = Object.fromEntries((data || []).map((item) => [item.feature_key, item.is_enabled]));
   window.APP_FEATURE_FLAGS = flags;
-  const pageFeature = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[activePage];
+  const pageFeature = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', team: 'team', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[activePage];
   NAV_ITEMS.forEach((item) => {
-    const key = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[item.id];
+    const key = { 'public-home': 'board', 'hall-of-fame': 'hall_of_fame', team: 'team', mypage: 'mypage', study: 'study', gallery: 'gallery', stat: 'stat' }[item.id];
     if (key && flags[key] === false) document.querySelectorAll(`a[href="${item.href}"]`).forEach((link) => { link.classList.add('hidden'); link.style.display = 'none'; });
   });
   const hideClosest = (selector, key) => { if (flags[key] === false) document.querySelector(selector)?.closest('section')?.classList.add('hidden'); };

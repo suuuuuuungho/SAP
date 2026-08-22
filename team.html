@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team - SAP 1기</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="assets/js/tailwind-config.js"></script>
+<link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body class="text-on-surface">
+<div id="app"></div>
+<template id="page-content">
+  <div class="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 md:-mt-8 lg:-mt-10 px-4 sm:px-6 lg:px-8 pt-4 md:pt-8 lg:pt-10 pb-3 mb-8 lg:mb-10 bg-surface/95 backdrop-blur-xl rounded-b-2xl shadow-sm">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+      <div>
+        <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Team</h1>
+        <p class="text-sm text-on-surface-variant mt-1">팀별 활동 시간과 기여도 랭킹</p>
+      </div>
+    </div>
+
+    <div class="glass-panel rounded-full p-1 flex flex-nowrap text-[11px] sm:text-sm font-semibold w-full sm:w-fit" id="team-tabs">
+      <button type="button" data-team-tab="1" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week1</button>
+      <button type="button" data-team-tab="2" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week2</button>
+      <button type="button" data-team-tab="3" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week3</button>
+      <button type="button" data-team-tab="4" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">Week4</button>
+      <button type="button" data-team-tab="total" class="flex-1 sm:flex-none px-1.5 sm:px-3.5 py-1.5 rounded-full whitespace-nowrap text-on-surface-variant transition-colors">전체누적</button>
+    </div>
+  </div>
+
+  <section class="mb-10 lg:mb-14">
+    <div class="flex items-center gap-2 mb-4">
+      <h2 class="text-lg font-bold">팀별 활동 시간</h2>
+      <span class="text-xs text-on-surface-variant">기도 · 말씀 · 공부 합산</span>
+    </div>
+    <div class="glass-card rounded-[1.5rem] p-4 sm:p-6">
+      <div class="relative h-64 sm:h-80">
+        <canvas id="team-totals-chart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-16">
+    <div class="flex items-center gap-2 mb-4">
+      <h2 class="text-lg font-bold">팀별 기여도 TOP 3</h2>
+      <span class="text-xs text-on-surface-variant">기도 · 말씀 · 공부 · 예배 총 활동시간 기준</span>
+    </div>
+    <div id="team-wagon-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6"></div>
+  </section>
+
+  <section class="mb-16">
+    <h2 class="text-lg font-bold mb-4">팀 명단</h2>
+    <div id="team-roster-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
+  </section>
+</template>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-guard.js"></script>
+<script src="assets/js/auth.js?v=10"></script>
+<script src="assets/js/layout.js?v=26"></script>
+<script src="assets/js/profile-avatar.js?v=5"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="assets/js/team.js?v=1"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (await requireAuth()) renderApp({ activePage: 'team' });
+  });
+</script>
+</body>
+</html>
