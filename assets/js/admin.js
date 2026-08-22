@@ -1714,6 +1714,14 @@ async function adminAttachWordExamPhoto(userId, examDate, file) {
   if (saveError) throw saveError;
 }
 
+// 학생 화면(Study/Stat/개인 리포트/Hall of Fame)에 이 시험의 사진·점수를 보여줄지 학생별로 켜고 끈다.
+async function adminSetWordExamVisibility(userId, examDate, visible) {
+  const { error } = await window.supabaseClient.from('word_exam_submissions')
+    .update({ visible_to_student: visible, updated_at: new Date().toISOString() })
+    .eq('user_id', userId).eq('exam_date', examDate);
+  if (error) throw error;
+}
+
 // 사진과 제출 행을 통째로 지운다 — 사진 없이 점수만 남는 상태를 만들지 않기 위해서다.
 async function adminDeleteWordExamPhoto(userId, examDate, photoPath) {
   const { error } = await window.supabaseClient.from('word_exam_submissions').delete().eq('user_id', userId).eq('exam_date', examDate);
@@ -1728,11 +1736,18 @@ function adminWordExamRowHTML(row) {
   const photoUrl = adminWordExamPhotoUrl(row.photo_path);
   const submitted = !!row.photo_path;
   const graded = row.status === 'graded';
+  const visible = !!row.visible_to_student;
   return `
     <div class="glass-card rounded-[1.5rem] p-4 flex flex-col sm:flex-row sm:items-center gap-4" data-word-exam-user="${row.user_id}">
-      <div class="min-w-0 flex-1">
-        <p class="font-bold truncate">${adminEscape(row.name)} <span class="text-xs text-on-surface-variant font-normal">@${adminEscape(row.username)}</span></p>
-        <p class="text-xs text-on-surface-variant truncate">${adminEscape(row.grade_class || '')}</p>
+      <div class="min-w-0 flex-1 flex items-center gap-3">
+        <div class="min-w-0">
+          <p class="font-bold truncate">${adminEscape(row.name)} <span class="text-xs text-on-surface-variant font-normal">@${adminEscape(row.username)}</span></p>
+          <p class="text-xs text-on-surface-variant truncate">${adminEscape(row.grade_class || '')}</p>
+        </div>
+        <label class="flex items-center gap-1.5 text-[11px] font-semibold text-on-surface-variant flex-shrink-0 ${submitted ? 'cursor-pointer' : 'opacity-40 pointer-events-none'}">
+          <input type="checkbox" class="rounded text-primary word-exam-visible-toggle" ${visible ? 'checked' : ''} ${submitted ? '' : 'disabled'}>
+          공개
+        </label>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
         <label class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-primary cursor-pointer flex-shrink-0" aria-label="시험지 사진 첨부">
@@ -1757,6 +1772,24 @@ function adminRenderWordExamList() {
   const q = adminWordExamSearch.trim().toLowerCase();
   const rows = adminWordExamRows.filter((row) => !q || row.name.toLowerCase().includes(q) || row.username.toLowerCase().includes(q));
   wrap.innerHTML = rows.length ? rows.map(adminWordExamRowHTML).join('') : '<p class="text-sm text-on-surface-variant text-center py-10">조건에 맞는 학생이 없습니다.</p>';
+  wrap.querySelectorAll('.word-exam-visible-toggle').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const userId = input.closest('[data-word-exam-user]').dataset.wordExamUser;
+      const checked = input.checked;
+      input.disabled = true;
+      try {
+        await adminSetWordExamVisibility(userId, adminWordExamActiveDate, checked);
+        const row = adminWordExamRows.find((r) => r.user_id === userId);
+        if (row) row.visible_to_student = checked;
+        adminShowStatus(checked ? '학생에게 공개했습니다.' : '학생에게 비공개로 전환했습니다.');
+      } catch (error) {
+        console.error('[admin] word exam visibility', error);
+        adminShowStatus('공개 설정을 변경하지 못했습니다.', true);
+        input.checked = !checked;
+      }
+      input.disabled = false;
+    });
+  });
   wrap.querySelectorAll('.word-exam-photo-input').forEach((input) => {
     input.addEventListener('change', async () => {
       const file = input.files[0];

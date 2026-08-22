@@ -13,18 +13,25 @@ create table if not exists public.word_exam_submissions (
   status text not null default 'pending' check (status in ('pending', 'graded')),
   graded_by uuid references auth.users(id) on delete set null,
   graded_at timestamptz,
+  -- 관리자가 학생 화면에 시험지 사진/점수를 공개할지 학생별로 직접 켜고 끈다. 기본값은 비공개 —
+  -- 사진을 첨부하거나 채점만 해서는 바로 노출되지 않고, 관리자가 명시적으로 공개해야 보인다.
+  visible_to_student boolean not null default false,
   updated_at timestamptz not null default now(),
   primary key (user_id, exam_date)
 );
+
+alter table public.word_exam_submissions add column if not exists visible_to_student boolean not null default false;
 
 create index if not exists word_exam_submissions_date_idx on public.word_exam_submissions (exam_date);
 
 alter table public.word_exam_submissions enable row level security;
 
+-- 학생은 관리자가 visible_to_student를 켠 본인 행만 볼 수 있다(그전까지는 존재 자체가 안 보임 —
+-- Study/Stat이 "아직 시험지가 등록되지 않았어요"로 표시). 관리자는 공개 여부와 무관하게 전부 본다.
 drop policy if exists "word_exam_submissions_select" on public.word_exam_submissions;
 create policy "word_exam_submissions_select"
   on public.word_exam_submissions for select
-  using (user_id = auth.uid() or public.is_app_admin(auth.uid()));
+  using ((user_id = auth.uid() and visible_to_student = true) or public.is_app_admin(auth.uid()));
 
 -- 학생은 채점 전(status='pending')까지만 본인 행을 쓰거나 지울 수 있다 — 사진 재업로드/삭제는
 -- 허용하되 점수/상태는 절대 직접 못 건드리고(score는 항상 null이어야 통과), 채점이 끝나면
@@ -73,7 +80,7 @@ as $$
   with totals as (
     select s.user_id, sum(s.score) as total_score, sum(s.max_score) as total_max, count(*) as exam_count
     from public.word_exam_submissions s
-    where s.status = 'graded'
+    where s.status = 'graded' and s.visible_to_student = true
     group by s.user_id
   ),
   ranked as (
@@ -92,7 +99,8 @@ grant execute on function public.get_word_exam_rankings() to authenticated;
 create or replace function public.admin_get_word_exam_submissions(target_exam_date date)
 returns table (
   user_id uuid, username text, name text, grade_class text,
-  photo_path text, score numeric, max_score numeric, status text, updated_at timestamptz
+  photo_path text, score numeric, max_score numeric, status text,
+  visible_to_student boolean, updated_at timestamptz
 )
 language plpgsql stable security definer set search_path = public
 as $$
@@ -100,7 +108,8 @@ begin
   if not public.is_app_admin(auth.uid()) then raise exception 'admin access required'; end if;
   return query
     select p.id, p.username, p.name, p.grade_class,
-      s.photo_path, s.score, s.max_score, coalesce(s.status, 'none'), s.updated_at
+      s.photo_path, s.score, s.max_score, coalesce(s.status, 'none'),
+      coalesce(s.visible_to_student, false), s.updated_at
     from public.profiles p
     left join public.word_exam_submissions s on s.user_id = p.id and s.exam_date = target_exam_date
     where p.app_role = 'student' and p.is_active = true
@@ -168,7 +177,7 @@ with valid_link as (
   from public.word_records r join student s on s.id=r.user_id where jsonb_array_length(r.verses)>0
 ), exam_posts as (
   select coalesce(jsonb_agg(jsonb_build_object('date',e.exam_date,'photoPath',e.photo_path,'score',e.score,'maxScore',e.max_score,'status',e.status) order by e.exam_date),'[]'::jsonb) value
-  from public.word_exam_submissions e join student s on s.id=e.user_id
+  from public.word_exam_submissions e join student s on s.id=e.user_id where e.visible_to_student = true
 )
 select case when not exists(select 1 from student) then null else jsonb_build_object(
   'student',(select jsonb_build_object('name',name,'username',username,'gradeClass',grade_class) from student),
