@@ -69,8 +69,8 @@ create policy "verification_photos_v2_admin_all"
   using (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()))
   with check (bucket_id = 'verification-photos-v2' and public.is_app_admin(auth.uid()));
 
--- Hall of Fame용 Top 5 랭킹 (채점 완료된 시험만 합산) — 점수는 순위 계산에만 쓰고 클라이언트에는
--- 절대 내려주지 않는다. 노출은 이름/아이디/학년반까지만.
+-- Hall of Fame용 Top 5 랭킹 (채점 완료된 시험만 합산, 학생 계정만 대상) — 점수는 순위 계산에만
+-- 쓰고 클라이언트에는 절대 내려주지 않는다. 노출은 이름/아이디/학년반까지만.
 drop function if exists public.get_word_exam_rankings();
 create or replace function public.get_word_exam_rankings()
 returns table (
@@ -81,6 +81,7 @@ as $$
   with totals as (
     select s.user_id, sum(s.score) as total_score, count(*) as exam_count
     from public.word_exam_submissions s
+    join public.profiles p on p.id = s.user_id and p.app_role = 'student' and p.is_active = true
     where s.status = 'graded' and s.visible_to_student = true
     group by s.user_id
   ),
