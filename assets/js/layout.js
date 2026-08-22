@@ -110,6 +110,7 @@ const ADMIN_NAV_GROUPS = [
     { id: 'board-manage', label: 'Board manage', icon: 'fa-solid fa-bullhorn', full: true },
     { id: 'verse', label: 'Bible Verse', icon: 'fa-solid fa-book-bible', full: true },
     { id: 'gallery-manage', label: 'Gallery manage', icon: 'fa-solid fa-photo-film', full: true },
+    { id: 'word-exam', label: 'Word Exam', icon: 'fa-solid fa-file-pen', full: true },
     { id: 'control', label: 'Control Panel', icon: 'fa-solid fa-sliders', full: true },
     { id: 'member', label: 'Member', icon: 'fa-solid fa-users', full: true },
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-table-cells-large', full: true },
@@ -315,6 +316,11 @@ async function applyFeatureFlags(activePage) {
     const studyContent = document.getElementById('study-content');
     if (studyContent) studyContent.innerHTML = '<div class="glass-panel rounded-[2rem] p-10 text-center text-sm text-on-surface-variant">영단어 학습 기능이 현재 꺼져 있습니다.</div>';
   }
+  if (flags.word_exam === false) {
+    document.getElementById('study-mode-exam')?.classList.add('hidden');
+    document.getElementById('stat-word-exam-list')?.closest('section')?.classList.add('hidden');
+  }
+  if (flags.hall_of_fame_word_exam === false) document.getElementById('hof-word-exam-section')?.classList.add('hidden');
   if (flags.stat_summary === false) { document.getElementById('stat-streak-current')?.closest('section')?.classList.add('hidden'); document.getElementById('stat-kpi-total')?.closest('section')?.classList.add('hidden'); }
   hideClosest('#stat-heatmap', 'stat_heatmap');
   hideClosest('#stat-trend-chart', 'stat_trend');

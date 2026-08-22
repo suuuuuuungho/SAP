@@ -22,7 +22,8 @@ const ADMIN_FEATURE_STRUCTURE = [
   ] },
   { key: 'hall_of_fame', title: 'Hall of Fame', description: '전체 이용자가 보는 랭킹 탭', icon: 'fa-solid fa-trophy', children: [
     { key: 'ranking', title: '전체 누적 랭킹', description: '운영기간 전체 누적 활동 시간 기준 상위 이용자를 표시합니다.' },
-    { key: 'ranking_weekly', title: '주차별 랭킹', description: 'Week1~4 탭으로 나눈 주차별 랭킹을 표시합니다.' }
+    { key: 'ranking_weekly', title: '주차별 랭킹', description: 'Week1~4 탭으로 나눈 주차별 랭킹을 표시합니다.' },
+    { key: 'hall_of_fame_word_exam', title: '단어 시험 랭킹', description: '단어 시험 누적 점수 상위 5명의 랭킹을 표시합니다.' }
   ] },
   { key: 'mypage', title: 'MyPage', description: '개인의 일별 인증과 활동 기록 탭', icon: 'fa-solid fa-user', children: [
     { key: 'pray', title: '기도 인증', description: '기도 시간과 인증 사진을 기록합니다.' },
@@ -31,7 +32,8 @@ const ADMIN_FEATURE_STRUCTURE = [
     { key: 'worship', title: '예배 인증', description: '예배 참석 여부와 시간을 기록합니다.' }
   ] },
   { key: 'study', title: 'Study', description: '영단어 학습 탭', icon: 'fa-solid fa-book', children: [
-    { key: 'study_vocab', title: '영단어 학습', description: '단어 목록, 암기 카드와 퀴즈를 제공합니다.' }
+    { key: 'study_vocab', title: '영단어 학습', description: '단어 목록, 암기 카드와 퀴즈를 제공합니다.' },
+    { key: 'word_exam', title: '단어 시험', description: '단어 시험지 사진 업로드와 점수 확인을 제공합니다.' }
   ] },
   { key: 'gallery', title: 'Gallery', description: '전체 이용자의 인증 게시물 탭', icon: 'fa-regular fa-images', children: [
     { key: 'gallery_pray', title: '기도 갤러리', description: '기도 인증 게시물과 사진을 표시합니다.' },
@@ -728,10 +730,10 @@ function adminRoleLabel(role) {
 }
 
 const ADMIN_PANEL_FOR_TAB = { 'gallery-manage': 'gallery' };
-const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'verse', 'gallery-manage', 'control', 'member', 'dashboard', 'stat']);
+const ADMIN_FULL_ONLY_TABS = new Set(['board-manage', 'verse', 'gallery-manage', 'word-exam', 'control', 'member', 'dashboard', 'stat']);
 
 function adminWireTabs() {
-  const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'verse', 'gallery-manage', 'control', 'member', 'dashboard', 'stat'];
+  const validTabs = ['board', 'gallery', 'comment', 'board-manage', 'verse', 'gallery-manage', 'word-exam', 'control', 'member', 'dashboard', 'stat'];
   const selectTab = (tab, historyMode = 'push') => {
     let nextTab = validTabs.includes(tab) ? tab : 'board';
     if (ADMIN_FULL_ONLY_TABS.has(nextTab) && !adminFullAccess) nextTab = 'board';
@@ -748,6 +750,7 @@ function adminWireTabs() {
     const panelId = ADMIN_PANEL_FOR_TAB[adminActiveTab] || adminActiveTab;
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.adminPanel !== panelId));
     if (adminActiveTab === 'gallery' || adminActiveTab === 'gallery-manage') window.setGalleryAdminMode?.(adminActiveTab === 'gallery-manage');
+    if (adminActiveTab === 'word-exam') adminLoadWordExam();
     if (adminActiveTab === 'comment') adminLoadCommentTab();
     if (adminActiveTab === 'control') { adminLoadFeatures(); adminLoadCommentRoles(); }
     if (adminActiveTab === 'member') adminLoadMembers();
@@ -1677,8 +1680,92 @@ function adminRenderAllStats() {
   wrap.innerHTML = `<div class="lg:hidden flex flex-col gap-3">${mobileRows}</div><div class="hidden lg:block max-h-[70vh] overflow-y-auto scrollbar-hide rounded-2xl">${header}${desktopRows}</div>`;
 }
 
+// 단어 시험 채점 — 8/22, 9/3 두 날짜 각각 전체 학생 제출 현황을 보여주고 점수를 입력하면 저장한다.
+const ADMIN_WORD_EXAM_DATES = ['2026-08-22', '2026-09-03'];
+let adminWordExamActiveDate = ADMIN_WORD_EXAM_DATES[0];
+let adminWordExamRows = [];
+let adminWordExamSearch = '';
+
+function adminWordExamPhotoUrl(path) {
+  if (!path) return '';
+  return window.supabaseClient.storage.from('verification-photos-v2').getPublicUrl(path).data.publicUrl;
+}
+
+function adminWordExamRowHTML(row) {
+  const photoUrl = adminWordExamPhotoUrl(row.photo_path);
+  const submitted = row.status && row.status !== 'none';
+  const graded = row.status === 'graded';
+  return `
+    <div class="glass-card rounded-[1.5rem] p-4 flex flex-col sm:flex-row sm:items-center gap-4" data-word-exam-user="${row.user_id}">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        ${photoUrl
+          ? `<a href="${photoUrl}" target="_blank" rel="noopener" class="w-16 h-16 rounded-xl overflow-hidden bg-surface-container flex-shrink-0"><img src="${photoUrl}" loading="lazy" class="w-full h-full object-cover"></a>`
+          : `<div class="w-16 h-16 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0 text-[10px] text-center px-1">미제출</div>`}
+        <div class="min-w-0">
+          <p class="font-bold truncate">${adminEscape(row.name)} <span class="text-xs text-on-surface-variant font-normal">@${adminEscape(row.username)}</span></p>
+          <p class="text-xs text-on-surface-variant truncate">${adminEscape(row.grade_class || '')}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <input type="number" min="0" max="100" step="1" class="glass-input rounded-xl px-3 py-2 text-sm w-20 word-exam-score-input" placeholder="점수" value="${row.score != null ? row.score : ''}" ${submitted ? '' : 'disabled'}>
+        <span class="text-xs text-on-surface-variant">/ 100점</span>
+        <button type="button" class="pill-btn-primary px-4 py-2 text-sm word-exam-save-btn disabled:opacity-40 disabled:cursor-not-allowed" ${submitted ? '' : 'disabled'}>${graded ? '수정' : '채점'}</button>
+      </div>
+    </div>`;
+}
+
+function adminRenderWordExamList() {
+  const wrap = document.getElementById('admin-word-exam-list');
+  if (!wrap) return;
+  const q = adminWordExamSearch.trim().toLowerCase();
+  const rows = adminWordExamRows.filter((row) => !q || row.name.toLowerCase().includes(q) || row.username.toLowerCase().includes(q));
+  wrap.innerHTML = rows.length ? rows.map(adminWordExamRowHTML).join('') : '<p class="text-sm text-on-surface-variant text-center py-10">조건에 맞는 학생이 없습니다.</p>';
+  wrap.querySelectorAll('.word-exam-save-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('[data-word-exam-user]');
+      const userId = card.dataset.wordExamUser;
+      const input = card.querySelector('.word-exam-score-input');
+      const score = Number(input.value);
+      if (!Number.isFinite(score) || score < 0 || score > 100) { adminShowStatus('0~100 사이 점수를 입력해주세요.', true); return; }
+      btn.disabled = true;
+      const { error } = await window.supabaseClient.rpc('admin_grade_word_exam', { target_user_id: userId, target_exam_date: adminWordExamActiveDate, new_score: score, new_max_score: 100 });
+      if (error) { adminShowStatus('채점 저장에 실패했습니다.', true); btn.disabled = false; return; }
+      adminShowStatus('채점을 저장했습니다.');
+      await adminLoadWordExam();
+    });
+  });
+}
+
+async function adminLoadWordExam() {
+  const wrap = document.getElementById('admin-word-exam-list');
+  if (wrap) wrap.innerHTML = '<p class="text-sm text-on-surface-variant text-center py-10"><i class="fa-solid fa-spinner fa-spin mr-2"></i>불러오는 중...</p>';
+  const { data, error } = await window.supabaseClient.rpc('admin_get_word_exam_submissions', { target_exam_date: adminWordExamActiveDate });
+  if (error) { if (wrap) wrap.innerHTML = '<p class="text-sm text-error text-center py-10">word_exam_schema.sql을 먼저 실행해주세요.</p>'; return; }
+  adminWordExamRows = data || [];
+  adminRenderWordExamList();
+}
+
+function adminWireWordExam() {
+  document.querySelectorAll('[data-word-exam-date]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.wordExamDate === adminWordExamActiveDate) return;
+      adminWordExamActiveDate = btn.dataset.wordExamDate;
+      document.querySelectorAll('[data-word-exam-date]').forEach((b) => {
+        b.classList.toggle('nav-pill-active', b === btn);
+        b.classList.toggle('text-on-surface-variant', b !== btn);
+      });
+      adminLoadWordExam();
+    });
+  });
+  document.getElementById('admin-word-exam-search')?.addEventListener('input', (event) => {
+    adminWordExamSearch = event.target.value;
+    adminRenderWordExamList();
+  });
+}
+
 function adminWireConsole() {
   adminWireTabs(); adminWireMember();
+  adminWireWordExam();
   const dashboardDateInput = document.getElementById('admin-dashboard-date');
   if (dashboardDateInput) {
     const today = adminTodayDateValue();

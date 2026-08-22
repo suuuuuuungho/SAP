@@ -126,9 +126,15 @@
   </section>
 
   <!-- 퍼스널 베스트 -->
-  <section class="mb-16">
+  <section class="mb-6">
     <p class="text-sm font-bold text-on-surface-variant mb-3">지금까지의 최고 기록들</p>
     <div id="stat-best-chips" class="flex flex-wrap gap-3"></div>
+  </section>
+
+  <!-- 단어 시험 점수 -->
+  <section class="mb-16">
+    <p class="text-sm font-bold text-on-surface-variant mb-3">단어 시험 점수</p>
+    <div id="stat-word-exam-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
   </section>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -136,10 +142,10 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=23"></script>
+<script src="assets/js/layout.js?v=24"></script>
 <script src="assets/js/pray-word.js?v=19"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/stat.js?v=13"></script>
+<script src="assets/js/stat.js?v=14"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'stat' });

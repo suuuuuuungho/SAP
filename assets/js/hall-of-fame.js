@@ -227,13 +227,40 @@ function wireHofTabs() {
   });
 }
 
+// 단어 시험 Top 5 — 주차 탭과 무관하게 채점 완료된 시험 누적 점수로만 집계하므로 별도 섹션으로 분리한다.
+function hofWordExamRowHTML(row, isLast) {
+  const isMe = row.user_id === hofCurrentUserId;
+  const medal = row.rank_no <= 3 ? ['🥇', '🥈', '🥉'][row.rank_no - 1] : String(row.rank_no);
+  return `
+    <div class="flex items-center gap-3 py-3 ${isLast ? '' : 'border-b border-outline-variant/35'} ${isMe ? 'bg-primary/5 -mx-3 px-3 rounded-xl' : ''}">
+      <div class="w-7 text-center text-sm font-bold">${medal}</div>
+      ${hofAvatar(row.user_id, row.name)}
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold truncate">${hofEscape(row.name)}${isMe ? ' <span class="text-[10px] text-primary">ME</span>' : ''}</p>
+        <p class="text-[11px] text-on-surface-variant truncate">@${hofEscape(row.username)}</p>
+      </div>
+      <p class="text-sm font-bold text-on-surface whitespace-nowrap">${row.total_score} / ${row.total_max}점</p>
+    </div>`;
+}
+
+async function refreshHofWordExam() {
+  const list = document.getElementById('hof-word-exam-list');
+  if (!list) return;
+  const { data, error } = await window.supabaseClient.rpc('get_word_exam_rankings');
+  if (error) { console.error('[hall-of-fame] word exam rankings', error); return; }
+  const rows = data || [];
+  const profiles = window.getPublicProfileCards ? await window.getPublicProfileCards(rows.map((r) => r.user_id)) : {};
+  Object.entries(profiles).forEach(([id, profile]) => { hofAvatarUrls[id] = profile.avatarUrl || ''; });
+  list.innerHTML = rows.length ? rows.map((row, index) => hofWordExamRowHTML(row, index === rows.length - 1)).join('') : '<div class="py-8 text-center text-sm text-on-surface-variant">아직 채점된 시험이 없어요.</div>';
+}
+
 async function initHallOfFameWidgets() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();
   hofCurrentUserId = session ? session.user.id : null;
   hofActiveTab = hofDefaultTab();
   applyHofTabStyles();
   wireHofTabs();
-  await refreshHofActiveTab();
+  await Promise.all([refreshHofActiveTab(), refreshHofWordExam()]);
   if (hofRefreshTimer) clearInterval(hofRefreshTimer);
   hofRefreshTimer = setInterval(() => {
     if (document.visibilityState === 'visible') refreshHofActiveTab();

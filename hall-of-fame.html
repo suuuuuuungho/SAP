@@ -51,15 +51,28 @@
   <section class="mb-16">
     <div id="hof-ranking-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6"></div>
   </section>
+
+  <section id="hof-word-exam-section" class="mb-16">
+    <div class="glass-card rounded-[1.5rem] p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 class="text-lg font-bold">단어 시험 TOP 5</h2>
+          <p class="text-xs text-on-surface-variant">누적 단어 시험 점수 기준</p>
+        </div>
+        <div class="icon-glass w-10 h-10 rounded-full flex items-center justify-center text-primary"><i class="fa-solid fa-file-pen"></i></div>
+      </div>
+      <div id="hof-word-exam-list"></div>
+    </div>
+  </section>
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=23"></script>
+<script src="assets/js/layout.js?v=24"></script>
 <script src="assets/js/profile-avatar.js?v=5"></script>
-<script src="assets/js/hall-of-fame.js?v=8"></script>
+<script src="assets/js/hall-of-fame.js?v=9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'hall-of-fame' });

@@ -17,14 +17,15 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">Study</h1>
       <div class="glass-panel rounded-full p-1 flex text-sm font-semibold" id="study-mode-tabs">
+        <button type="button" id="study-mode-exam" data-mode="exam" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">단어 시험</button>
         <button type="button" id="study-mode-list" data-mode="list" class="px-3.5 py-1.5 rounded-full nav-pill-active transition-colors">목록</button>
         <button type="button" id="study-mode-flashcard" data-mode="flashcard" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">암기카드</button>
         <button type="button" id="study-mode-quiz" data-mode="quiz" class="px-3.5 py-1.5 rounded-full text-on-surface-variant transition-colors">퀴즈</button>
       </div>
     </div>
 
-    <!-- Lv.1 전용 단어장 + Day 선택 -->
-    <div class="flex items-center justify-between gap-3">
+    <!-- Lv.1 전용 단어장 + Day 선택 (단어 시험 모드에서는 숨김) -->
+    <div id="study-daybar" class="flex items-center justify-between gap-3">
       <span class="glass-card rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold nav-pill-active whitespace-nowrap">Lv.1</span>
       <select id="study-day-selector" class="glass-input rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold flex-shrink-0"></select>
     </div>
@@ -38,8 +39,9 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=23"></script>
-<script src="assets/js/study.js?v=5"></script>
+<script src="assets/js/layout.js?v=24"></script>
+<script src="assets/js/image-utils.js?v=1"></script>
+<script src="assets/js/study.js?v=6"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'study' });
