@@ -1,18 +1,27 @@
-// Study 탭: 영단어 학습(목록/암기카드/퀴즈) — vocab_words(콘텐츠, 읽기전용) +
-// vocab_progress(학생별 학습완료 여부, 본인 행만)를 조합해 렌더링한다.
-// home.js는 로드하지 않는다(다른 탭과 동일한 이유 — layout.js의 renderApp()이 initHomeWidgets를
-// 페이지 구분 없이 호출하기 때문). getCurrentUserId는 이 파일 자체에 구현한다(pray-word.js 미로드).
+// Study 탭: 영단어 학습(목록/암기카드/퀴즈/단어 시험) — vocab_words(콘텐츠, 읽기전용) +
+// vocab_progress(학생별 학습완료 여부, 본인 행만) + word_exam_submissions(관리자가 첨부한 시험지
+// 사진/점수, 학생은 본인 행 읽기만)를 조합해 렌더링한다. home.js는 로드하지 않는다(다른 탭과
+// 동일한 이유 — layout.js의 renderApp()이 initHomeWidgets를 페이지 구분 없이 호출하기 때문).
+// getCurrentUserId는 이 파일 자체에 구현한다(pray-word.js 미로드).
 
 const STUDY_QUIZ_MAX_QUESTIONS = 15; // 세트가 커질 때 퀴즈 세션 길이 상한
 const STUDY_QUIZ_MIN_WORDS = 2;      // 퀴즈를 진행하기 위한 최소 단어 수
 const STUDY_LEVEL = 1;
 const STUDY_PAGE_SIZE = 1000;        // Supabase REST 기본 최대 반환 행 수 — 이보다 크면 나눠 받아야 함
 
+// 단어 시험(오프라인 시험지 사진 제출) — 8/22, 9/5 두 번만 고정으로 연다.
+const STUDY_EXAM_BUCKET = 'verification-photos-v2';
+const STUDY_EXAM_DATES = [
+  { key: '2026-08-22', label: '8/22 (토)' },
+  { key: '2026-09-05', label: '9/5 (토)' }
+];
+
 let studyAllWords = [];      // vocab_words 전체, study_day/sort_order 순
 let studyProgressMap = {};   // word_id -> vocab_progress row
 let studyCurrentUserId = null;
+let studyExamSubmissions = {}; // exam_date -> word_exam_submissions row
 
-let studyActiveMode = 'list';  // 'list' | 'flashcard' | 'quiz'
+let studyActiveMode = 'list';  // 'list' | 'flashcard' | 'quiz' | 'exam'
 let studyActiveDay = 'all';    // 'all' | integer
 
 let studyFlashcardIndex = 0;
@@ -59,6 +68,12 @@ async function fetchStudyData(userId) {
   ]);
   if (progressRes.error) console.error('[study] vocab_progress', progressRes.error);
   return { words, progress: progressRes.data || [] };
+}
+
+async function fetchExamSubmissions(userId) {
+  const { data, error } = await window.supabaseClient.from('word_exam_submissions').select('*').eq('user_id', userId);
+  if (error) { console.error('[study] word_exam_submissions', error); return {}; }
+  return Object.fromEntries((data || []).map((row) => [row.exam_date, row]));
 }
 
 // --- 필터 헬퍼 ---
@@ -164,6 +179,7 @@ function wireDaySelector() {
 
 function wireModeTabs() {
   const buttons = {
+    exam: document.getElementById('study-mode-exam'),
     list: document.getElementById('study-mode-list'),
     flashcard: document.getElementById('study-mode-flashcard'),
     quiz: document.getElementById('study-mode-quiz')
@@ -179,16 +195,51 @@ function wireModeTabs() {
         b.classList.toggle('nav-pill-active', k === key);
         b.classList.toggle('text-on-surface-variant', k !== key);
       });
+      document.getElementById('study-daybar')?.classList.toggle('hidden', key === 'exam');
       renderContent();
     });
   });
 }
 
 function renderContent() {
+  if (studyActiveMode === 'exam') { renderExamMode(); return; }
   const wordSet = getActiveWordSet();
   if (studyActiveMode === 'list') renderListMode(wordSet);
   else if (studyActiveMode === 'flashcard') renderFlashcardMode(wordSet);
   else renderQuizMode(wordSet);
+}
+
+// --- 단어 시험 모드 (관리자가 첨부한 시험지 사진 + 점수 확인 전용, 학생은 읽기만 한다) ---
+
+function studyExamPhotoUrl(path) {
+  if (!path) return '';
+  return window.supabaseClient.storage.from(STUDY_EXAM_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+function examCardHTML(examInfo) {
+  const sub = studyExamSubmissions[examInfo.key];
+  const photoUrl = sub ? studyExamPhotoUrl(sub.photo_path) : '';
+  const graded = sub && sub.status === 'graded';
+  const statusLabel = graded ? '채점 완료' : sub ? '채점 대기중' : '아직 시험지가 등록되지 않았어요';
+  return `
+    <div class="glass-card rounded-[1.5rem] p-5">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <p class="font-bold text-on-surface">${examInfo.label} 단어 시험</p>
+          <p class="text-xs text-on-surface-variant mt-0.5">${statusLabel}</p>
+        </div>
+        ${graded ? `<span class="pill-btn-primary px-4 py-1.5 text-sm whitespace-nowrap">${sub.score} / ${sub.max_score}점</span>` : ''}
+      </div>
+      ${photoUrl ? `
+        <div class="rounded-2xl overflow-hidden bg-surface-container aspect-[4/3]">
+          <img src="${photoUrl}" loading="lazy" decoding="async" alt="${examInfo.label} 시험지 사진" class="w-full h-full object-contain">
+        </div>` : ''}
+    </div>`;
+}
+
+function renderExamMode() {
+  const container = document.getElementById('study-content');
+  container.innerHTML = `<div class="flex flex-col gap-4 max-w-xl mx-auto">${STUDY_EXAM_DATES.map(examCardHTML).join('')}</div>`;
 }
 
 // --- 목록 모드 ---
@@ -487,10 +538,14 @@ async function initStudyWidgets() {
   const userId = await getStudyCurrentUserId();
   if (!userId) return;
 
-  const { words, progress } = await fetchStudyData(userId);
+  const [{ words, progress }, examSubmissions] = await Promise.all([
+    fetchStudyData(userId),
+    fetchExamSubmissions(userId)
+  ]);
   studyAllWords = words;
   studyProgressMap = Object.fromEntries(progress.map((p) => [p.word_id, p]));
   studyCompleteDays = computeCompleteDays();
+  studyExamSubmissions = examSubmissions;
 
   renderDaySelector();
   renderContent();

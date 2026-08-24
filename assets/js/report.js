@@ -156,6 +156,11 @@ function renderSharedReport(data) {
   }).join('');
   document.getElementById('report-pray-posts').innerHTML = (data.prayPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5 min-w-[88%] sm:min-w-[420px] lg:min-w-[480px] snap-start"><p class="text-xs font-bold text-primary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML((post.entries || []).map((entry) => entry.photoPath), '기도 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportPrayerDetails(post.entries)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant w-full">기도 인증 기록이 없습니다.</p>';
   document.getElementById('report-word-posts').innerHTML = (data.wordPosts || []).map((post) => `<article class="glass-card rounded-[1.5rem] p-5 min-w-[88%] sm:min-w-[420px] lg:min-w-[480px] snap-start"><p class="text-xs font-bold text-secondary mb-3">${reportEscape(reportDate(post.date))}</p>${reportPhotosHTML([post.photoPath], '말씀 묵상 인증 사진')}<ul class="mt-4 space-y-2 text-on-surface-variant">${reportVerseDetails(post.verses)}</ul></article>`).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant w-full">말씀 묵상 인증 기록이 없습니다.</p>';
+  document.getElementById('report-exam-posts').innerHTML = (data.examPosts || []).map((post) => {
+    const graded = post.status === 'graded';
+    const scoreLabel = graded ? `${post.score} / ${post.maxScore}점` : '채점 대기중';
+    return `<article class="glass-card rounded-[1.5rem] p-5 min-w-[88%] sm:min-w-[420px] lg:min-w-[480px] snap-start"><div class="flex items-center justify-between gap-3 mb-3"><p class="text-xs font-bold text-primary">${reportEscape(reportDate(post.date))}</p><p class="text-sm font-bold ${graded ? 'text-primary' : 'text-on-surface-variant'}">${reportEscape(scoreLabel)}</p></div>${reportPhotosHTML([post.photoPath], '단어 시험지 사진')}</article>`;
+  }).join('') || '<p class="glass-card rounded-2xl p-8 text-sm text-center text-on-surface-variant w-full">단어 시험 제출 기록이 없습니다.</p>';
   wireReportCarousels();
 }
 

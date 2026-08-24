@@ -25,6 +25,12 @@ let statTrendChart = null;
 let statRadarChart = null;
 let statDonutChart = null;
 
+// 단어 시험(오프라인 시험지 채점 결과) — Study 탭과 동일하게 8/22, 9/5 두 번 고정.
+const STAT_EXAM_DATES = [
+  { key: '2026-08-22', label: '8/22 (토)' },
+  { key: '2026-09-05', label: '9/5 (토)' }
+];
+
 // --- 데이터 조회 & 정규화 ---
 
 async function fetchFullHistory(userId) {
@@ -483,6 +489,30 @@ function renderPersonalBestChips(fullDays) {
     : '<p class="text-sm text-on-surface-variant">아직 기록이 없어요. 오늘부터 시작해볼까요?</p>';
 }
 
+// --- 렌더: 단어 시험 점수 ---
+
+function statExamCardHTML(examInfo, row) {
+  const graded = row && row.status === 'graded';
+  const statusLabel = graded ? `${row.score} / ${row.max_score}점` : row ? '채점 대기중' : '미제출';
+  return `
+    <div class="glass-card rounded-[1.5rem] p-4 flex items-center justify-between gap-3">
+      <div>
+        <p class="text-xs font-bold text-on-surface-variant">${examInfo.label}</p>
+        <p class="text-sm text-on-surface mt-1">단어 시험</p>
+      </div>
+      <p class="text-lg font-bold ${graded ? 'text-primary' : 'text-on-surface-variant'}">${statusLabel}</p>
+    </div>`;
+}
+
+async function renderStatWordExam(userId) {
+  const wrap = document.getElementById('stat-word-exam-list');
+  if (!wrap) return;
+  const { data, error } = await window.supabaseClient.from('word_exam_submissions').select('exam_date,score,max_score,status').eq('user_id', userId);
+  if (error) { console.error('[stat] word_exam_submissions', error); return; }
+  const byDate = Object.fromEntries((data || []).map((row) => [row.exam_date, row]));
+  wrap.innerHTML = STAT_EXAM_DATES.map((examInfo) => statExamCardHTML(examInfo, byDate[examInfo.key])).join('');
+}
+
 // --- 탭 wiring ---
 
 function renderRangeDependentViews() {
@@ -564,6 +594,7 @@ async function initStatWidgets() {
   renderStreakCard(statFullDays);
   renderPersonalBestChips(statFullDays);
   renderRangeDependentViews();
+  await renderStatWordExam(userId);
 }
 
 window.initStatWidgets = initStatWidgets;

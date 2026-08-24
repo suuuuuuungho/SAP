@@ -108,6 +108,60 @@
       <section class="mb-7"><div id="gallery-active-grid" class="gallery-swipe-grid"></div></section><nav id="gallery-pagination" class="flex items-center justify-center gap-2 pb-16" aria-label="학생 갤러리 페이지"></nav>
     </section>
 
+    <section data-admin-panel="word-exam" class="admin-panel hidden">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Word Test</h2><p class="text-xs text-on-surface-variant">시험지 사진 첨부 및 채점</p></div>
+
+      <div class="glass-card rounded-[1.5rem] p-4 sm:p-5 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">단어 시험 기능 on/off</p>
+            <p class="text-xs text-on-surface-variant mt-0.5">학생 Study 탭 노출과 Hall of Fame 랭킹 카드를 여기서 켭니다. (기존 Control Panel 항목이 이곳으로 옮겨왔습니다)</p>
+          </div>
+          <div id="admin-word-exam-feature-toggles" class="flex flex-wrap items-center gap-4 flex-shrink-0"></div>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="admin-word-exam-date-tabs">
+        <button type="button" data-word-exam-date="2026-08-22" class="nav-pill-active rounded-full px-5 py-2 transition-colors">8/22 (토)</button>
+        <button type="button" data-word-exam-date="2026-09-05" class="text-on-surface-variant rounded-full px-5 py-2 transition-colors">9/5 (토)</button>
+      </div>
+      <div class="glass-input rounded-full px-4 py-2 flex items-center gap-2 w-fit mx-auto mb-5"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-word-exam-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div>
+
+      <div class="glass-card rounded-[1.5rem] px-4 py-3 mb-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-semibold">전체 공개</span>
+          <label class="admin-switch" aria-label="선택한 시험 날짜의 제출된 학생 전체 공개 켜기 또는 끄기">
+            <input type="checkbox" id="admin-word-exam-bulk-visible">
+            <span class="admin-switch-track"></span>
+          </label>
+        </div>
+        <span id="admin-word-exam-bulk-count" class="text-xs text-on-surface-variant"></span>
+      </div>
+
+      <div id="admin-word-exam-list" class="flex flex-col gap-3 pb-16"></div>
+    </section>
+
+    <section data-admin-panel="team-manage" class="admin-panel hidden">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Team Manage</h2><p class="text-xs text-on-surface-variant">팀 구성과 팀장·부팀장 지정, 팀원 배정</p></div>
+
+      <section class="glass-panel rounded-[2rem] p-5 sm:p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4">팀 목록</h3>
+        <form id="admin-team-create-form" class="flex items-center gap-2 mb-4">
+          <input id="admin-team-create-name" class="glass-input rounded-full px-4 py-2 text-sm flex-1" placeholder="새 팀 이름 (예: 1팀)" maxlength="30" required>
+          <button type="submit" class="pill-btn-primary px-5 py-2 text-sm whitespace-nowrap">팀 추가</button>
+        </form>
+        <div id="admin-team-list" class="flex flex-col gap-2"></div>
+      </section>
+
+      <section class="glass-panel rounded-[2rem] p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 class="text-lg font-bold">팀원 배정</h3>
+          <div class="glass-input rounded-full px-4 py-2 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-xs"></i><input id="admin-team-member-search" class="border-0 bg-transparent p-0 text-sm focus:ring-0 w-44" placeholder="이름 또는 아이디"></div>
+        </div>
+        <div id="admin-team-member-list" class="flex flex-col gap-2 pb-8"></div>
+      </section>
+    </section>
+
     <section data-admin-panel="comment" class="admin-panel hidden">
       <div class="flex flex-wrap items-end justify-between gap-4 mb-6"><h2 class="text-3xl lg:text-4xl font-bold tracking-tight">Comment</h2><p class="text-xs text-on-surface-variant">말씀 묵상 게시물에 날짜별로 댓글을 남깁니다.</p></div>
       <div class="glass-panel rounded-full p-1 flex w-fit mx-auto mb-5 text-sm font-semibold" id="comment-view-tabs">
@@ -221,7 +275,7 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/auth-guard.js"></script>
 <script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=24"></script>
+<script src="assets/js/layout.js?v=28"></script>
 <script src="assets/js/image-utils.js?v=1"></script>
 <script src="assets/js/pray-word.js?v=19"></script>
 <script src="assets/js/profile-avatar.js?v=5"></script>
@@ -229,7 +283,7 @@
 <script>window.IS_ADMIN_CONSOLE = false;</script>
 <script src="assets/js/gallery.js?v=29"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=56"></script>
+<script src="assets/js/admin.js?v=62"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>
