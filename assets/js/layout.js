@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   // [data-member-nav] 숨김 로직 대상에서 제외). 다른 항목은 관리자/교사 등급이면
   // 숨겨지는 게 기존 의도된 동작이라 그대로 둔다.
   { id: 'hall-of-fame', label: 'Hall of Fame', href: 'hall-of-fame.html', icon: 'fa-solid fa-trophy', shared: true },
-  { id: 'team', label: 'Team', href: 'team.html', icon: 'fa-solid fa-people-group' },
+  { id: 'team', label: 'Team', href: 'team.html', icon: 'fa-solid fa-people-group', shared: true },
   { id: 'mypage', label: 'MyPage', href: 'index.html', icon: 'fa-solid fa-user' },
   { id: 'study', label: 'Study', href: 'study.html', icon: 'fa-solid fa-book' },
   { id: 'gallery', label: 'Gallery', href: 'gallery.html', icon: 'fa-regular fa-image' },
@@ -105,7 +105,8 @@ const ADMIN_NAV_GROUPS = [
     { id: 'board', label: 'Board', icon: 'fa-solid fa-clipboard-list' },
     { id: 'gallery', label: 'Gallery', icon: 'fa-regular fa-images' },
     { id: 'comment', label: 'Comment', icon: 'fa-regular fa-comment-dots', tier: 'comment' },
-    { id: 'hall-of-fame', label: 'Hall of Fame', icon: 'fa-solid fa-trophy', href: 'hall-of-fame.html?admin=1' }
+    { id: 'hall-of-fame', label: 'Hall of Fame', icon: 'fa-solid fa-trophy', href: 'hall-of-fame.html?admin=1' },
+    { id: 'team', label: 'Team', icon: 'fa-solid fa-people-group', href: 'team.html?admin=1' }
   ],
   [
     { id: 'board-manage', label: 'Board manage', icon: 'fa-solid fa-bullhorn', full: true },
@@ -183,9 +184,14 @@ function adminNavTierAttr(item) {
   return 'data-admin-only';
 }
 
+// 학생용 페이지지만 관리자 콘솔 사이드바에서도 href 링크로 열람 가능한 페이지들
+// (?admin=1로 접근 시 admin 콘솔 스타일 셸을 유지). 새 페이지를 admin 콘솔에서도
+// 보이게 하려면 여기와 ADMIN_NAV_GROUPS의 href 항목만 추가하면 된다.
+const ADMIN_LINKABLE_PAGES = ['hall-of-fame', 'team'];
+
 function adminNavFull(activePage = 'admin') {
-  const active = activePage === 'hall-of-fame' ? 'hall-of-fame' : window.location.hash.replace('#', '') || 'board';
-  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="flex items-center gap-2 px-3 pt-5 pb-2"><span class="h-px bg-outline-variant/60 flex-1"></span><span class="text-[9px] font-bold tracking-[.16em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/60 flex-1"></span></div>' : ''}${group.map((item) => item.href || activePage === 'hall-of-fame' ? `
+  const active = ADMIN_LINKABLE_PAGES.includes(activePage) ? activePage : window.location.hash.replace('#', '') || 'board';
+  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="flex items-center gap-2 px-3 pt-5 pb-2"><span class="h-px bg-outline-variant/60 flex-1"></span><span class="text-[9px] font-bold tracking-[.16em] text-on-surface-variant">MANAGEMENT</span><span class="h-px bg-outline-variant/60 flex-1"></span></div>' : ''}${group.map((item) => item.href || ADMIN_LINKABLE_PAGES.includes(activePage) ? `
     <a href="${item.href || `admin.html#${item.id}`}" ${adminNavTierAttr(item)} class="hidden flex w-full items-center gap-3 px-4 py-2.5 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface hover:bg-white/40'} font-medium text-sm transition-all duration-200 text-left">
       <i class="${item.icon} w-4 text-center"></i><span>${item.label}</span>
     </a>` : `
@@ -195,8 +201,8 @@ function adminNavFull(activePage = 'admin') {
 }
 
 function adminNavIcon(activePage = 'admin') {
-  const active = activePage === 'hall-of-fame' ? 'hall-of-fame' : window.location.hash.replace('#', '') || 'board';
-  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="h-px bg-outline-variant/60 mx-2 my-2"></div>' : ''}${group.map((item) => item.href || activePage === 'hall-of-fame' ? `
+  const active = ADMIN_LINKABLE_PAGES.includes(activePage) ? activePage : window.location.hash.replace('#', '') || 'board';
+  return ADMIN_NAV_GROUPS.map((group, groupIndex) => `${groupIndex ? '<div class="h-px bg-outline-variant/60 mx-2 my-2"></div>' : ''}${group.map((item) => item.href || ADMIN_LINKABLE_PAGES.includes(activePage) ? `
     <a href="${item.href || `admin.html#${item.id}`}" aria-label="${item.label}" ${adminNavTierAttr(item)} class="hidden flex nav-icon-item w-12 h-12 rounded-full ${item.id === active ? 'nav-pill-active' : 'text-on-surface-variant hover:bg-white/40'} items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i><div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </a>` : `
@@ -222,8 +228,8 @@ function profileBlock(idSuffix) {
 }
 
 function renderShell(activePage) {
-  const isAdminHallOfFame = activePage === 'hall-of-fame' && new URLSearchParams(window.location.search).get('admin') === '1';
-  const isAdminShell = activePage === 'admin' || isAdminHallOfFame;
+  const isAdminLinkedPage = ADMIN_LINKABLE_PAGES.includes(activePage) && new URLSearchParams(window.location.search).get('admin') === '1';
+  const isAdminShell = activePage === 'admin' || isAdminLinkedPage;
   const fullNav = isAdminShell ? adminNavFull(activePage) : NAV_ITEMS.map((item) => navLinkFull(item, activePage)).join('');
   const iconNav = isAdminShell ? adminNavIcon(activePage) : NAV_ITEMS.map((item) => navLinkIcon(item, activePage)).join('');
 
