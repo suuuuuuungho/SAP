@@ -6,7 +6,7 @@
 <title>Study - SAP 1기</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<script src="assets/js/tailwind-config.js"></script>
+<script src="assets/js/core/tailwind-config.js"></script>
 <link href="assets/css/app.css" rel="stylesheet">
 </head>
 <body class="text-on-surface">
@@ -36,11 +36,11 @@
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
-<script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=29"></script>
-<script src="assets/js/study.js?v=9"></script>
+<script src="assets/js/core/supabase-client.js"></script>
+<script src="assets/js/core/auth-guard.js"></script>
+<script src="assets/js/core/auth.js?v=10"></script>
+<script src="assets/js/core/layout.js?v=29"></script>
+<script src="assets/js/features/study.js?v=9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     if (await requireAuth()) renderApp({ activePage: 'study' });

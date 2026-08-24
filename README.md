@@ -40,14 +40,28 @@ npx serve .
 
 ## 페이지 구성
 
-- `index.html` — Home
-- `study.html` — Study
-- `gallery.html` — Gallery
-- `stat.html` — Stat
-- `login.html` — 아이디/비밀번호 로그인
-- `signup.html` — 회원가입 (아이디/비밀번호/비밀번호 확인/이름/학년반/전화번호/이메일)
-- `find-id.html` — 아이디 찾기 (이름 + 전화번호)
-- `find-password.html` — 비밀번호 찾기 (아이디 → 이메일로 재설정 링크 발송)
-- `reset-password.html` — 이메일로 받은 재설정 링크가 도착하는 페이지 (새 비밀번호 설정)
+**일반 이용자 (사이드바 있음, `assets/js/layout.js`가 공통 셸을 주입)**
 
-Home은 원본 목업 그대로의 대시보드 콘텐츠(Section 1 시작하기 체크리스트 + Section 2 지표 카드)가 구현되어 있고, Study/Gallery/Stat은 아직 레이아웃 셸(placeholder)만 있습니다. 모든 페이지는 `assets/js/layout.js`가 공통 사이드바/헤더를 주입합니다.
+- `index.html` — MyPage (기도/말씀 인증, 오늘 위젯)
+- `home.html` — Board (공지, 오늘의 말씀, 내 게시물 댓글 알림)
+- `study.html` — Study (단어 학습, 단어 시험 확인)
+- `gallery.html` — Gallery (기도/말씀 인증 게시물, 댓글)
+- `stat.html` — Stat (개인 활동 통계·차트)
+- `hall-of-fame.html` — Hall of Fame (주차별/누적 랭킹, 단어 시험 Top 5)
+- `team.html` — Team (팀별 활동시간·기여도 랭킹)
+- `profile.html` — 내 프로필 (아바타, 계정 설정)
+
+**관리자 전용**
+
+- `admin.html` — 관리자 콘솔 (Board 관리, 학부모 메시지, 성경 말씀, Comment, Gallery 관리, Word Test, Team 관리, Control Panel, Member, Dashboard, Stat) — 탭별로 `assets/js/admin/`에 파일이 나뉘어 있음
+- `report.html` — 학부모에게 문자로 발송되는 학생 개인 리포트 (토큰 기반, 로그인 불필요)
+
+**인증**
+
+- `login.html` / `signup.html` / `find-id.html` / `find-password.html` / `reset-password.html`
+
+## `assets/js/` 폴더 구조
+
+- `assets/js/core/` — 인증, 레이아웃(사이드바), Supabase 클라이언트 등 페이지 공통 인프라
+- `assets/js/features/` — 페이지별 기능 스크립트 (gallery, study, stat, team, hall-of-fame, report 등)
+- `assets/js/admin/` — 관리자 콘솔 탭별 스크립트 (admin-core, admin-board-manage, admin-comment 등)

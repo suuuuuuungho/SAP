@@ -57,11 +57,7 @@ function hofPeriodForActiveTab(currentPeriod) {
   };
 }
 
-function hofEscape(value) {
-  return String(value == null ? '' : value)
-    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-}
+const hofEscape = escapeHTML;
 
 function hofFormatMinutes(minutes) {
   const value = Number(minutes) || 0;

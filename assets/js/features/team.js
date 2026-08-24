@@ -27,11 +27,7 @@ function weekNoForTab(tab) {
   return tab === 'total' ? null : Number(tab);
 }
 
-function teamEscape(value) {
-  return String(value == null ? '' : value)
-    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-}
+const teamEscape = escapeHTML;
 
 function teamFormatMinutes(minutes) {
   const value = Math.round(Number(minutes) || 0);

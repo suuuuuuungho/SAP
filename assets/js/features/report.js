@@ -1,9 +1,7 @@
 const REPORT_PHOTO_BUCKET = 'verification-photos-v2';
 let reportTrendChart = null;
 
-function reportEscape(value) {
-  return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
-}
+const reportEscape = escapeHTML;
 
 function reportDate(value) {
   const date = new Date(`${value}T12:00:00`);

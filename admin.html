@@ -6,7 +6,7 @@
 <title>Admin - SAP 1기</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<script src="assets/js/tailwind-config.js"></script>
+<script src="assets/js/core/tailwind-config.js"></script>
 <link href="assets/css/app.css" rel="stylesheet">
 </head>
 <body class="text-on-surface">
@@ -272,18 +272,28 @@
 </template>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config.js"></script>
-<script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/auth-guard.js"></script>
-<script src="assets/js/auth.js?v=10"></script>
-<script src="assets/js/layout.js?v=29"></script>
-<script src="assets/js/image-utils.js?v=1"></script>
-<script src="assets/js/pray-word.js?v=19"></script>
-<script src="assets/js/profile-avatar.js?v=5"></script>
-<script src="assets/js/public-home.js?v=12"></script>
+<script src="assets/js/core/supabase-client.js"></script>
+<script src="assets/js/core/auth-guard.js"></script>
+<script src="assets/js/core/dom-utils.js"></script>
+<script src="assets/js/core/auth.js?v=10"></script>
+<script src="assets/js/core/layout.js?v=29"></script>
+<script src="assets/js/core/image-utils.js?v=1"></script>
+<script src="assets/js/features/pray-word.js?v=19"></script>
+<script src="assets/js/core/profile-avatar.js?v=5"></script>
+<script src="assets/js/features/public-home.js?v=12"></script>
 <script>window.IS_ADMIN_CONSOLE = false;</script>
-<script src="assets/js/gallery.js?v=29"></script>
+<script src="assets/js/features/gallery.js?v=29"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/js/admin.js?v=64"></script>
+<script src="assets/js/admin/admin-core.js?v=1"></script>
+<script src="assets/js/admin/admin-control.js?v=1"></script>
+<script src="assets/js/admin/admin-board-manage.js?v=1"></script>
+<script src="assets/js/admin/admin-verse.js?v=1"></script>
+<script src="assets/js/admin/admin-comment.js?v=1"></script>
+<script src="assets/js/admin/admin-member.js?v=1"></script>
+<script src="assets/js/admin/admin-dashboard.js?v=1"></script>
+<script src="assets/js/admin/admin-stat.js?v=1"></script>
+<script src="assets/js/admin/admin-word-exam.js?v=1"></script>
+<script src="assets/js/admin/admin-team.js?v=1"></script>
 <script>document.addEventListener('DOMContentLoaded', async () => { if (await requireAuth()) renderApp({ activePage: 'admin' }); });</script>
 </body>
 </html>

@@ -6,11 +6,7 @@ const HOME_REFRESH_MS = 5 * 60 * 1000;
 let publicHomeCurrentUserId = null;
 let publicHomeRefreshTimer = null;
 
-function publicHomeEscape(value) {
-  return String(value == null ? '' : value)
-    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-}
+const publicHomeEscape = escapeHTML;
 
 function renderPublicHomeMessages(messages) {
   const wrap = document.getElementById('home-message-list');
