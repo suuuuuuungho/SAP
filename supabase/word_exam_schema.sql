@@ -90,11 +90,13 @@ as $$
     select t.*, dense_rank() over (order by t.total_score desc, t.exam_count desc) as rank_no
     from totals t
   )
+  -- rank_no <= 5로 거르면 5등 동점자가 여럿일 때 5명보다 많이 나올 수 있어,
+  -- 등수는 전체 인원 기준으로 정확히 매기되(동점 순위 유지) 표시 인원만 5명으로 자른다.
   select r.rank_no, r.user_id, p.username, p.name, p.grade_class
   from ranked r
   join public.profiles p on p.id = r.user_id
-  where r.rank_no <= 5
-  order by r.rank_no;
+  order by r.rank_no
+  limit 5;
 $$;
 grant execute on function public.get_word_exam_rankings() to authenticated;
 
