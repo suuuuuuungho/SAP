@@ -85,7 +85,9 @@ as $$
     group by s.user_id
   ),
   ranked as (
-    select t.*, row_number() over (order by t.total_score desc, t.exam_count desc) as rank_no
+    -- dense_rank: 총점·응시횟수가 완전히 같으면 공동 순위를 매기고(예: 공동 3등),
+    -- 그다음 사람은 등수를 건너뛰지 않고 바로 다음 순번(4등)을 받는다.
+    select t.*, dense_rank() over (order by t.total_score desc, t.exam_count desc) as rank_no
     from totals t
   )
   select r.rank_no, r.user_id, p.username, p.name, p.grade_class

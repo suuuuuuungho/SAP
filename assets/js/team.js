@@ -209,7 +209,10 @@ function buildContributionMap(totalsRows, top3Rows) {
   top3Rows.forEach((row) => {
     const teamTotal = totalsByTeam[row.team_id];
     const denom = teamTotal ? (teamTotal.pray_minutes + teamTotal.word_minutes + teamTotal.study_minutes + teamTotal.worship_minutes) : 0;
-    map[row.user_id] = { rankNo: row.rank_no, percent: denom > 0 ? Math.round((row.total_minutes / denom) * 100) : 0 };
+    // 팀 합산 활동 시간이 0이면(아직 아무도 인증하지 않은 주 등) 순위가 의미 없으므로
+    // 메달을 아예 달지 않는다.
+    if (denom <= 0) return;
+    map[row.user_id] = { rankNo: row.rank_no, percent: Math.round((row.total_minutes / denom) * 100) };
   });
   return map;
 }
