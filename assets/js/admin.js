@@ -956,7 +956,7 @@ function commentProfileCommentHTML(comment, profiles) {
     ? `<img src="${galleryEscape(profile.avatarUrl)}" alt="" class="w-full h-full object-cover">`
     : galleryEscape((profile?.name || profile?.username || '?').charAt(0));
   const editControl = commentCanWrite && comment.author_id === adminCurrentUserId
-    ? `<button type="button" data-profile-comment-edit="${comment.id}" data-profile-comment-body="${galleryEscape(comment.body)}" class="ml-2 font-semibold hover:text-primary">수정</button>`
+    ? `<button type="button" data-profile-comment-edit="${comment.id}" data-profile-comment-body="${galleryEscape(comment.body)}" class="ml-2 font-semibold hover:text-primary">수정</button><button type="button" data-profile-comment-delete="${comment.id}" class="ml-2 font-semibold hover:text-error">삭제</button>`
     : '';
   return `<div class="flex items-start gap-2.5" data-profile-comment-id="${comment.id}">
     <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary-container to-tertiary-container text-white flex items-center justify-center text-xs font-bold flex-shrink-0">${avatar}</div>
@@ -1077,7 +1077,7 @@ function renderCommentList() {
         <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold flex-shrink-0 ${threads.length ? 'text-primary bg-primary/10' : 'text-on-surface-variant bg-surface-container'}">${threads.length ? `댓글 ${threads.length}개` : '댓글 없음'}</span>
       </div>
       <div class="mb-3">${commentPhotoHTML(record)}</div>
-      ${threads.length ? `<div class="flex flex-col gap-1.5 mb-3 pl-3 border-l-2 border-outline-variant/40">${threads.map((c) => `<p class="text-xs leading-5">${galleryEscape(c.body)} <span class="text-on-surface-variant">· ${galleryRelativeTime(c.created_at)}</span></p>`).join('')}</div>` : ''}
+      ${threads.length ? `<div class="flex flex-col gap-1.5 mb-3 pl-3 border-l-2 border-outline-variant/40">${threads.map((c) => `<p class="text-xs leading-5">${galleryEscape(c.body)} <span class="text-on-surface-variant">· ${galleryRelativeTime(c.created_at)}</span>${c.author_id === adminCurrentUserId ? `<button type="button" data-comment-thread-delete="${c.id}" class="ml-2 font-semibold text-on-surface-variant hover:text-error">삭제</button>` : ''}</p>`).join('')}</div>` : ''}
       ${commentCanWrite
         ? `<form data-comment-form="${user.id}" class="flex items-center gap-2"><input type="text" data-comment-input required maxlength="300" autocomplete="off" placeholder="댓글 달기..." class="glass-input flex-1 rounded-full px-4 py-2 text-sm"><button type="submit" class="text-primary font-bold text-sm px-2">게시</button></form>`
         : ''}
@@ -1199,16 +1199,34 @@ function wireCommentControls() {
     renderCommentList();
     document.getElementById('comment-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  document.getElementById('comment-list')?.addEventListener('click', (event) => {
+  document.getElementById('comment-list')?.addEventListener('click', async (event) => {
     const profileButton = event.target.closest('[data-comment-profile-user]');
-    if (profileButton) openCommentProfile(profileButton.dataset.commentProfileUser);
+    if (profileButton) { openCommentProfile(profileButton.dataset.commentProfileUser); return; }
+    const deleteButton = event.target.closest('[data-comment-thread-delete]');
+    if (deleteButton) {
+      if (!confirm('이 댓글을 삭제할까요?')) return;
+      const { error } = await window.supabaseClient.from('post_comments').delete().eq('id', deleteButton.dataset.commentThreadDelete).eq('author_id', adminCurrentUserId);
+      if (error) { console.error('[comment-list] delete comment', error); adminShowStatus('댓글을 삭제하지 못했습니다.', true); return; }
+      await loadCommentDay();
+      adminShowStatus('댓글을 삭제했습니다.');
+    }
   });
   document.getElementById('comment-profile-overlay')?.addEventListener('click', closeCommentProfile);
   document.getElementById('comment-profile-back')?.addEventListener('click', closeCommentProfile);
   document.getElementById('comment-profile-close')?.addEventListener('click', closeCommentProfile);
-  document.getElementById('comment-profile-content')?.addEventListener('click', (event) => {
+  document.getElementById('comment-profile-content')?.addEventListener('click', async (event) => {
     const editButton = event.target.closest('[data-profile-comment-edit]');
+    const deleteButton = event.target.closest('[data-profile-comment-delete]');
     const cancelButton = event.target.closest('[data-profile-comment-cancel]');
+    if (deleteButton) {
+      if (!confirm('이 댓글을 삭제할까요?')) return;
+      const { error } = await window.supabaseClient.from('post_comments').delete().eq('id', deleteButton.dataset.profileCommentDelete).eq('author_id', adminCurrentUserId);
+      if (error) { console.error('[comment-profile] delete comment', error); adminShowStatus('댓글을 삭제하지 못했습니다.', true); return; }
+      const activeUserId = commentProfileUserId;
+      await openCommentProfile(activeUserId);
+      adminShowStatus('댓글을 삭제했습니다.');
+      return;
+    }
     if (editButton) {
       const article = editButton.closest('article');
       const form = article?.querySelector('[data-profile-comment-form]');
