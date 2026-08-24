@@ -832,7 +832,7 @@ let commentCanWrite = false;
 let commentWordMap = {};
 let commentThreads = {};
 let commentTabInitialized = false;
-let commentViewMode = 'list';
+let commentViewMode = 'table';
 let commentTableWordMap = {};
 let commentTableThreadCounts = {};
 let commentTableLoaded = false;
@@ -1311,6 +1311,7 @@ async function adminLoadCommentTab() {
     commentCanWrite = await loadGalleryCommentPermission();
     wireCommentControls();
     renderCommentDaySelect();
+    renderCommentViewTabs();
   }
   commentDayMeta();
   if (commentViewMode === 'table') { await loadCommentTable(); } else { await loadCommentDay(); }
