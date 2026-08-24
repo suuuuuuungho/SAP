@@ -125,9 +125,10 @@ function navLinkFull(item, activePage) {
   const visibilityAttr = item.shared ? '' : (item.adminOnly ? 'data-admin-only' : 'data-member-nav');
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" ${visibilityAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
+    <a href="${item.href}" data-nav-item="${item.id}" ${visibilityAttr} class="${hiddenCls} flex items-center gap-3 px-4 py-2.5 rounded-full ${activeCls} font-medium text-sm transition-all duration-200">
       <i class="${item.icon} w-4 text-center"></i>
       ${item.label}
+      <span data-nav-badge class="hidden ml-auto text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 items-center justify-center bg-error text-white"></span>
     </a>`;
 }
 
@@ -137,11 +138,41 @@ function navLinkIcon(item, activePage) {
   const visibilityAttr = item.shared ? '' : (item.adminOnly ? 'data-admin-only' : 'data-member-nav');
   const hiddenCls = item.adminOnly ? 'hidden' : '';
   return `
-    <a href="${item.href}" aria-label="${item.label}" ${visibilityAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
+    <a href="${item.href}" aria-label="${item.label}" data-nav-item="${item.id}" ${visibilityAttr} class="${hiddenCls} nav-icon-item w-12 h-12 rounded-full ${activeCls} flex items-center justify-center mx-auto transition-all relative">
       <i class="${item.icon} text-lg"></i>
+      <span data-nav-badge class="hidden absolute top-1 right-1 text-[9px] font-bold rounded-full min-w-[14px] h-[14px] px-0.5 items-center justify-center bg-error text-white"></span>
       <div class="nav-tooltip absolute left-16 glass-card text-on-surface text-xs py-1 px-2.5 rounded-full pointer-events-none whitespace-nowrap z-50">${item.label}</div>
     </a>`;
 }
+
+// 사이드바 뱃지: 여러 화면 폭(desktop/tablet/mobile)에 각각 렌더된 같은 nav item을
+// data-nav-item 셀렉터로 한꺼번에 찾아 갱신한다.
+function setNavBadge(itemId, count) {
+  document.querySelectorAll(`[data-nav-item="${itemId}"] [data-nav-badge]`).forEach((el) => {
+    if (count > 0) {
+      el.textContent = count > 99 ? '99+' : String(count);
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    } else {
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+  });
+}
+
+// Board 탭에 "내 게시물에 달린 새 댓글" 개수를 표시한다. profiles.board_comments_seen_at
+// 이후에 생긴 post_comments만 센다(최초 null이면 전부 안 읽은 것으로 취급).
+async function updateBoardCommentBadge() {
+  if (!window.supabaseClient) return;
+  try {
+    const { data, error } = await window.supabaseClient.rpc('get_unread_board_comment_count');
+    if (error) return; // board_comment_notifications.sql 적용 전에는 기존처럼 뱃지 없이 동작
+    setNavBadge('public-home', data || 0);
+  } catch (err) {
+    console.error('[layout] updateBoardCommentBadge', err);
+  }
+}
+window.updateBoardCommentBadge = updateBoardCommentBadge;
 
 function adminNavTierAttr(item) {
   if (item.full) return 'data-admin-full-only';
@@ -350,4 +381,5 @@ function renderApp({ activePage }) {
   if (window.initAdminWidgets) window.initAdminWidgets();
   if (window.initProfileWidgets) window.initProfileWidgets();
   applyFeatureFlags(activePage);
+  if (activePage !== 'admin') updateBoardCommentBadge();
 }

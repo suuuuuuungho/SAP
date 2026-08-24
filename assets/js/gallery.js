@@ -787,6 +787,7 @@ async function initGalleryWidgets() {
   const params = new URLSearchParams(window.location.search);
   const requestedDate = params.get('date');
   const requestedType = params.get('type');
+  const requestedComments = params.get('comments') === '1';
   gallerySelectedIndex = requestedDate && galleryDays.includes(requestedDate)
     ? galleryDays.indexOf(requestedDate)
     : galleryDefaultDayIndex();
@@ -807,6 +808,8 @@ async function initGalleryWidgets() {
   await selectGalleryDay(gallerySelectedIndex);
   document.querySelectorAll('[data-admin-gallery-edit-close]').forEach((button) => button.addEventListener('click', closeAdminGalleryEdit));
   document.getElementById('admin-gallery-edit-save')?.addEventListener('click', saveAdminGalleryEdit);
+  // Board의 "내 게시물 댓글" 목록에서 ?comments=1로 들어온 경우, 내 댓글창을 바로 연다.
+  if (requestedComments && galleryCurrentUserId) await openGalleryComments(galleryCurrentUserId, galleryActiveType);
 }
 
 function applyGalleryGridClass() {

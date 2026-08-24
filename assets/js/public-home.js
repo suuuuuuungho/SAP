@@ -41,6 +41,44 @@ function renderPublicHomeVerse(verse) {
   text.textContent = verse ? verse.verse_text : '관리자가 등록한 성경구절이 여기에 표시됩니다.';
 }
 
+function publicHomeCommentPostLabel(type) {
+  return type === 'pray' ? '기도' : '말씀묵상';
+}
+
+function renderBoardComments(comments) {
+  const section = document.getElementById('board-comments-section');
+  const wrap = document.getElementById('board-comments-list');
+  if (!section || !wrap) return;
+  if (!comments.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  wrap.innerHTML = comments.map((comment) => `
+    <button type="button" data-board-comment-date="${comment.post_date}" data-board-comment-type="${comment.post_type}"
+      class="glass-card rounded-2xl p-3.5 text-left flex items-start gap-2.5 hover:bg-white/50 transition-colors">
+      ${comment.is_unread ? '<span class="w-2 h-2 rounded-full bg-error mt-1.5 flex-shrink-0"></span>' : '<span class="w-2 h-2 flex-shrink-0"></span>'}
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] text-on-surface-variant mb-0.5">${publicHomeEscape(comment.author_name)} · ${publicHomeCommentPostLabel(comment.post_type)} · ${new Date(comment.post_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</p>
+        <p class="text-sm truncate">${publicHomeEscape(comment.body)}</p>
+      </div>
+      <i class="fa-solid fa-chevron-right text-xs text-on-surface-variant mt-1.5 flex-shrink-0"></i>
+    </button>`).join('');
+}
+
+async function loadBoardComments() {
+  const { data, error } = await window.supabaseClient.rpc('get_board_comments_for_me', { limit_count: 15 });
+  if (error) return; // board_comment_notifications.sql 적용 전에는 섹션을 그냥 숨겨둔다
+  renderBoardComments(data || []);
+  window.supabaseClient.rpc('mark_board_comments_seen').then(() => window.updateBoardCommentBadge?.());
+}
+
+function wireBoardComments() {
+  document.getElementById('board-comments-list')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-board-comment-date]');
+    if (!button) return;
+    const params = new URLSearchParams({ date: button.dataset.boardCommentDate, type: button.dataset.boardCommentType, comments: '1' });
+    window.location.href = `gallery.html?${params.toString()}`;
+  });
+}
+
 async function loadPublicHome() {
   const now = new Date();
   const nowIso = now.toISOString();
@@ -74,7 +112,8 @@ async function loadPublicHome() {
 async function initPublicHomeWidgets() {
   const { data: { session } } = await window.supabaseClient.auth.getSession();
   publicHomeCurrentUserId = session ? session.user.id : null;
-  await loadPublicHome();
+  wireBoardComments();
+  await Promise.all([loadPublicHome(), loadBoardComments()]);
   if (publicHomeRefreshTimer) clearInterval(publicHomeRefreshTimer);
   publicHomeRefreshTimer = setInterval(() => {
     if (document.visibilityState === 'visible') loadPublicHome();
